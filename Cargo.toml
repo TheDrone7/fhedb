@@ -1,0 +1,16 @@
+[package]
+name = "fhedb"
+version = "0.0.1"
+edition = "2021"
+
+[[bin]]
+name = "fhedb"
+path = "fhedb-cli/src/main.rs"
+
+[workspace]
+members = [
+	"fhedb-cli",
+	"fhedb-file",
+	"fhedb-core",
+	"fhedb-parser"
+]
