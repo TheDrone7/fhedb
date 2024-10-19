@@ -1,6 +1,8 @@
 [package]
 name = "fhedb-file"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 
 [dependencies]
+lazy_static = "1.5.0"
+fhedb-core = { path = "../fhedb-core" }
