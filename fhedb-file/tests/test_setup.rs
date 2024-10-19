@@ -29,7 +29,7 @@ pub fn create_test_file(path: &str) {
 
     let init = Database::new("test".to_owned());
 
-    write(test_file, &bson::to_vec(&init).unwrap()).unwrap();
+    write(test_file, init.to_bytes()).unwrap();
 }
 
 pub fn teardown(path: &str) {
