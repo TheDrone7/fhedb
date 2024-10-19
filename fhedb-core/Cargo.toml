@@ -1,6 +1,19 @@
 [package]
 name = "fhedb-core"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 
 [dependencies]
+chrono = "0.4.38"
+
+[dependencies.bson]
+version = "2.13.0"
+features = ["chrono-0_4"]
+
+[dependencies.uuid]
+version = "1.11.0"
+features = ["v4", "fast-rng", "macro-diagnostics", "serde"]
+
+[dependencies.serde]
+version = "1.0.210"
+features = ["std", "derive"]
