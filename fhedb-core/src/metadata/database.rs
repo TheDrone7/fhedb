@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct Database {
+pub struct DbMetadata {
     pub name: String,
     pub version: String,
     #[serde(with = "bson::serde_helpers::chrono_datetime_as_bson_datetime")]
@@ -13,9 +13,9 @@ pub struct Database {
     pub size: u64,
 }
 
-impl Database {
+impl DbMetadata {
     pub fn new(name: String) -> Self {
-        Database {
+        DbMetadata {
             name,
             version: std::env::var("CARGO_PKG_VERSION").unwrap(),
             created: chrono::Utc::now(),

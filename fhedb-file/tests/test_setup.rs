@@ -27,7 +27,7 @@ pub fn create_test_file(path: &str) {
     let project_root = PROJECT_ROOT.to_string();
     let test_file = format!("{}/{}", project_root, path);
 
-    let init = Database::new("test".to_owned());
+    let init = DbMetadata::new("test".to_owned());
 
     write(test_file, init.to_bytes()).unwrap();
 }

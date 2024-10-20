@@ -9,10 +9,10 @@ fn write_db_to_file() {
 	use fhedb_core::prelude::*;
 	use fhedb_file::prelude::*;
 
-	let db = Database::new("test_write".to_owned());
+	let db = DbMetadata::new("test_write".to_owned());
 	db.to_file(path).unwrap();
 
-	let db = Database::from_file(path).unwrap();
+	let db = DbMetadata::from_file(path).unwrap();
 	assert_eq!(db.name, "test_write");
 
 	teardown(path);

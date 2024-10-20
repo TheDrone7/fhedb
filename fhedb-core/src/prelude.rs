@@ -1,2 +1,2 @@
-pub use crate::metadata::database::Database;
+pub use crate::metadata::database::DbMetadata;
 pub use bson;

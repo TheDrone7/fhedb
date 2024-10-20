@@ -1,11 +1,11 @@
 use crate::error::{FheDbFileError as Error, Result};
-use fhedb_core::prelude::Database;
+use fhedb_core::prelude::DbMetadata;
 
 pub trait FileRead {
-    fn from_file(path: &str) -> Result<Database>;
+    fn from_file(path: &str) -> Result<DbMetadata>;
 }
 
-impl FileRead for Database {
+impl FileRead for DbMetadata {
     fn from_file(path: &str) -> Result<Self> {
         let path = std::path::Path::new(path);
         if !path.exists() {

@@ -9,7 +9,7 @@ fn read_file_to_db() {
     let path = "tests/test.fhedb";
     setup_once(path);
 
-    let db = Database::from_file(path).unwrap();
+    let db = DbMetadata::from_file(path).unwrap();
     assert_eq!(db.name, "test");
 
     teardown(path);
