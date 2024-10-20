@@ -1,12 +1,48 @@
+//! This module defines the FileUpdate trait.
+//!
+//! It also contains the implementations for structures defined in the fhedb-core crate.
+
 use crate::error::{FheDbFileError as Error, Result};
 use fhedb_core::prelude::*;
 use std::io::prelude::*;
 
+/// The FileUpdate trait defines the function for updating files.
 pub trait FileUpdate {
+    /// Update a file, replacing appropriate contents with current structure.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the file to be updated.
+    ///
+    /// # Returns
+    ///
+    /// Result indicating success or failure.
     fn update_file(&self, path: &str) -> Result<()>;
 }
 
+/// Implementing FileUpdate trait for DbMetadata.
 impl FileUpdate for DbMetadata {
+    /// Update a file, replacing appropriate contents with current metadata.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the file to be updated.
+    ///
+    /// # Returns
+    ///
+    /// Result indicating success or failure.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use fhedb_file::prelude::*;
+    /// use fhedb_core::prelude::*;
+    ///
+    /// let mut db = DbMetadata::from_file("test.fhedb")?;
+    /// db.name = "new_name".to_owned();
+    ///
+    /// let result = db.update_file("test.fhedb")?;
+    /// ```
     fn update_file(&self, path: &str) -> Result<()> {
         let path = std::path::Path::new(path);
         let mut file = std::fs::OpenOptions::new()

@@ -1,11 +1,47 @@
+//! This module defines the FileRead trait.
+//!
+//! It also contains the implementations for structures defined in the fhedb-core crate.
+
 use crate::error::{FheDbFileError as Error, Result};
 use fhedb_core::prelude::DbMetadata;
 
-pub trait FileRead {
-    fn from_file(path: &str) -> Result<DbMetadata>;
+/// The FileRead trait defines the function for reading files.
+pub trait FileRead<T> {
+    /// Read a file and return.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the file to be read.
+    ///
+    /// # Returns
+    ///
+    /// Result indicating success or failure.
+    /// File content parsed into the type T if successful.
+    /// Otherwise an error.
+    fn from_file(path: &str) -> Result<T>;
 }
 
-impl FileRead for DbMetadata {
+/// Implementing FileRead trait for DbMetadata.
+impl FileRead<DbMetadata> for DbMetadata {
+    /// Read a file and return the database metadata.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the file to be read.
+    ///
+    /// # Returns
+    ///
+    /// Result indicating success or failure.
+    /// Database metadata if successful.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use fhedb_file::prelude::*;
+    /// use fhedb_core::prelude::*;
+    ///
+    /// let db = DbMetadata::from_file("test.fhedb");
+    /// ```
     fn from_file(path: &str) -> Result<Self> {
         let path = std::path::Path::new(path);
         if !path.exists() {
