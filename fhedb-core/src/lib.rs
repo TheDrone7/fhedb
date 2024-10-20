@@ -6,6 +6,8 @@
 //! This provides the basic functionality expanded upon
 //! by other libraries in the project.
 
+/// The database module contains the structures for the database itself.
+pub mod database;
 /// The metadata module contains the structures for the database metadata.
 pub mod metadata;
 
