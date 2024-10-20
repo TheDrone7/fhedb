@@ -16,11 +16,13 @@ impl FileRead for DbMetadata {
         }
 
         if let Ok(db) = std::fs::read(path) {
-            if db.len() < 1 {
+            if db.len() < 4 {
                 return Err(Error::new("File is empty", path.to_str().unwrap_or("")));
             }
 
-            let db = Self::from(&db[0..db[0] as usize]);
+            let size = u32::from_le_bytes([db[0], db[1], db[2], db[3]]) as usize;
+
+            let db = Self::from(&db[0..size]);
             if let Ok(db) = db {
                 Ok(db)
             } else {
