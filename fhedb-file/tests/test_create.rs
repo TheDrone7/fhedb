@@ -13,7 +13,7 @@ fn create_db_in_file() {
     let db = DbMetadata::new("test_cr".to_owned());
     db.create_file(path).unwrap();
 
-    let db = DbMetadata::from_file(path).unwrap();
+    let db = DbMetadata::read_file(path).unwrap();
     assert_eq!(db.name, "test_cr");
 
     teardown(path);

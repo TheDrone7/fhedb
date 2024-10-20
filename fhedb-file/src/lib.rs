@@ -1,21 +1,19 @@
 //! This is the library that handles file I/O for the FHEDB project.
 //!
-//! It adds the ability to create, read, update and delete files for the database and metadata.
+//! It adds the ability to 
+//! - create
+//! - read
+//! - update
+//! - delete 
+//! 
+//! files for the various structures from [`fhedb_core`].
 
-/// The create module contains the functions for creating files.
-pub mod create;
-
-/// The delete module contains the functions for deleting files.
-pub mod delete;
 
 /// The error module contains the error types for the file I/O operations.
 pub mod error;
 
-/// The read module contains the functions for reading files.
-pub mod read;
-
-/// The update module contains the functions for updating files.
-pub mod update;
+/// Contains the file I/O operations for database metadata.
+pub mod metadata;
 
 /// The prelude module contains the common imports for the file library.
 pub mod prelude;
