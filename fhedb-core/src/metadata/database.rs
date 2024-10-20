@@ -24,16 +24,16 @@ pub struct DbMetadata {
 /// Implementation of the DbMetadata struct.
 impl DbMetadata {
     /// Create a new DbMetadata struct.
-    /// 
+    ///
     /// # Arguments
     /// * `name` - The name of the database.
-    /// 
+    ///
     /// # Returns
     /// A new DbMetadata struct.
-    /// 
+    ///
     /// # Example
     /// ```
-    /// use fhedb_core::metadata::DbMetadata;
+    /// use fhedb_core::prelude::DbMetadata;
     /// let db = DbMetadata::new("test".to_owned());
     /// assert_eq!(db.name, "test");
     /// ```
@@ -50,36 +50,31 @@ impl DbMetadata {
     }
 
     /// Create a new DbMetadata struct from a byte slice.
-    /// 
+    ///
     /// # Arguments
     /// * `file_contents` - The byte slice to create the DbMetadata struct from.
-    /// 
+    ///
     /// # Returns
     /// A new DbMetadata struct.
-    /// 
+    ///
     /// # Example
     /// ```
-    /// use fhedb_core::metadata::DbMetadata;
+    /// use fhedb_core::prelude::DbMetadata;
     /// let db = DbMetadata::from(&[0, 0, 0, 0]);
     /// assert_eq!(db.is_err(), true);
-    /// 
-    /// 
-    /// let file = std::fs::read("my_database.fhedb").unwrap();
-    /// let db = DbMetadata::from(file.as_slice()).unwrap();
-    /// assert_eq!(db.name, "test");
     /// ```
     pub fn from(file_contents: &[u8]) -> Result<Self, bson::de::Error> {
         bson::from_slice(file_contents)
     }
 
     /// Convert the DbMetadata struct to a byte vector.
-    /// 
+    ///
     /// # Returns
     /// A byte vector of the DbMetadata struct.
-    /// 
+    ///
     /// # Example
     /// ```
-    /// use fhedb_core::metadata::DbMetadata;
+    /// use fhedb_core::prelude::DbMetadata;
     /// let db = DbMetadata::new("test".to_owned());
     /// let bytes = db.to_bytes();
     /// assert_eq!(bytes.len(), 131);
