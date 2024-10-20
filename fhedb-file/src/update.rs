@@ -38,10 +38,17 @@ impl FileUpdate for DbMetadata {
     /// use fhedb_file::prelude::*;
     /// use fhedb_core::prelude::*;
     ///
-    /// let mut db = DbMetadata::from_file("test.fhedb")?;
-    /// db.name = "new_name".to_owned();
+    /// let mut metadata = DbMetadata::new("test".to_owned());
+    /// metadata.create_file("test.fhedb");
     ///
-    /// let result = db.update_file("test.fhedb")?;
+    ///
+    /// metadata.name = "new_name".to_owned();
+    /// let result = metadata.update_file("test.fhedb");
+    ///
+    /// assert!(result.is_ok());
+    ///
+    /// // Clean up
+    /// std::fs::remove_file("test.fhedb").unwrap();
     /// ```
     fn update_file(&self, path: &str) -> Result<()> {
         let path = std::path::Path::new(path);

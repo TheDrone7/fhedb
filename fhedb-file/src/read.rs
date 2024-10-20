@@ -40,7 +40,15 @@ impl FileRead<DbMetadata> for DbMetadata {
     /// use fhedb_file::prelude::*;
     /// use fhedb_core::prelude::*;
     ///
-    /// let db = DbMetadata::from_file("test.fhedb");
+    /// let metadata = DbMetadata::new("test".to_owned());
+    /// metadata.create_file("test.fhedb").unwrap();
+    ///
+    /// let result = DbMetadata::from_file("test.fhedb");
+    ///
+    /// assert!(result.is_ok());
+    ///
+    /// // Clean up
+    /// std::fs::remove_file("test.fhedb").unwrap();
     /// ```
     fn from_file(path: &str) -> Result<Self> {
         let path = std::path::Path::new(path);

@@ -37,8 +37,12 @@ impl FileDelete for DbMetadata {
     /// use fhedb_file::prelude::*;
     /// use fhedb_core::prelude::*;
     ///
-    /// let db = DbMetadata::new("test".to_owned());
-    /// let result = db.delete_file("file.txt");
+    /// // Create a new database metadata
+    /// let metadata = DbMetadata::new("test".to_owned());
+    /// metadata.create_file("test.fhedb").unwrap();
+    ///
+    /// // Delete the file
+    /// let result = metadata.delete_file("test.fhedb");
     /// ```
     fn delete_file(&self, path: &str) -> Result<()> {
         let path = std::path::Path::new(path);
