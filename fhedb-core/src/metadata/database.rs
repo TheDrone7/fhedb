@@ -15,8 +15,6 @@ pub struct DbMetadata {
     pub last_modified: chrono::DateTime<chrono::Utc>,
     /// The number of documents in the database.
     pub document_count: u64,
-    /// The offsets of the documents in the database.
-    pub offsets: Vec<u64>,
     /// The size of the database in bytes.
     pub size: u64,
 }
@@ -45,7 +43,6 @@ impl DbMetadata {
             last_modified: chrono::Utc::now(),
             document_count: 0,
             size: 0,
-            offsets: Vec::new(),
         }
     }
 
