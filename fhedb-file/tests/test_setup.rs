@@ -1,34 +1,30 @@
 extern crate fhedb_file;
-extern crate lazy_static;
 
-use lazy_static::lazy_static;
 use std::fs::write;
-use std::sync::Mutex;
+use std::sync::OnceLock;
 
-lazy_static! {
-    pub static ref TEST_SETUP: Mutex<bool> = Mutex::new(false);
-    pub static ref PROJECT_ROOT: String = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-}
+static PROJECT_ROOT: OnceLock<String> = OnceLock::new();
+static TEST_SETUP: OnceLock<bool> = OnceLock::new();
 
 pub fn setup_once(path: &str) {
-    let mut setup_done = TEST_SETUP.lock().unwrap();
-    if !*setup_done {
+    let setup_done = TEST_SETUP.get();
+    if setup_done.is_none() {
         // Perform setup
+        PROJECT_ROOT.get_or_init(|| std::env::var("CARGO_MANIFEST_DIR").unwrap());
         create_test_file(path);
 
         // Mark it as done
-        *setup_done = true;
+        let _ = TEST_SETUP.set(true);
     }
 }
 
 pub fn create_test_file(path: &str) {
     pub use fhedb_core::prelude::*;
 
-    let project_root = PROJECT_ROOT.to_string();
+    let project_root = PROJECT_ROOT.get().unwrap();
     let test_file = format!("{}/{}", project_root, path);
 
     let init = DbMetadata::new("test".to_owned());
-
     write(test_file, init.to_bytes()).unwrap();
 }
 
