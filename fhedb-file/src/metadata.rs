@@ -69,16 +69,16 @@ impl MetadataFileIO for DbMetadata {
     /// use fhedb_file::prelude::*;
     /// use fhedb_core::prelude::*;
     ///
-    /// let metadata = DbMetadata::new("test".to_owned());
-    /// metadata.create_file("test.fhedb").unwrap();
+    /// let metadata = DbMetadata::new("read".to_owned());
+    /// metadata.create_file("read.fhedb").unwrap();
     ///
-    /// let result = DbMetadata::read_file("test.fhedb");
+    /// let result = DbMetadata::read_file("read.fhedb");
     ///
     /// assert!(result.is_ok());
-    /// assert_eq!(result.unwrap().name, "test");
+    /// assert_eq!(result.unwrap().name, "read");
     ///
     /// // Clean up
-    /// std::fs::remove_file("test.fhedb").unwrap();
+    /// std::fs::remove_file("read.fhedb").unwrap();
     /// ```
     fn read_file(path: &str) -> Result<DbMetadata> {
         let path = std::path::Path::new(path);
@@ -129,13 +129,13 @@ impl MetadataFileIO for DbMetadata {
     /// use fhedb_file::prelude::*;
     /// use fhedb_core::prelude::*;
     ///
-    /// let metadata = DbMetadata::new("test".to_owned());
-    /// let result = metadata.create_file("test.fhedb");
+    /// let metadata = DbMetadata::new("create".to_owned());
+    /// let result = metadata.create_file("create.fhedb");
     ///
     /// assert!(result.is_ok());
     ///
     /// // Clean up
-    /// std::fs::remove_file("test.fhedb").unwrap();
+    /// std::fs::remove_file("create.fhedb").unwrap();
     /// ```
     fn create_file(&self, path: &str) -> Result<()> {
         let path = std::path::Path::new(path);
@@ -165,17 +165,17 @@ impl MetadataFileIO for DbMetadata {
     /// use fhedb_file::prelude::*;
     /// use fhedb_core::prelude::*;
     ///
-    /// let mut metadata = DbMetadata::new("test".to_owned());
-    /// metadata.create_file("test.fhedb");
+    /// let mut metadata = DbMetadata::new("update".to_owned());
+    /// metadata.create_file("update.fhedb");
     ///
     ///
     /// metadata.name = "new_name".to_owned();
-    /// let result = metadata.update_file("test.fhedb");
+    /// let result = metadata.update_file("update.fhedb");
     ///
     /// assert!(result.is_ok());
     ///
     /// // Clean up
-    /// std::fs::remove_file("test.fhedb").unwrap();
+    /// std::fs::remove_file("update.fhedb").unwrap();
     /// ```
     fn update_file(&self, path: &str) -> Result<()> {
         let path = std::path::Path::new(path);
@@ -198,7 +198,8 @@ impl MetadataFileIO for DbMetadata {
         file.read_to_end(&mut remaining)
             .map_err(|_| Error::new("Could not read file", path.to_str().unwrap_or("")))?;
 
-        let dbm: Vec<u8> = self.try_into()
+        let dbm: Vec<u8> = self
+            .try_into()
             .map_err(|_| Error::new("Could not serialize database", ""))?;
 
         file.seek(std::io::SeekFrom::Start(0))
