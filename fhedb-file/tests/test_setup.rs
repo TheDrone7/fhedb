@@ -24,8 +24,9 @@ pub fn create_test_file(path: &str) {
     let project_root = PROJECT_ROOT.get().unwrap();
     let test_file = format!("{}/{}", project_root, path);
 
-    let init = DbMetadata::new("test".to_owned());
-    write(test_file, init.to_bytes()).unwrap();
+    let init = &DbMetadata::new("test".to_owned());
+    let bytes: Vec<u8> = init.try_into().unwrap();
+    write(test_file, bytes).unwrap();
 }
 
 pub fn teardown(path: &str) {

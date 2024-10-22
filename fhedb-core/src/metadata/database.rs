@@ -45,6 +45,14 @@ impl DbMetadata {
             size: 0,
         }
     }
+}
+
+/// Implementations of the TryFrom trait for the DbMetadata struct.
+/// This allows the DbMetadata struct to be created from a byte slice.
+impl TryFrom<&[u8]> for DbMetadata {
+    /// The error type for the TryFrom trait.
+    /// Just forwards the bson error type.
+    type Error = bson::de::Error;
 
     /// Create a new DbMetadata struct from a byte slice.
     ///
@@ -57,26 +65,35 @@ impl DbMetadata {
     /// # Example
     /// ```
     /// use fhedb_core::prelude::DbMetadata;
-    /// let db = DbMetadata::from(&[0, 0, 0, 0]);
+    /// let bytes: [u8; 4] = [0, 0, 0, 0];
+    /// let db = DbMetadata::try_from(&bytes[..]);
     /// assert_eq!(db.is_err(), true);
     /// ```
-    pub fn from(file_contents: &[u8]) -> Result<Self, bson::de::Error> {
+    fn try_from(file_contents: &[u8]) -> Result<Self, Self::Error> {
         bson::from_slice(file_contents)
     }
+}
+
+/// Implementations of the TryInto trait for the DbMetadata struct.
+/// This allows the DbMetadata struct to be converted to a byte vector.
+impl TryInto<Vec<u8>> for &DbMetadata {
+    /// The error type for the TryInto trait.
+    /// Just forwards the bson error type.
+    type Error = bson::ser::Error;
 
     /// Convert the DbMetadata struct to a byte vector.
     ///
     /// # Returns
-    /// A byte vector of the DbMetadata struct.
+    /// A byte vector representation of the DbMetadata struct.
     ///
     /// # Example
     /// ```
     /// use fhedb_core::prelude::DbMetadata;
-    /// let db = DbMetadata::new("test".to_owned());
-    /// let bytes = db.to_bytes();
-    /// assert_eq!(bytes.len(), 131);
+    /// let db = &DbMetadata::new("test".to_owned());
+    /// let bytes: Vec<u8> = db.try_into().unwrap();
+    /// assert_eq!(bytes.len(), 117);
     /// ```
-    pub fn to_bytes(&self) -> Vec<u8> {
-        bson::to_vec(self).unwrap()
+    fn try_into(self) -> Result<Vec<u8>, Self::Error> {
+        bson::to_vec(self)
     }
 }

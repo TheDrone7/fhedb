@@ -96,7 +96,7 @@ impl MetadataFileIO for DbMetadata {
 
             let size = u32::from_le_bytes([db[0], db[1], db[2], db[3]]) as usize;
 
-            let db = Self::from(&db[0..size]);
+            let db = Self::try_from(&db[0..size]);
             if let Ok(db) = db {
                 Ok(db)
             } else {
@@ -198,7 +198,8 @@ impl MetadataFileIO for DbMetadata {
         file.read_to_end(&mut remaining)
             .map_err(|_| Error::new("Could not read file", path.to_str().unwrap_or("")))?;
 
-        let dbm = self.to_bytes();
+        let dbm: Vec<u8> = self.try_into()
+            .map_err(|_| Error::new("Could not serialize database", ""))?;
 
         file.seek(std::io::SeekFrom::Start(0))
             .map_err(|_| Error::new("Could not seek file", path.to_str().unwrap_or("")))?;
