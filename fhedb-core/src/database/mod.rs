@@ -9,7 +9,7 @@ pub struct Database {
 impl Database {
     pub fn new(path: String) -> Self {
         let path = std::path::Path::new(&path);
-        let filename = path.file_name().unwrap().to_str().unwrap();
+        let filename = path.file_stem().unwrap().to_str().unwrap();
 
         let metadata = DbMetadata::new(filename.to_owned());
         let path = path.to_str().unwrap().to_owned();
