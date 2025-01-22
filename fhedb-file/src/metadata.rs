@@ -13,7 +13,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use crate::error::{FheDbFileError as Error, Result};
-use fhedb_core::prelude::{bson, DbMetadata};
+use fhedb_core::prelude::DbMetadata;
 
 /// The trait that defines the file operations for the database metadata.
 pub trait MetadataFileIO {
@@ -94,9 +94,9 @@ impl MetadataFileIO for DbMetadata {
                 return Err(Error::new("File is empty", path.to_str().unwrap_or("")));
             }
 
-            let size = u32::from_le_bytes([db[0], db[1], db[2], db[3]]) as usize;
+            let size = u32::from_le_bytes([db[0], db[1], db[2], db[3]]) as usize; 
 
-            let db = Self::try_from(&db[0..size]);
+            let db = Self::try_from((&db[0..size], path.file_stem().unwrap().to_str().unwrap()));
             if let Ok(db) = db {
                 Ok(db)
             } else {
@@ -141,12 +141,10 @@ impl MetadataFileIO for DbMetadata {
         let path = std::path::Path::new(path);
         let mut file = File::create(path)
             .map_err(|_| Error::new("Could not create file", path.to_str().unwrap_or("")))?;
-        if let Ok(db) = bson::to_vec(self) {
-            file.write_all(&db)
-                .map_err(|_| Error::new("Could not write to file", path.to_str().unwrap_or("")))
-        } else {
-            Err(Error::new("Could not serialize database", ""))
-        }
+        let db: Vec<u8> = self.try_into()
+            .map_err(|_| Error::new("Could not serialize database", ""))?;
+        file.write_all(&db)
+            .map_err(|_| Error::new("Could not write to file", path.to_str().unwrap_or("")))
     }
 
     /// Update a file, replacing appropriate contents with current metadata.
