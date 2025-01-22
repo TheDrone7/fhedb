@@ -10,19 +10,19 @@ fn update_db_metadata_in_file() {
     use fhedb_file::prelude::*;
 
     let mut db = DbMetadata::read_file(path).unwrap();
-    assert_eq!(db.name, "test");
-
-    // Extend the contents
-    db.name = "test_update".to_owned();
-    db.update_file(path).unwrap();
-    let mut db = DbMetadata::read_file(path).unwrap();
     assert_eq!(db.name, "test_update");
 
+    // Extend the contents
+    db.version = "longer_version".to_owned();
+    db.update_file(path).unwrap();
+    let mut db = DbMetadata::read_file(path).unwrap();
+    assert_eq!(db.version, "longer_version");
+
     // Shorten the contents
-    db.name = "te".to_owned();
+    db.version = "sv".to_owned();
     db.update_file(path).unwrap();
     let db = DbMetadata::read_file(path).unwrap();
-    assert_eq!(db.name, "te");
+    assert_eq!(db.version, "sv");
 
     teardown(path);
 }

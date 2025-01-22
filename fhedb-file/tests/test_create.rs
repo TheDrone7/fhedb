@@ -10,11 +10,11 @@ fn create_db_in_file() {
     use fhedb_file::prelude::*;
 
     // Make sure it overwrites the existing file
-    let db = DbMetadata::new("test_cr".to_owned());
+    let db = DbMetadata::new("test_create".to_owned());
     db.create_file(path).unwrap();
 
     let db = DbMetadata::read_file(path).unwrap();
-    assert_eq!(db.name, "test_cr");
+    assert_eq!(db.name, "test_create");
 
     teardown(path);
 }
