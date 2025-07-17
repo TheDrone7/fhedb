@@ -3,25 +3,46 @@ use bson::Document;
 use std::collections::HashMap;
 use uuid::Uuid;
 
+/// Represents the type of a field in a document schema.
+///
+/// This enum is used to specify the allowed types for fields in a document.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FieldType {
+    /// A 64-bit integer value.
     Int,
+    /// A 64-bit floating point value.
     Float,
+    /// A boolean value (true or false).
     Boolean,
+    /// A UTF-8 encoded string value.
     String,
+    /// An array of elements, all of the specified type.
     Array(Box<FieldType>),
-    Reference(String), // Name of the collection it refers to
-    Id,                // Auto-generated UUID
+    /// A reference to another collection, identified by its name.
+    Reference(String),
+    /// A universally unique identifier (UUID).
+    Id,
 }
 
+/// Describes the schema for a document.
+///
+/// The schema maps field names to their expected types.
 #[derive(Debug, Clone)]
 pub struct Schema {
+    /// A map from field names to their corresponding types.
     pub fields: HashMap<String, FieldType>,
 }
 
 impl Schema {
-    /// Validates a BSON document against the schema.
-    /// Returns Ok(()) if valid, or Err(Vec<String>) with error messages.
+    /// Validates a BSON document against this schema.
+    ///
+    /// ## Arguments
+    ///
+    /// * `doc` - A reference to the [BSON document](bson::Document) to validate.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [Ok(())](Result::Ok) if the document matches the schema. Returns [`Err`]\([`Vec<String>`]) containing error messages for each field that does not conform to the schema.
     pub fn validate_document(&self, doc: &Document) -> Result<(), Vec<String>> {
         let mut errors = Vec::new();
         for (field, field_type) in &self.fields {
@@ -44,6 +65,16 @@ impl Schema {
     }
 }
 
+/// Checks whether a BSON value matches the expected field type.
+///
+/// ## Arguments
+///
+/// * `value` - The [BSON value](bson::Bson) to check.
+/// * `field_type` - The expected [type](FieldType) of the value.
+///
+/// ## Returns
+///
+/// Returns [Ok(())](Result::Ok) if the value matches the expected type. Returns [`Err`]\([`String`]) with a description of the mismatch otherwise.
 fn validate_bson_type(value: &Bson, field_type: &FieldType) -> Result<(), String> {
     match field_type {
         FieldType::Int => match value {
@@ -74,7 +105,7 @@ fn validate_bson_type(value: &Bson, field_type: &FieldType) -> Result<(), String
             _ => Err("Expected array".to_string()),
         },
         FieldType::Reference(_) => match value {
-            Bson::String(_) => Ok(()), // Could add more checks if needed
+            Bson::String(_) => Ok(()),
             _ => Err("Expected reference (string)".to_string()),
         },
         FieldType::Id => match value {
