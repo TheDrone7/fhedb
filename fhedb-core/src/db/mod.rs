@@ -12,3 +12,6 @@ pub mod collection;
 
 /// The schema module - contains the [`Schema`] struct.
 pub mod schema;
+
+/// The document module - contains the [`Document`] struct.
+pub mod document;
