@@ -4,6 +4,10 @@
 //!
 //! ## Modules
 //!
-//! - [`logfile`]: Contains logfile operations for collections.
+//! - [`collection`]: Contains file operations for collections.
 
-pub mod logfile;
+/// The collection module - contains the file operations for collections.
+pub mod collection;
+
+/// The types module - contains the types for the file operations.
+pub mod types;

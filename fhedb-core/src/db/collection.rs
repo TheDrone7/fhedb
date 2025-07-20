@@ -1,6 +1,7 @@
 use crate::db::document::{DocId, Document};
 use crate::db::schema::{IdType, Schema};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use uuid::Uuid;
 
 /// Describes a collection of documents in the database.
@@ -11,7 +12,7 @@ pub struct Collection {
     /// The name of the collection.
     pub name: String,
     /// The schema describing the structure of documents in this collection.
-    schema: Schema,
+    pub(crate) schema: Schema,
     /// The in-memory storage of documents in this collection, keyed by document ID.
     documents: HashMap<DocId, Document>,
     /// The name of the field in the schema with type Id, or "id" if not present in the schema.
@@ -19,7 +20,9 @@ pub struct Collection {
     /// The type of ID used in this collection (string or integer).
     id_type: IdType,
     /// Counter for generating sequential u64 IDs. Starts at 0 and increments on each insert.
-    inserts: u64,
+    pub(crate) inserts: u64,
+    /// The base path for the collection.
+    pub(crate) base_path: PathBuf,
 }
 
 impl Collection {
@@ -33,16 +36,24 @@ impl Collection {
     /// ## Returns
     ///
     /// Returns [`Ok`]\([`Collection`]) if collection was created successfully, or [`Err`]\([`String`]) otherwise.
-    pub fn new(name: impl Into<String>, mut schema: Schema) -> Result<Self, String> {
+    pub fn new(
+        name: impl Into<String>,
+        mut schema: Schema,
+        base_path: impl Into<PathBuf>,
+    ) -> Result<Self, String> {
         let (id_field, id_type) = schema.ensure_id()?;
+        let name = name.into();
+        let temp_path = base_path.into();
+        let base_path = temp_path.join(name.clone());
 
         Ok(Self {
-            name: name.into(),
+            name,
             schema,
             documents: HashMap::new(),
             id_field,
             id_type,
             inserts: 0,
+            base_path,
         })
     }
 

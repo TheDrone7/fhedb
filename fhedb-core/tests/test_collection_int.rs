@@ -1,6 +1,7 @@
 use bson::doc;
 use fhedb_core::prelude::*;
 use std::collections::HashMap;
+use tempfile::tempdir;
 
 fn make_test_schema() -> Schema {
     let mut fields = HashMap::new();
@@ -13,7 +14,8 @@ fn make_test_schema() -> Schema {
 #[test]
 fn test_get_documents_with_data() {
     let schema = make_test_schema();
-    let mut collection = Collection::new("users", schema).unwrap();
+    let temp_dir = tempdir().unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
     // Add some documents
     let doc1 = doc! {
@@ -45,7 +47,8 @@ fn test_get_documents_with_data() {
 #[test]
 fn test_add_document_without_id_field() {
     let schema = make_test_schema();
-    let mut collection = Collection::new("users", schema).unwrap();
+    let temp_dir = tempdir().unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
     // Add a document without an id field
     let doc = doc! {
@@ -77,7 +80,8 @@ fn test_add_document_without_id_field() {
 #[test]
 fn test_add_document_with_custom_integer_id() {
     let schema = make_test_schema();
-    let mut collection = Collection::new("users", schema).unwrap();
+    let temp_dir = tempdir().unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
     // Add a document with a custom integer ID
     let doc = doc! {
@@ -97,7 +101,8 @@ fn test_add_document_with_custom_integer_id() {
 #[test]
 fn test_add_document_with_string_id_should_fail() {
     let schema = make_test_schema();
-    let mut collection = Collection::new("users", schema).unwrap();
+    let temp_dir = tempdir().unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
     // Try to add a document with a string ID to an integer ID collection
     let doc = doc! {
@@ -119,7 +124,8 @@ fn test_add_document_with_string_id_should_fail() {
 #[test]
 fn test_sequential_id_generation() {
     let schema = make_test_schema();
-    let mut collection = Collection::new("users", schema).unwrap();
+    let temp_dir = tempdir().unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
     // Add documents without IDs to test sequential generation
     let doc1 = doc! { "name": "Alice", "age": 30i64 };

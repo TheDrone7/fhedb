@@ -1,6 +1,7 @@
 use bson::doc;
 use fhedb_core::prelude::*;
 use std::collections::HashMap;
+use tempfile::tempdir;
 use uuid::Uuid;
 
 fn make_test_schema() -> Schema {
@@ -14,7 +15,8 @@ fn make_test_schema() -> Schema {
 #[test]
 fn test_get_documents_with_data() {
     let schema = make_test_schema();
-    let mut collection = Collection::new("users", schema).unwrap();
+    let temp_dir = tempdir().unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
     let uuid1 = Uuid::new_v4().to_string();
     let uuid2 = Uuid::new_v4().to_string();
@@ -49,7 +51,8 @@ fn test_get_documents_with_data() {
 #[test]
 fn test_add_document_without_id_field() {
     let schema = make_test_schema();
-    let mut collection = Collection::new("users", schema).unwrap();
+    let temp_dir = tempdir().unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
     // Add a document without an id field
     let doc = doc! {
@@ -82,7 +85,8 @@ fn test_add_document_without_id_field() {
 #[test]
 fn test_add_document_with_custom_string_id() {
     let schema = make_test_schema();
-    let mut collection = Collection::new("users", schema).unwrap();
+    let temp_dir = tempdir().unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
     // Add a document with a custom string ID (not UUID)
     let doc = doc! {
@@ -102,7 +106,8 @@ fn test_add_document_with_custom_string_id() {
 #[test]
 fn test_add_document_with_integer_id_should_fail() {
     let schema = make_test_schema();
-    let mut collection = Collection::new("users", schema).unwrap();
+    let temp_dir = tempdir().unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
     // Try to add a document with an integer ID to a string ID collection
     let doc = doc! {

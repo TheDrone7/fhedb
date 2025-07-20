@@ -46,6 +46,17 @@ pub struct Schema {
 }
 
 impl Schema {
+    /// Creates a new empty schema.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`Schema`] with no fields defined.
+    pub fn new() -> Self {
+        Self {
+            fields: HashMap::new(),
+        }
+    }
+
     /// Validates a BSON document against this schema.
     ///
     /// ## Arguments
@@ -111,6 +122,129 @@ impl Schema {
             _ => {
                 Err("Schema must contain at most one field with type IdString or IdInt".to_string())
             }
+        }
+    }
+}
+
+impl From<Document> for Schema {
+    /// Creates a [`Schema`] from a BSON document.
+    ///
+    /// The BSON document should directly contain field names as keys
+    /// and field type representations as values.
+    ///
+    /// ## Arguments
+    ///
+    /// * `doc` - The BSON document to convert from.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`Schema`] with the parsed fields.
+    fn from(doc: Document) -> Self {
+        let mut schema = Schema::new();
+
+        for (field_name, field_type_value) in doc {
+            if let Some(field_type) = parse_field_type(&field_type_value) {
+                schema.fields.insert(field_name, field_type);
+            }
+        }
+
+        schema
+    }
+}
+
+impl From<Schema> for Document {
+    /// Converts a [`Schema`] to a BSON document.
+    ///
+    /// ## Arguments
+    ///
+    /// * `schema` - The schema to convert.
+    ///
+    /// ## Returns
+    ///
+    /// A BSON document representing the schema.
+    fn from(schema: Schema) -> Self {
+        let mut doc = Document::new();
+
+        for (field_name, field_type) in schema.fields {
+            doc.insert(field_name, field_type_to_bson(field_type));
+        }
+
+        doc
+    }
+}
+
+/// Parses a BSON value into a [`FieldType`].
+///
+/// ## Arguments
+///
+/// * `value` - The BSON value to parse.
+///
+/// ## Returns
+///
+/// Returns [`Some`]\([`FieldType`]) if the value represents a valid field type,
+/// or [`None`] if the value is not recognized.
+fn parse_field_type(value: &Bson) -> Option<FieldType> {
+    match value {
+        Bson::String(s) => match s.as_str() {
+            "int" => Some(FieldType::Int),
+            "float" => Some(FieldType::Float),
+            "boolean" => Some(FieldType::Boolean),
+            "string" => Some(FieldType::String),
+            "id_string" => Some(FieldType::IdString),
+            "id_int" => Some(FieldType::IdInt),
+            _ => None,
+        },
+        Bson::Document(doc) => {
+            // Handle array types: { "array": "int" }
+            if let Some(Bson::String(inner_type)) = doc.get("array") {
+                let inner_field_type = match inner_type.as_str() {
+                    "int" => FieldType::Int,
+                    "float" => FieldType::Float,
+                    "boolean" => FieldType::Boolean,
+                    "string" => FieldType::String,
+                    "id_string" => FieldType::IdString,
+                    "id_int" => FieldType::IdInt,
+                    _ => return None,
+                };
+                Some(FieldType::Array(Box::new(inner_field_type)))
+            }
+            // Handle reference types: { "reference": "collection_name" }
+            else if let Some(Bson::String(collection_name)) = doc.get("reference") {
+                Some(FieldType::Reference(collection_name.clone()))
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Converts a [`FieldType`] to a BSON value.
+///
+/// ## Arguments
+///
+/// * `field_type` - The field type to convert.
+///
+/// ## Returns
+///
+/// A BSON value representing the field type.
+fn field_type_to_bson(field_type: FieldType) -> Bson {
+    match field_type {
+        FieldType::Int => Bson::String("int".to_string()),
+        FieldType::Float => Bson::String("float".to_string()),
+        FieldType::Boolean => Bson::String("boolean".to_string()),
+        FieldType::String => Bson::String("string".to_string()),
+        FieldType::IdString => Bson::String("id_string".to_string()),
+        FieldType::IdInt => Bson::String("id_int".to_string()),
+        FieldType::Array(inner_type) => {
+            let mut doc = Document::new();
+            doc.insert("array", field_type_to_bson(*inner_type));
+            Bson::Document(doc)
+        }
+        FieldType::Reference(collection_name) => {
+            let mut doc = Document::new();
+            doc.insert("reference", Bson::String(collection_name));
+            Bson::Document(doc)
         }
     }
 }
