@@ -1,5 +1,5 @@
 use bson::{Bson, Document as BsonDocument};
-use fhedb_core::file::logfile::{FileOps, LogEntry};
+use fhedb_core::file::logfile::{FileOps, LogEntry, Operation};
 use tempfile::TempDir;
 
 #[test]
@@ -35,7 +35,7 @@ fn test_append_to_log() {
 
     // Append to log
     file_ops
-        .append_to_log("test_collection", "INSERT", &doc)
+        .append_to_log("test_collection", &Operation::Insert, &doc)
         .unwrap();
 
     // Verify the collection directory was created
@@ -70,13 +70,13 @@ fn test_read_log_entries() {
 
     // Append multiple entries to log
     file_ops
-        .append_to_log("test_collection", "INSERT", &doc1)
+        .append_to_log("test_collection", &Operation::Insert, &doc1)
         .unwrap();
     file_ops
-        .append_to_log("test_collection", "INSERT", &doc2)
+        .append_to_log("test_collection", &Operation::Insert, &doc2)
         .unwrap();
     file_ops
-        .append_to_log("test_collection", "DELETE", &doc1)
+        .append_to_log("test_collection", &Operation::Delete, &doc1)
         .unwrap();
 
     // Read back the log entries
@@ -87,20 +87,20 @@ fn test_read_log_entries() {
 
     // Verify the first entry
     let first_entry = &entries[0];
-    assert_eq!(first_entry.operation, "INSERT");
+    assert_eq!(first_entry.operation, Operation::Insert);
     assert_eq!(first_entry.document.get_str("name").unwrap(), "Alice");
     assert_eq!(first_entry.document.get_i32("age").unwrap(), 25);
     assert!(!first_entry.timestamp.is_empty());
 
     // Verify the second entry
     let second_entry = &entries[1];
-    assert_eq!(second_entry.operation, "INSERT");
+    assert_eq!(second_entry.operation, Operation::Insert);
     assert_eq!(second_entry.document.get_str("name").unwrap(), "Bob");
     assert_eq!(second_entry.document.get_i32("age").unwrap(), 30);
 
     // Verify the third entry
     let third_entry = &entries[2];
-    assert_eq!(third_entry.operation, "DELETE");
+    assert_eq!(third_entry.operation, Operation::Delete);
     assert_eq!(third_entry.document.get_str("name").unwrap(), "Alice");
 }
 
@@ -121,9 +121,9 @@ fn test_log_entry_creation() {
     let mut doc = BsonDocument::new();
     doc.insert("name", Bson::String("Test".to_string()));
 
-    let log_entry = LogEntry::new("INSERT".to_string(), doc.clone());
+    let log_entry = LogEntry::new(Operation::Insert, doc.clone());
 
-    assert_eq!(log_entry.operation, "INSERT");
+    assert_eq!(log_entry.operation, Operation::Insert);
     assert_eq!(log_entry.document.get_str("name").unwrap(), "Test");
     assert!(!log_entry.timestamp.is_empty());
 
@@ -148,10 +148,10 @@ fn test_multiple_collections() {
 
     // Write to different collections
     file_ops
-        .append_to_log("users", "INSERT", &user_doc)
+        .append_to_log("users", &Operation::Insert, &user_doc)
         .unwrap();
     file_ops
-        .append_to_log("products", "INSERT", &product_doc)
+        .append_to_log("products", &Operation::Insert, &product_doc)
         .unwrap();
 
     // Verify separate directories were created
@@ -205,7 +205,7 @@ fn test_complex_document_logging() {
 
     // Write to log
     file_ops
-        .append_to_log("complex_collection", "INSERT", &complex_doc)
+        .append_to_log("complex_collection", &Operation::Insert, &complex_doc)
         .unwrap();
 
     // Read back

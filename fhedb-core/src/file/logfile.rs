@@ -3,6 +3,50 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
+/// Represents a database operation type.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Operation {
+    /// Insert a new document.
+    Insert,
+    /// Delete an existing document.
+    Delete,
+    /// Update an existing document.
+    Update,
+}
+
+impl Operation {
+    /// Converts the operation to its string representation.
+    ///
+    /// ## Returns
+    ///
+    /// A string representation of the operation.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Operation::Insert => "INSERT",
+            Operation::Delete => "DELETE",
+            Operation::Update => "UPDATE",
+        }
+    }
+
+    /// Converts a string to an operation.
+    ///
+    /// ## Arguments
+    ///
+    /// * `s` - The string to convert.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Some`]\([`Operation`]) if the string is valid, or [`None`] if not recognized.
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "INSERT" => Some(Operation::Insert),
+            "DELETE" => Some(Operation::Delete),
+            "UPDATE" => Some(Operation::Update),
+            _ => None,
+        }
+    }
+}
+
 /// File operations for maintaining collections in the database.
 ///
 /// This module provides functionality for creating collection directories
@@ -78,7 +122,7 @@ impl FileOps {
     /// ## Arguments
     ///
     /// * `collection_name` - The name of the collection.
-    /// * `operation` - The operation to log (e.g., "INSERT", "DELETE").
+    /// * `operation` - The operation to log.
     /// * `document` - The BSON document to log.
     ///
     /// ## Returns
@@ -88,7 +132,7 @@ impl FileOps {
     pub fn append_to_log(
         &self,
         collection_name: &str,
-        operation: &str,
+        operation: &Operation,
         document: &BsonDocument,
     ) -> io::Result<()> {
         // Ensure the collection directory exists
@@ -106,7 +150,7 @@ impl FileOps {
         let timestamp = chrono::Utc::now().to_rfc3339();
         let mut log_entry = BsonDocument::new();
         log_entry.insert("timestamp", Bson::String(timestamp));
-        log_entry.insert("operation", Bson::String(operation.to_string()));
+        log_entry.insert("operation", Bson::String(operation.as_str().to_string()));
         log_entry.insert("document", Bson::Document(document.clone()));
 
         // Serialize to BSON and write to file
@@ -166,10 +210,8 @@ impl FileOps {
                         .get_str("timestamp")
                         .unwrap_or("unknown")
                         .to_string();
-                    let operation = log_doc
-                        .get_str("operation")
-                        .unwrap_or("unknown")
-                        .to_string();
+                    let operation_str = log_doc.get_str("operation").unwrap_or("unknown");
+                    let operation = Operation::from_str(operation_str).unwrap_or(Operation::Insert); // Default to Insert if unknown
                     let document = log_doc
                         .get_document("document")
                         .cloned()
@@ -210,8 +252,8 @@ impl FileOps {
 pub struct LogEntry {
     /// The timestamp when the operation occurred.
     pub timestamp: String,
-    /// The type of operation (e.g., "INSERT", "DELETE").
-    pub operation: String,
+    /// The type of operation.
+    pub operation: Operation,
     /// The BSON document associated with the operation.
     pub document: BsonDocument,
 }
@@ -227,7 +269,7 @@ impl LogEntry {
     /// ## Returns
     ///
     /// A new [`LogEntry`] with the current timestamp.
-    pub fn new(operation: String, document: BsonDocument) -> Self {
+    pub fn new(operation: Operation, document: BsonDocument) -> Self {
         Self {
             timestamp: chrono::Utc::now().to_rfc3339(),
             operation,
