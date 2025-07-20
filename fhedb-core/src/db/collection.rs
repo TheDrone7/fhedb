@@ -211,6 +211,63 @@ impl Collection {
         }
     }
 
+    /// Updates a document in the collection by its ID.
+    ///
+    /// This method updates an existing document with the provided fields.
+    /// Only the fields present in the update document will be modified.
+    ///
+    /// ## Arguments
+    ///
+    /// * `id` - The [`DocId`] of the document to update.
+    /// * `update_doc` - A [`bson::Document`] containing the fields to update.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`Document`]) with the updated document if successful,
+    /// or [`Err`]\([`Vec<String>`]) with validation or other errors.
+    pub fn update_document(
+        &mut self,
+        id: DocId,
+        update_doc: bson::Document,
+    ) -> Result<Document, Vec<String>> {
+        if update_doc.contains_key(&self.id_field) {
+            return Err(vec![format!("Cannot update ID field '{}'", self.id_field)]);
+        }
+
+        let offset = match self.document_indices.get(&id) {
+            Some(&offset) => offset,
+            None => return Err(vec![format!("Document with ID {:?} not found", id)]),
+        };
+
+        let current_log_entry = match self.read_log_entry_at_offset(offset) {
+            Ok(entry) => entry,
+            Err(e) => return Err(vec![format!("Failed to read document: {}", e)]),
+        };
+
+        let mut updated_doc = current_log_entry.document.clone();
+
+        for (key, value) in update_doc {
+            updated_doc.insert(key, value);
+        }
+
+        if let Err(validation_errors) = self.validate_document(&updated_doc) {
+            return Err(validation_errors);
+        }
+
+        match self.append_to_log(&Operation::Update, &updated_doc) {
+            Ok(new_offset) => {
+                self.document_indices.insert(id.clone(), new_offset);
+                Ok(Document::new(id, updated_doc))
+            }
+            Err(e) => {
+                return Err(vec![format!(
+                    "Failed to write updated document to log: {}",
+                    e
+                )]);
+            }
+        }
+    }
+
     /// Removes a document from the collection by its ID.
     ///
     /// ## Arguments

@@ -24,7 +24,7 @@ The "fancy" part of this **_(planned)_** would be that the DBMS applies FHE (Ful
 - [x] Collection (metadata) management
 - [x] Document creation
 - [x] Indexing
-- [ ] CRUD operations (other than create)
+- [x] CRUD operations (other than create)
 - [ ] Database metadata management
 - [ ] Server for accessing the database
 - [ ] Querying (basic, fields other than ID)

@@ -310,3 +310,104 @@ fn test_read_log_entry_at_offset() {
     let invalid_offset_result = collection.read_log_entry_at_offset(99999);
     assert!(invalid_offset_result.is_err());
 }
+
+#[test]
+fn test_update_document_logs_correctly() {
+    let schema = make_test_schema();
+    let temp_dir = tempdir().unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
+
+    // Add a document first
+    let original_doc = doc! {
+        "id": 1i64,
+        "name": "Alice",
+        "age": 30i64,
+        "salary": 75000.0,
+        "active": true
+    };
+    let doc_id = collection.add_document(original_doc.clone()).unwrap();
+
+    // Update the document
+    let update_doc = doc! {
+        "name": "Alice Updated",
+        "salary": 80000.0
+    };
+    let result = collection.update_document(doc_id.clone(), update_doc);
+    assert!(result.is_ok());
+
+    // Read all log entries to verify the update was logged correctly
+    let log_entries = collection.read_log_entries().unwrap();
+    assert_eq!(log_entries.len(), 2); // Insert + Update
+
+    // Check the insert entry
+    let (insert_entry, _) = &log_entries[0];
+    assert_eq!(insert_entry.operation, Operation::Insert);
+    assert_eq!(insert_entry.document.get_str("name").unwrap(), "Alice");
+
+    // Check the update entry
+    let (update_entry, _) = &log_entries[1];
+    assert_eq!(update_entry.operation, Operation::Update);
+    assert_eq!(update_entry.document.get_str("name").unwrap(), "Alice Updated");
+    assert_eq!(update_entry.document.get_f64("salary").unwrap(), 80000.0);
+    // Verify unchanged fields are preserved
+    assert_eq!(update_entry.document.get_i64("age").unwrap(), 30);
+    assert_eq!(update_entry.document.get_bool("active").unwrap(), true);
+
+    // Verify that retrieving the document returns the updated version
+    let retrieved_doc = collection.get_document(doc_id).unwrap();
+    assert_eq!(retrieved_doc.data.get_str("name").unwrap(), "Alice Updated");
+    assert_eq!(retrieved_doc.data.get_f64("salary").unwrap(), 80000.0);
+    assert_eq!(retrieved_doc.data.get_i64("age").unwrap(), 30);
+    assert_eq!(retrieved_doc.data.get_bool("active").unwrap(), true);
+}
+
+#[test]
+fn test_collection_from_files_handles_update_operations() {
+    let schema = make_test_schema();
+    let temp_dir = tempdir().unwrap();
+    
+    // Create a collection and add some documents with updates
+    {
+        let mut collection = Collection::new("test_updates", schema.clone(), temp_dir.path()).unwrap();
+        
+        // Add a document
+        let doc = doc! {
+            "id": 1i64,
+            "name": "Bob",
+            "age": 25i64,
+            "salary": 60000.0,
+            "active": true
+        };
+        let doc_id = collection.add_document(doc).unwrap();
+        
+        // Update it multiple times
+        let update1 = doc! {
+            "name": "Bob Smith"
+        };
+        collection.update_document(doc_id.clone(), update1).unwrap();
+        
+        let update2 = doc! {
+            "salary": 65000.0,
+            "active": false
+        };
+        collection.update_document(doc_id, update2).unwrap();
+        
+        // Force metadata write
+        collection.write_metadata().unwrap();
+    }
+    
+    // Load the collection from files
+    let loaded_collection = Collection::from_files(temp_dir.path(), "test_updates").unwrap();
+    
+    // Verify the final state is correct
+    let doc_id = DocId::from_u64(1);
+    let retrieved_doc = loaded_collection.get_document(doc_id).unwrap();
+    assert_eq!(retrieved_doc.data.get_str("name").unwrap(), "Bob Smith");
+    assert_eq!(retrieved_doc.data.get_i64("age").unwrap(), 25);
+    assert_eq!(retrieved_doc.data.get_f64("salary").unwrap(), 65000.0);
+    assert_eq!(retrieved_doc.data.get_bool("active").unwrap(), false);
+    
+    // Verify the document count is correct (should be 1, not 3)
+    let all_docs = loaded_collection.get_documents();
+    assert_eq!(all_docs.len(), 1);
+}
