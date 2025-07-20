@@ -13,8 +13,8 @@ pub struct Collection {
     pub name: String,
     /// The schema describing the structure of documents in this collection.
     pub(crate) schema: Schema,
-    /// The in-memory storage of documents in this collection, keyed by document ID.
-    documents: HashMap<DocId, Document>,
+    /// The in-memory storage of document indices, mapping document IDs to log file offsets.
+    document_indices: HashMap<DocId, usize>,
     /// The name of the field in the schema with type Id, or "id" if not present in the schema.
     pub(crate) id_field: String,
     /// The type of ID used in this collection (string or integer).
@@ -49,7 +49,7 @@ impl Collection {
         Ok(Self {
             name,
             schema,
-            documents: HashMap::new(),
+            document_indices: HashMap::new(),
             id_field,
             id_type,
             inserts: 0,
@@ -101,18 +101,9 @@ impl Collection {
         let doc_id = match doc.get(id_field) {
             Some(value) => {
                 match (&self.id_type, value) {
-                    (IdType::String, bson::Bson::String(s)) => {
-                        // Use the string as-is (could be UUID or arbitrary string)
-                        DocId::from_string(s.clone())
-                    }
+                    (IdType::String, bson::Bson::String(s)) => DocId::from_string(s.clone()),
                     (IdType::Int, bson::Bson::Int32(i)) => DocId::from_u64(*i as u64),
                     (IdType::Int, bson::Bson::Int64(i)) => DocId::from_u64(*i as u64),
-                    (IdType::String, bson::Bson::Int32(_) | bson::Bson::Int64(_)) => {
-                        return Err(vec![format!("'{}' field must be a string", id_field)]);
-                    }
-                    (IdType::Int, bson::Bson::String(_)) => {
-                        return Err(vec![format!("'{}' field must be an integer", id_field)]);
-                    }
                     _ => {
                         // Invalid ID type, generate new one
                         let new_id = self.generate_id();
@@ -128,8 +119,8 @@ impl Collection {
                 new_id
             }
         };
-        let db_doc = Document::new(doc_id.clone(), doc);
-        self.documents.insert(doc_id.clone(), db_doc);
+        let _db_doc = Document::new(doc_id.clone(), doc);
+        // self.documents.insert(doc_id.clone(), db_doc);
         self.inserts += 1;
         Ok(doc_id)
     }
@@ -158,8 +149,15 @@ impl Collection {
     /// ## Returns
     ///
     /// Returns [`Some`]\([`Document`]) if the document was present and removed, or [`None`] if not found.
-    pub fn remove_document(&mut self, id: DocId) -> Option<Document> {
-        self.documents.remove(&id)
+    pub fn remove_document(&mut self, _id: DocId) -> Option<Document> {
+        // TODO: Implement log-based document removal
+        // This should:
+        // 1. Check if document exists in document_indices
+        // 2. Read document from log file using the offset
+        // 3. Mark document as deleted in log
+        // 4. Remove from document_indices
+        // 5. Return the document if found
+        unimplemented!("remove_document will be implemented with log-based storage")
     }
 
     /// Retrieves a reference to a document by its ID.
@@ -171,8 +169,13 @@ impl Collection {
     /// ## Returns
     ///
     /// Returns [`Some`]\(&[`Document`]) if found, or [`None`] if not present.
-    pub fn get_document(&self, id: DocId) -> Option<&Document> {
-        self.documents.get(&id)
+    pub fn get_document(&self, _id: DocId) -> Option<&Document> {
+        // TODO: Implement log-based document retrieval
+        // This should:
+        // 1. Check if document exists in document_indices
+        // 2. Read document from log file using the offset
+        // 3. Return reference to the document if found
+        unimplemented!("get_document will be implemented with log-based storage")
     }
 
     /// Retrieves all documents in the collection.
@@ -181,7 +184,12 @@ impl Collection {
     ///
     /// Returns a [`Vec`] containing references to all [`Document`]s in the collection.
     pub fn get_documents(&self) -> Vec<&Document> {
-        self.documents.values().collect()
+        // TODO: Implement log-based document retrieval for all documents
+        // This should:
+        // 1. Iterate through all offsets in document_indices
+        // 2. Read each document from log file
+        // 3. Return references to all documents
+        unimplemented!("get_documents will be implemented with log-based storage")
     }
 
     /// Gets the schema of this collection.
@@ -218,5 +226,14 @@ impl Collection {
     /// The name of the ID field as a [`String`].
     pub fn id_field_name(&self) -> &str {
         &self.id_field
+    }
+
+    /// Gets the document indices map containing DocId to log offset mappings.
+    ///
+    /// ## Returns
+    ///
+    /// A reference to the document indices [`HashMap`].
+    pub fn document_indices(&self) -> &HashMap<DocId, usize> {
+        &self.document_indices
     }
 }
