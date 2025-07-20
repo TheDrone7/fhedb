@@ -202,7 +202,7 @@ fn test_update_document_nonexistent() {
         "name": "Alice"
     };
     let result = collection.update_document(non_existent_id, update_doc);
-    
+
     assert!(result.is_err());
     let errors = result.unwrap_err();
     assert!(errors.iter().any(|e| e.contains("Document with ID")));
@@ -231,7 +231,7 @@ fn test_update_document_cannot_update_id() {
         "name": "Alice Updated"
     };
     let result = collection.update_document(doc_id, update_doc);
-    
+
     assert!(result.is_err());
     let errors = result.unwrap_err();
     assert!(errors.iter().any(|e| e.contains("Cannot update ID field")));
@@ -258,7 +258,7 @@ fn test_update_document_schema_validation() {
         "age": "thirty"
     };
     let result = collection.update_document(doc_id, update_doc);
-    
+
     assert!(result.is_err());
     let errors = result.unwrap_err();
     assert!(errors.iter().any(|e| e.contains("Field 'age'")));
