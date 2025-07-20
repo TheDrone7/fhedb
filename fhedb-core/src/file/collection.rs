@@ -80,7 +80,7 @@ pub trait CollectionFileOps {
     ///
     /// Returns [`Ok`]\([`Collection`]) if the metadata was read successfully,
     /// or [`Err`]\([`io::Error`]) if the metadata could not be read.
-    fn read_metadata(collection_dir: impl Into<PathBuf>) -> io::Result<Collection>;
+    fn read_metadata(base_path: impl Into<PathBuf>, name: &str) -> io::Result<Collection>;
 }
 
 // Implementation for Collection should be added in collection.rs:
@@ -352,9 +352,9 @@ impl CollectionFileOps for Collection {
         Ok(())
     }
 
-    fn read_metadata(collection_dir: impl Into<PathBuf>) -> io::Result<Collection> {
-        let collection_dir: PathBuf = collection_dir.into();
-        let base_path = collection_dir.parent().unwrap();
+    fn read_metadata(base_path: impl Into<PathBuf>, name: &str) -> io::Result<Collection> {
+        let base_path: PathBuf = base_path.into();
+        let collection_dir = base_path.join(name);
         let metadata_path = collection_dir.join("metadata.bin");
 
         if !metadata_path.exists() {
@@ -368,11 +368,11 @@ impl CollectionFileOps for Collection {
         let metadata: BsonDocument = bson::from_slice(&contents).map_err(|e| {
             io::Error::new(io::ErrorKind::InvalidData, format!("Invalid BSON: {}", e))
         })?;
-        let name = metadata.get_str("name").unwrap_or("unknown");
+        let stored_name = metadata.get_str("name").unwrap_or("unknown");
         let inserts = metadata.get_i64("inserts").unwrap_or(0) as u64;
         let schema = Schema::from(metadata.get_document("schema").cloned().unwrap_or_default());
 
-        let mut collection = Collection::new(name, schema, base_path).map_err(|e| {
+        let mut collection = Collection::new(stored_name, schema, &base_path).map_err(|e| {
             io::Error::new(io::ErrorKind::InvalidData, format!("Invalid schema: {}", e))
         })?;
         collection.inserts = inserts;

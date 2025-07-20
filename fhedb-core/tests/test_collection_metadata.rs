@@ -57,8 +57,11 @@ fn test_read_metadata_round_trip_string_id() {
     assert!(original_collection.write_metadata().is_ok());
 
     // Read metadata back
-    let read_collection =
-        Collection::read_metadata(original_collection.base_path().clone()).unwrap();
+    let read_collection = Collection::read_metadata(
+        original_collection.base_path().clone().parent().unwrap(),
+        &original_collection.name,
+    )
+    .unwrap();
 
     // Verify all fields match
     assert_eq!(read_collection.name, original_collection.name);
@@ -80,8 +83,11 @@ fn test_read_metadata_round_trip_int_id() {
     assert!(original_collection.write_metadata().is_ok());
 
     // Read metadata back
-    let read_collection =
-        Collection::read_metadata(original_collection.base_path().clone()).unwrap();
+    let read_collection = Collection::read_metadata(
+        original_collection.base_path().clone().parent().unwrap(),
+        &original_collection.name,
+    )
+    .unwrap();
 
     // Verify all fields match
     assert_eq!(read_collection.name, original_collection.name);
@@ -124,7 +130,11 @@ fn test_read_metadata_with_inserts() {
     assert!(collection.write_metadata().is_ok());
 
     // Read metadata back
-    let read_collection = Collection::read_metadata(collection.base_path().clone()).unwrap();
+    let read_collection = Collection::read_metadata(
+        collection.base_path().clone().parent().unwrap(),
+        &collection.name,
+    )
+    .unwrap();
 
     // Verify inserts count is preserved
     assert_eq!(read_collection.inserts(), 2);
@@ -134,10 +144,9 @@ fn test_read_metadata_with_inserts() {
 #[test]
 fn test_read_metadata_file_not_found() {
     let temp_dir = tempdir().unwrap();
-    let collection_path = temp_dir.path().join("nonexistent_collection");
 
     // Try to read metadata from non-existent collection
-    let result = Collection::read_metadata(collection_path);
+    let result = Collection::read_metadata(temp_dir.path(), "nonexistent_collection");
     assert!(result.is_err());
 
     let error = result.unwrap_err();
@@ -184,7 +193,11 @@ fn test_write_metadata_overwrites_existing() {
     assert!(collection.write_metadata().is_ok());
 
     // Read metadata back and verify it was updated
-    let read_collection = Collection::read_metadata(collection.base_path().clone()).unwrap();
+    let read_collection = Collection::read_metadata(
+        collection.base_path().clone().parent().unwrap(),
+        &collection.name,
+    )
+    .unwrap();
     assert_eq!(read_collection.inserts(), 1);
     assert_eq!(read_collection.inserts(), collection.inserts());
 }
@@ -226,7 +239,11 @@ fn test_metadata_preserves_complex_schema() {
     assert!(collection.write_metadata().is_ok());
 
     // Read metadata back
-    let read_collection = Collection::read_metadata(collection.base_path().clone()).unwrap();
+    let read_collection = Collection::read_metadata(
+        collection.base_path().clone().parent().unwrap(),
+        &collection.name,
+    )
+    .unwrap();
 
     // Verify complex schema is preserved exactly
     assert_eq!(
@@ -278,8 +295,16 @@ fn test_multiple_collections_metadata_isolation() {
     assert!(collection2.metadata_path().exists());
 
     // Read both back and verify they're different
-    let read_collection1 = Collection::read_metadata(collection1.base_path().clone()).unwrap();
-    let read_collection2 = Collection::read_metadata(collection2.base_path().clone()).unwrap();
+    let read_collection1 = Collection::read_metadata(
+        collection1.base_path().clone().parent().unwrap(),
+        &collection1.name,
+    )
+    .unwrap();
+    let read_collection2 = Collection::read_metadata(
+        collection2.base_path().clone().parent().unwrap(),
+        &collection2.name,
+    )
+    .unwrap();
 
     assert_eq!(read_collection1.name, "users");
     assert_eq!(read_collection2.name, "employees");
