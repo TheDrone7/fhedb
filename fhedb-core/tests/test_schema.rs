@@ -1,7 +1,6 @@
 use bson::doc;
-use fhedb_core::prelude::{FieldType, Schema};
+use fhedb_core::prelude::{FieldType, Schema, IdType};
 use std::collections::HashMap;
-use uuid::Uuid;
 
 fn make_schema() -> Schema {
     let mut fields = HashMap::new();
@@ -17,14 +16,13 @@ fn make_schema() -> Schema {
         "ref_field".to_string(),
         FieldType::Reference("other_collection".to_string()),
     );
-    fields.insert("id_field".to_string(), FieldType::Id);
+    fields.insert("id_field".to_string(), FieldType::IdInt);
     Schema { fields }
 }
 
 #[test]
 fn test_valid_document() {
     let schema = make_schema();
-    let uuid = Uuid::new_v4().to_string();
     let doc = doc! {
         "int_field": 69i64,
         "float_field": 3.14f64,
@@ -32,7 +30,7 @@ fn test_valid_document() {
         "string_field": "hello world",
         "array_field": [1i32, 2i32, 3i32],
         "ref_field": "other_collection_id",
-        "id_field": uuid,
+        "id_field": 42i64,
     };
     assert!(schema.validate_document(&doc).is_ok());
 }
@@ -40,7 +38,6 @@ fn test_valid_document() {
 #[test]
 fn test_missing_field() {
     let schema = make_schema();
-    let uuid = Uuid::new_v4().to_string();
     let doc = doc! {
         "int_field": 69i64,
         // missing float_field
@@ -48,7 +45,7 @@ fn test_missing_field() {
         "string_field": "hello world",
         "array_field": [1i32, 2i32, 3i32],
         "ref_field": "other_collection_id",
-        "id_field": uuid,
+        "id_field": 42i64,
     };
     let result = schema.validate_document(&doc);
     assert!(result.is_err());
@@ -63,7 +60,6 @@ fn test_missing_field() {
 #[test]
 fn test_type_mismatch() {
     let schema = make_schema();
-    let uuid = Uuid::new_v4().to_string();
     let doc = doc! {
         "int_field": "not an int",
         "float_field": 3.14f64,
@@ -71,7 +67,7 @@ fn test_type_mismatch() {
         "string_field": "hello world",
         "array_field": [1i32, 2i32, 3i32],
         "ref_field": "other_collection_id",
-        "id_field": uuid,
+        "id_field": 42i64,
     };
     let result = schema.validate_document(&doc);
     assert!(result.is_err());
@@ -86,7 +82,6 @@ fn test_type_mismatch() {
 #[test]
 fn test_array_type_mismatch() {
     let schema = make_schema();
-    let uuid = Uuid::new_v4().to_string();
     let doc = doc! {
         "int_field": 69i64,
         "float_field": 3.14f64,
@@ -94,7 +89,7 @@ fn test_array_type_mismatch() {
         "string_field": "hello world",
         "array_field": [1i32, "not an int", 3i32],
         "ref_field": "other_collection_id",
-        "id_field": uuid,
+        "id_field": 42i64,
     };
     let result = schema.validate_document(&doc);
     assert!(result.is_err());
@@ -107,7 +102,7 @@ fn test_array_type_mismatch() {
 }
 
 #[test]
-fn test_invalid_uuid() {
+fn test_invalid_id_type() {
     let schema = make_schema();
     let doc = doc! {
         "int_field": 69i64,
@@ -116,7 +111,7 @@ fn test_invalid_uuid() {
         "string_field": "hello world",
         "array_field": [1i32, 2i32, 3i32],
         "ref_field": "other_collection_id",
-        "id_field": "not-a-uuid",
+        "id_field": "not-an-integer",
     };
     let result = schema.validate_document(&doc);
     assert!(result.is_err());
@@ -124,7 +119,7 @@ fn test_invalid_uuid() {
     assert!(
         errors
             .iter()
-            .any(|e| e.contains("Expected valid UUID string"))
+            .any(|e| e.contains("Expected ID as integer"))
     );
 }
 
@@ -135,21 +130,23 @@ fn test_ensure_id_no_id_field() {
     fields.insert("age".to_string(), FieldType::Int);
     let mut schema = Schema { fields };
     
-    let id_field = schema.ensure_id().unwrap();
+    let (id_field, id_type) = schema.ensure_id().unwrap();
     assert_eq!(id_field, "id");
+    assert_eq!(id_type, IdType::Int);
     assert!(schema.fields.contains_key("id"));
-    assert_eq!(schema.fields.get("id"), Some(&FieldType::Id));
+    assert_eq!(schema.fields.get("id"), Some(&FieldType::IdInt));
 }
 
 #[test]
 fn test_ensure_id_with_existing_id_field() {
     let mut fields = HashMap::new();
-    fields.insert("custom_id".to_string(), FieldType::Id);
+    fields.insert("custom_id".to_string(), FieldType::IdString);
     fields.insert("name".to_string(), FieldType::String);
     let mut schema = Schema { fields };
     
-    let id_field = schema.ensure_id().unwrap();
+    let (id_field, id_type) = schema.ensure_id().unwrap();
     assert_eq!(id_field, "custom_id");
+    assert_eq!(id_type, IdType::String);
     assert!(schema.fields.contains_key("custom_id"));
     assert!(!schema.fields.contains_key("id")); // Should not add default "id"
 }
@@ -157,20 +154,20 @@ fn test_ensure_id_with_existing_id_field() {
 #[test]
 fn test_ensure_id_multiple_id_fields() {
     let mut fields = HashMap::new();
-    fields.insert("id1".to_string(), FieldType::Id);
-    fields.insert("id2".to_string(), FieldType::Id);
+    fields.insert("id1".to_string(), FieldType::IdString);
+    fields.insert("id2".to_string(), FieldType::IdInt);
     fields.insert("name".to_string(), FieldType::String);
     let mut schema = Schema { fields };
     
     let result = schema.ensure_id();
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("Schema must contain at most one field with type Id"));
+    assert!(result.unwrap_err().contains("Schema must contain at most one field with type IdString or IdInt"));
 }
 
 #[test]
 fn test_validate_document_missing_id_field() {
     let mut fields = HashMap::new();
-    fields.insert("id".to_string(), FieldType::Id);
+    fields.insert("id".to_string(), FieldType::IdString);
     fields.insert("name".to_string(), FieldType::String);
     fields.insert("age".to_string(), FieldType::Int);
     let schema = Schema { fields };
@@ -188,13 +185,13 @@ fn test_validate_document_missing_id_field() {
 #[test]
 fn test_validate_document_missing_other_field() {
     let mut fields = HashMap::new();
-    fields.insert("id".to_string(), FieldType::Id);
+    fields.insert("id".to_string(), FieldType::IdString);
     fields.insert("name".to_string(), FieldType::String);
     fields.insert("age".to_string(), FieldType::Int);
     let schema = Schema { fields };
     
     let doc = doc! {
-        "id": uuid::Uuid::new_v4().to_string(),
+        "id": "some-uuid-string",
         // Missing age field
         "name": "Alice"
     };
@@ -208,7 +205,7 @@ fn test_validate_document_missing_other_field() {
 #[test]
 fn test_validate_document_missing_id_and_other_field() {
     let mut fields = HashMap::new();
-    fields.insert("id".to_string(), FieldType::Id);
+    fields.insert("id".to_string(), FieldType::IdString);
     fields.insert("name".to_string(), FieldType::String);
     fields.insert("age".to_string(), FieldType::Int);
     let schema = Schema { fields };

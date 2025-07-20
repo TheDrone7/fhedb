@@ -1,6 +1,7 @@
 use crate::db::document::{DocId, Document};
-use crate::db::schema::Schema;
+use crate::db::schema::{Schema, IdType};
 use std::collections::HashMap;
+use uuid::Uuid;
 
 /// Describes a collection of documents in the database.
 ///
@@ -15,6 +16,10 @@ pub struct Collection {
     documents: HashMap<DocId, Document>,
     /// The name of the field in the schema with type Id, or "id" if not present in the schema.
     id_field: String,
+    /// The type of ID used in this collection (string or integer).
+    id_type: IdType,
+    /// Counter for generating sequential u64 IDs. Starts at 0 and increments on each insert.
+    inserts: u64,
 }
 
 impl Collection {
@@ -29,12 +34,15 @@ impl Collection {
     ///
     /// Returns [`Ok`]\([`Collection`]) if collection was created successfully, or [`Err`]\([`String`]) otherwise.
     pub fn new(name: impl Into<String>, mut schema: Schema) -> Result<Self, String> {
-        let id_field = schema.ensure_id()?;
+        let (id_field, id_type) = schema.ensure_id()?;
+        
         Ok(Self {
             name: name.into(),
             schema,
             documents: HashMap::new(),
             id_field,
+            id_type,
+            inserts: 0,
         })
     }
 
@@ -79,24 +87,55 @@ impl Collection {
         }
         // Use the id_field (from schema or default)
         let id_field = &self.id_field;
-        let doc_id = match doc.get_str(id_field) {
-            Ok(id_str) => match uuid::Uuid::parse_str(id_str) {
-                Ok(uuid) => DocId::from(uuid),
-                Err(_) => {
-                    let new_id = DocId::new();
-                    doc.insert(id_field, new_id.to_string());
-                    new_id
+        let doc_id = match doc.get(id_field) {
+            Some(value) => {
+                match (&self.id_type, value) {
+                    (IdType::String, bson::Bson::String(s)) => {
+                        // Use the string as-is (could be UUID or arbitrary string)
+                        DocId::from_string(s.clone())
+                    }
+                    (IdType::Int, bson::Bson::Int32(i)) => DocId::from_u64(*i as u64),
+                    (IdType::Int, bson::Bson::Int64(i)) => DocId::from_u64(*i as u64),
+                    (IdType::String, bson::Bson::Int32(_) | bson::Bson::Int64(_)) => {
+                        return Err(vec![format!("'{}' field must be a string", id_field)]);
+                    }
+                    (IdType::Int, bson::Bson::String(_)) => {
+                        return Err(vec![format!("'{}' field must be an integer", id_field)]);
+                    }
+                    _ => {
+                        // Invalid ID type, generate new one
+                        let new_id = self.generate_id();
+                        doc.insert(id_field, new_id.to_bson());
+                        new_id
+                    }
                 }
-            },
-            Err(_) => {
-                let new_id = DocId::new();
-                doc.insert(id_field, new_id.to_string());
+            }
+            None => {
+                // No ID provided, generate new one
+                let new_id = self.generate_id();
+                doc.insert(id_field, new_id.to_bson());
                 new_id
             }
         };
-        let db_doc = Document::new(doc_id, doc);
-        self.documents.insert(doc_id, db_doc);
+        let db_doc = Document::new(doc_id.clone(), doc);
+        self.documents.insert(doc_id.clone(), db_doc);
+        self.inserts += 1;
         Ok(doc_id)
+    }
+
+    /// Generates a new document ID based on the collection's ID type.
+    ///
+    /// For u64 IDs, uses the current inserts counter value.
+    /// For String IDs, generates a random UUID.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`DocId`] with the appropriate type and value.
+    fn generate_id(&self) -> DocId {
+        match self.id_type {
+            IdType::String => DocId::from_uuid(Uuid::new_v4()),
+            IdType::Int => DocId::from_u64(self.inserts),
+        }
     }
 
     /// Removes a document from the collection by its ID.

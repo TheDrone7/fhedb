@@ -1,7 +1,17 @@
 use bson::Bson;
 use bson::Document;
 use std::collections::HashMap;
-use uuid::Uuid;
+
+/// Represents the type of ID that can be used in a collection.
+///
+/// This enum is used to specify whether a collection uses string or integer IDs.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum IdType {
+    /// String-based identifiers (UUIDs or arbitrary strings).
+    String,
+    /// Integer-based identifiers (u64).
+    Int,
+}
 
 /// Represents the type of a field in a document schema.
 ///
@@ -20,8 +30,10 @@ pub enum FieldType {
     Array(Box<FieldType>),
     /// A reference to another collection, identified by its name.
     Reference(String),
-    /// A universally unique identifier (UUID).
-    Id,
+    /// A document identifier that must be a string.
+    IdString,
+    /// A document identifier that must be a u64 integer.
+    IdInt,
 }
 
 /// Describes the schema for a document.
@@ -55,7 +67,7 @@ impl Schema {
                     }
                 }
                 None => {
-                    if let FieldType::Id = field_type {
+                    if let FieldType::IdString | FieldType::IdInt = field_type {
                         continue;
                     }
                     errors.push(format!("Missing field: '{}'.", field));
@@ -72,33 +84,33 @@ impl Schema {
     /// Ensures the schema has exactly one Id field.
     ///
     /// If more than one Id field is found, returns an error.
-    /// If none is found, adds a new field named "id" with type Id.
+    /// If none is found, adds a new field named "id" with type IdString.
     /// If exactly one is found, does nothing.
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok(String)`](Result::Ok) containing the name of the Id field.
+    /// Returns [`Ok((String, IdType))`](Result::Ok) containing the name of the Id field and its type.
     ///
     /// Returns [`Err`]\([`String`]) containing an error message if the schema contains more than one Id field.
-    pub fn ensure_id(&mut self) -> Result<String, String> {
-        let id_fields: Vec<String> = self
+    pub fn ensure_id(&mut self) -> Result<(String, IdType), String> {
+        let id_fields: Vec<(String, IdType)> = self
             .fields
             .iter()
             .filter_map(|(field, field_type)| {
-                if let FieldType::Id = field_type {
-                    Some(field.clone())
-                } else {
-                    None
+                match field_type {
+                    FieldType::IdString => Some((field.clone(), IdType::String)),
+                    FieldType::IdInt => Some((field.clone(), IdType::Int)),
+                    _ => None,
                 }
             })
             .collect();
         match id_fields.len() {
             0 => {
-                self.fields.insert("id".to_string(), FieldType::Id);
-                Ok("id".to_string())
+                self.fields.insert("id".to_string(), FieldType::IdInt);
+                Ok(("id".to_string(), IdType::Int))
             }
             1 => Ok(id_fields[0].clone()),
-            _ => Err("Schema must contain at most one field with type Id".to_string()),
+            _ => Err("Schema must contain at most one field with type IdString or IdInt".to_string()),
         }
     }
 }
@@ -146,11 +158,13 @@ fn validate_bson_type(value: &Bson, field_type: &FieldType) -> Result<(), String
             Bson::String(_) => Ok(()),
             _ => Err("Expected reference (string)".to_string()),
         },
-        FieldType::Id => match value {
-            Bson::String(s) => Uuid::parse_str(s)
-                .map(|_| ())
-                .map_err(|_| "Expected valid UUID string".to_string()),
-            _ => Err("Expected UUID as string".to_string()),
+        FieldType::IdString => match value {
+            Bson::String(_) => Ok(()),
+            _ => Err("Expected ID as string".to_string()),
+        },
+        FieldType::IdInt => match value {
+            Bson::Int32(_) | Bson::Int64(_) => Ok(()),
+            _ => Err("Expected ID as integer".to_string()),
         },
     }
 }

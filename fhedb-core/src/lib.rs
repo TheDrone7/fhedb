@@ -9,5 +9,5 @@ pub mod db;
 pub mod prelude {
     pub use crate::db::collection::Collection;
     pub use crate::db::document::{DocId, Document};
-    pub use crate::db::schema::{FieldType, Schema};
+    pub use crate::db::schema::{FieldType, Schema, IdType};
 }
