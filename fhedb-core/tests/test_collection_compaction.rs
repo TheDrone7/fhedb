@@ -1,6 +1,4 @@
 use bson::doc;
-use fhedb_core::file::collection::CollectionFileOps;
-use fhedb_core::file::types::Operation;
 use fhedb_core::prelude::*;
 use std::collections::HashMap;
 use tempfile::tempdir;
