@@ -96,12 +96,10 @@ impl Schema {
         let id_fields: Vec<(String, IdType)> = self
             .fields
             .iter()
-            .filter_map(|(field, field_type)| {
-                match field_type {
-                    FieldType::IdString => Some((field.clone(), IdType::String)),
-                    FieldType::IdInt => Some((field.clone(), IdType::Int)),
-                    _ => None,
-                }
+            .filter_map(|(field, field_type)| match field_type {
+                FieldType::IdString => Some((field.clone(), IdType::String)),
+                FieldType::IdInt => Some((field.clone(), IdType::Int)),
+                _ => None,
             })
             .collect();
         match id_fields.len() {
@@ -110,7 +108,9 @@ impl Schema {
                 Ok(("id".to_string(), IdType::Int))
             }
             1 => Ok(id_fields[0].clone()),
-            _ => Err("Schema must contain at most one field with type IdString or IdInt".to_string()),
+            _ => {
+                Err("Schema must contain at most one field with type IdString or IdInt".to_string())
+            }
         }
     }
 }

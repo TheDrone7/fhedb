@@ -1,5 +1,5 @@
 use bson::doc;
-use fhedb_core::prelude::{FieldType, Schema, IdType};
+use fhedb_core::prelude::{FieldType, IdType, Schema};
 use std::collections::HashMap;
 
 fn make_schema() -> Schema {
@@ -116,11 +116,7 @@ fn test_invalid_id_type() {
     let result = schema.validate_document(&doc);
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(
-        errors
-            .iter()
-            .any(|e| e.contains("Expected ID as integer"))
-    );
+    assert!(errors.iter().any(|e| e.contains("Expected ID as integer")));
 }
 
 #[test]
@@ -129,7 +125,7 @@ fn test_ensure_id_no_id_field() {
     fields.insert("name".to_string(), FieldType::String);
     fields.insert("age".to_string(), FieldType::Int);
     let mut schema = Schema { fields };
-    
+
     let (id_field, id_type) = schema.ensure_id().unwrap();
     assert_eq!(id_field, "id");
     assert_eq!(id_type, IdType::Int);
@@ -143,7 +139,7 @@ fn test_ensure_id_with_existing_id_field() {
     fields.insert("custom_id".to_string(), FieldType::IdString);
     fields.insert("name".to_string(), FieldType::String);
     let mut schema = Schema { fields };
-    
+
     let (id_field, id_type) = schema.ensure_id().unwrap();
     assert_eq!(id_field, "custom_id");
     assert_eq!(id_type, IdType::String);
@@ -158,10 +154,14 @@ fn test_ensure_id_multiple_id_fields() {
     fields.insert("id2".to_string(), FieldType::IdInt);
     fields.insert("name".to_string(), FieldType::String);
     let mut schema = Schema { fields };
-    
+
     let result = schema.ensure_id();
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("Schema must contain at most one field with type IdString or IdInt"));
+    assert!(
+        result
+            .unwrap_err()
+            .contains("Schema must contain at most one field with type IdString or IdInt")
+    );
 }
 
 #[test]
@@ -171,13 +171,13 @@ fn test_validate_document_missing_id_field() {
     fields.insert("name".to_string(), FieldType::String);
     fields.insert("age".to_string(), FieldType::Int);
     let schema = Schema { fields };
-    
+
     let doc = doc! {
         // Missing id field
         "name": "Alice",
         "age": 30i64
     };
-    
+
     // Should pass validation since Id fields are allowed to be missing
     assert!(schema.validate_document(&doc).is_ok());
 }
@@ -189,13 +189,13 @@ fn test_validate_document_missing_other_field() {
     fields.insert("name".to_string(), FieldType::String);
     fields.insert("age".to_string(), FieldType::Int);
     let schema = Schema { fields };
-    
+
     let doc = doc! {
         "id": "some-uuid-string",
         // Missing age field
         "name": "Alice"
     };
-    
+
     let result = schema.validate_document(&doc);
     assert!(result.is_err());
     let errors = result.unwrap_err();
@@ -209,12 +209,12 @@ fn test_validate_document_missing_id_and_other_field() {
     fields.insert("name".to_string(), FieldType::String);
     fields.insert("age".to_string(), FieldType::Int);
     let schema = Schema { fields };
-    
+
     let doc = doc! {
         // Missing both id and age fields
         "name": "Alice"
     };
-    
+
     let result = schema.validate_document(&doc);
     assert!(result.is_err());
     let errors = result.unwrap_err();

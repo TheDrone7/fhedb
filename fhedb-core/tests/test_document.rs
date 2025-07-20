@@ -1,5 +1,5 @@
-use fhedb_core::prelude::{DocId, Document};
 use bson::doc;
+use fhedb_core::prelude::{DocId, Document};
 use uuid::Uuid;
 
 #[test]

@@ -1,5 +1,5 @@
 use crate::db::document::{DocId, Document};
-use crate::db::schema::{Schema, IdType};
+use crate::db::schema::{IdType, Schema};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -35,7 +35,7 @@ impl Collection {
     /// Returns [`Ok`]\([`Collection`]) if collection was created successfully, or [`Err`]\([`String`]) otherwise.
     pub fn new(name: impl Into<String>, mut schema: Schema) -> Result<Self, String> {
         let (id_field, id_type) = schema.ensure_id()?;
-        
+
         Ok(Self {
             name: name.into(),
             schema,
@@ -80,7 +80,7 @@ impl Collection {
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok(DocId)`] if the document is valid and added, or [`Err(Vec<String>)`] with validation errors. Returns an error if the schema does not have an ID field.
+    /// Returns [`Ok`]\([`DocId`]) if the document is valid and added, or [`Err`]\([`Vec<String>`]) with validation errors. Returns an error if the schema does not have an ID field.
     pub fn add_document(&mut self, mut doc: bson::Document) -> Result<DocId, Vec<String>> {
         if let Err(errors) = self.validate_document(&doc) {
             return Err(errors);
@@ -146,7 +146,7 @@ impl Collection {
     ///
     /// ## Returns
     ///
-    /// Returns [`Some(Document)`] if the document was present and removed, or [`None`] if not found.
+    /// Returns [`Some`]\([`Document`]) if the document was present and removed, or [`None`] if not found.
     pub fn remove_document(&mut self, id: DocId) -> Option<Document> {
         self.documents.remove(&id)
     }
@@ -159,7 +159,7 @@ impl Collection {
     ///
     /// ## Returns
     ///
-    /// Returns [`Some(&Document)`] if found, or [`None`] if not present.
+    /// Returns [`Some`]\(&[`Document`]) if found, or [`None`] if not present.
     pub fn get_document(&self, id: DocId) -> Option<&Document> {
         self.documents.get(&id)
     }
