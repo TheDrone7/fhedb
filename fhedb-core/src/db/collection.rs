@@ -58,6 +58,56 @@ impl Collection {
         })
     }
 
+    /// Creates a new [`Collection`] from existing files on disk.
+    ///
+    /// This method reads the collection's metadata from the filesystem and reconstructs
+    /// the collection instance. It reads all log entries and processes them to rebuild
+    /// the collection's state.
+    ///
+    /// ## Arguments
+    ///
+    /// * `base_path` - The base directory path where collections are stored.
+    /// * `name` - The name of the collection to load.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`Collection`]) if the collection was loaded successfully,
+    /// or [`Err`]\([`std::io::Error`]) if the collection could not be loaded.
+    pub fn from_files(base_path: impl Into<PathBuf>, name: &str) -> Result<Self, std::io::Error> {
+        let mut collection = Self::read_metadata(base_path, name)?;
+
+        // Read all log entries from the logfile with their offsets
+        let log_entries = collection.read_log_entries()?;
+
+        // Loop over all log entries and rebuild the document indices
+        for (log_entry, log_offset) in log_entries {
+            // Extract the document ID from the BSON document
+            let doc_id = collection
+                .get_doc_id_from_bson(&log_entry.document)
+                .ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        format!(
+                            "Could not extract document ID from log entry at offset {}",
+                            log_offset
+                        ),
+                    )
+                })?;
+
+            // Update collection indices based on operation type
+            match log_entry.operation {
+                Operation::Insert | Operation::Update => {
+                    collection.document_indices.insert(doc_id, log_offset);
+                }
+                Operation::Delete => {
+                    collection.document_indices.remove(&doc_id);
+                }
+            }
+        }
+
+        Ok(collection)
+    }
+
     /// Checks if the schema contains a field with the given name.
     ///
     /// ## Arguments
@@ -99,20 +149,8 @@ impl Collection {
         }
         // Use the id_field (from schema or default)
         let id_field = &self.id_field;
-        let doc_id = match doc.get(id_field) {
-            Some(value) => {
-                match (&self.id_type, value) {
-                    (IdType::String, bson::Bson::String(s)) => DocId::from_string(s.clone()),
-                    (IdType::Int, bson::Bson::Int32(i)) => DocId::from_u64(*i as u64),
-                    (IdType::Int, bson::Bson::Int64(i)) => DocId::from_u64(*i as u64),
-                    _ => {
-                        // Invalid ID type, generate new one
-                        let new_id = self.generate_id();
-                        doc.insert(id_field, new_id.to_bson());
-                        new_id
-                    }
-                }
-            }
+        let doc_id = match self.get_doc_id_from_bson(&doc) {
+            Some(value) => value,
             None => {
                 // No ID provided, generate new one
                 let new_id = self.generate_id();
@@ -147,6 +185,29 @@ impl Collection {
         match self.id_type {
             IdType::String => DocId::from_uuid(Uuid::new_v4()),
             IdType::Int => DocId::from_u64(self.inserts),
+        }
+    }
+
+    /// Extracts the document ID from a BSON document.
+    ///
+    /// This method retrieves the ID field from the document and converts it to a [`DocId`].
+    /// If the ID field is not present or is of an unsupported type, it returns `None`.
+    ///
+    /// ## Arguments
+    ///
+    /// * `doc` - A reference to the [`bson::Document`] from which to extract the ID.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Some`]\([`DocId`]) if the ID was successfully extracted,
+    /// or [`None`] if the ID field is missing or of an unsupported type.
+    fn get_doc_id_from_bson(&self, doc: &bson::Document) -> Option<DocId> {
+        let id_field = &self.id_field;
+        match doc.get(id_field) {
+            Some(bson::Bson::String(s)) => Some(DocId::from_string(s.clone())),
+            Some(bson::Bson::Int32(i)) => Some(DocId::from_u64(*i as u64)),
+            Some(bson::Bson::Int64(i)) => Some(DocId::from_u64(*i as u64)),
+            _ => None,
         }
     }
 
