@@ -1,6 +1,7 @@
 use crate::db::{collection::Collection, schema::Schema};
 use crate::file::types::{LogEntry, Operation};
 use bson::{Bson, Document as BsonDocument};
+use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -39,6 +40,19 @@ pub trait CollectionFileOps {
     /// Returns [`Ok`]\([`Vec`]\([`LogEntry`]) if the log entries were read successfully,
     /// or [`Err`]\([`io::Error`]) if the log entries could not be read.
     fn read_log_entries(&self) -> io::Result<Vec<LogEntry>>;
+
+    /// Compacts the logfile by applying all operations and creating a new logfile
+    /// with only the final state of each document.
+    ///
+    /// This method reads all log entries, applies them in order to reconstruct
+    /// the current state of documents, then writes a new compacted logfile
+    /// containing only the final state of each document as INSERT operations.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok(())`](Result::Ok) if the logfile was compacted successfully,
+    /// or [`Err`]\([`io::Error`]) if the compaction failed.
+    fn compact_logfile(&self) -> io::Result<()>;
 
     /// Writes the collection's metadata to the metadata file.
     ///
@@ -160,6 +174,77 @@ impl CollectionFileOps for Collection {
         }
 
         Ok(entries)
+    }
+
+    fn compact_logfile(&self) -> io::Result<()> {
+        let logfile_path = self.logfile_path();
+
+        // Read all log entries
+        let entries = self.read_log_entries()?;
+
+        // If no entries, nothing to compact
+        if entries.is_empty() {
+            return Ok(());
+        }
+
+        // Apply all operations to reconstruct current state
+        let mut current_state: HashMap<String, BsonDocument> = HashMap::new();
+
+        for log_entry in entries {
+            let document = log_entry.document;
+            let operation = log_entry.operation;
+
+            // Extract document ID for tracking
+            let id_field = self.id_field.clone();
+            let doc_id = match document.get(id_field) {
+                Some(bson::Bson::String(s)) => s.clone(),
+                Some(bson::Bson::Int32(i)) => i.to_string(),
+                Some(bson::Bson::Int64(i)) => i.to_string(),
+                _ => continue, // Skip documents without valid ID
+            };
+
+            match operation {
+                Operation::Insert => {
+                    current_state.insert(doc_id, document);
+                }
+                Operation::Delete => {
+                    current_state.remove(&doc_id);
+                }
+                Operation::Update => {
+                    current_state.insert(doc_id, document);
+                }
+            }
+        }
+
+        // Create a temporary file for the compacted log
+        let temp_path = logfile_path.with_extension("tmp");
+        let mut temp_file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(&temp_path)?;
+
+        // Write compacted entries (only final state as INSERT operations)
+        for (_, document) in current_state {
+            let timestamp = chrono::Utc::now().to_rfc3339();
+            let mut log_entry = BsonDocument::new();
+            log_entry.insert("timestamp", Bson::String(timestamp));
+            log_entry.insert(
+                "operation",
+                Bson::String(Operation::Insert.as_str().to_string()),
+            );
+            log_entry.insert("document", Bson::Document(document));
+
+            let bson_bytes = bson::to_vec(&log_entry)
+                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+            temp_file.write_all(&bson_bytes)?;
+            writeln!(temp_file)?;
+        }
+
+        // Atomically replace the old logfile with the compacted one
+        fs::rename(temp_path, logfile_path)?;
+
+        Ok(())
     }
 
     fn write_metadata(&self) -> io::Result<()> {

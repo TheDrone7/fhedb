@@ -16,9 +16,9 @@ pub struct Collection {
     /// The in-memory storage of documents in this collection, keyed by document ID.
     documents: HashMap<DocId, Document>,
     /// The name of the field in the schema with type Id, or "id" if not present in the schema.
-    id_field: String,
+    pub(crate) id_field: String,
     /// The type of ID used in this collection (string or integer).
-    id_type: IdType,
+    pub(crate) id_type: IdType,
     /// Counter for generating sequential u64 IDs. Starts at 0 and increments on each insert.
     pub(crate) inserts: u64,
     /// The base path for the collection.
@@ -209,5 +209,14 @@ impl Collection {
     /// The base path as a [`PathBuf`].
     pub fn base_path(&self) -> &PathBuf {
         &self.base_path
+    }
+
+    /// Gets the name of the ID field for this collection.
+    ///
+    /// ## Returns
+    ///
+    /// The name of the ID field as a [`String`].
+    pub fn id_field_name(&self) -> &str {
+        &self.id_field
     }
 }
