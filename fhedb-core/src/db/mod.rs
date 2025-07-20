@@ -4,8 +4,9 @@
 //!
 //! ## Modules
 //!
-//! - [`collection`]: Contains the [`Collection`] struct.
-//! - [`schema`]: Contains the [`Schema`] struct.
+//! - [`collection`]: Contains the Collection struct.
+//! - [`schema`]: Contains the Schema struct.
+//! - [`document`]: Contains the Document struct.
 
 /// The collection module - contains the [`Collection`] struct.
 pub mod collection;
