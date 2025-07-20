@@ -92,20 +92,29 @@ fn test_append_and_read_entries() {
     };
 
     // Append first entry and verify append-only behavior
-    assert!(collection.append_to_log(&Operation::Insert, &doc1).is_ok());
+    let offset1 = collection.append_to_log(&Operation::Insert, &doc1).unwrap();
     let entries1 = collection.read_log_entries().unwrap();
     assert_eq!(entries1.len(), 1);
     assert_eq!(entries1[0].document, doc1);
 
+    // First entry should start at offset 0
+    assert_eq!(offset1, 0);
+
     // Append second entry and verify first is still there
-    assert!(collection.append_to_log(&Operation::Update, &doc2).is_ok());
+    let offset2 = collection.append_to_log(&Operation::Update, &doc2).unwrap();
     let entries2 = collection.read_log_entries().unwrap();
     assert_eq!(entries2.len(), 2);
     assert_eq!(entries2[0].document, doc1);
     assert_eq!(entries2[1].document, doc2);
 
+    // Second entry should start at a different offset
+    assert!(offset2 > offset1);
+
     // Append third entry
-    assert!(collection.append_to_log(&Operation::Delete, &doc3).is_ok());
+    let offset3 = collection.append_to_log(&Operation::Delete, &doc3).unwrap();
+
+    // Third entry should start at an even higher offset
+    assert!(offset3 > offset2);
 
     // Read back all entries
     let entries = collection.read_log_entries().unwrap();
@@ -244,4 +253,62 @@ fn test_multiple_collections_log_isolation() {
 
     // Verify different logfile paths
     assert_ne!(collection1.logfile_path(), collection2.logfile_path());
+}
+
+#[test]
+fn test_read_log_entry_at_offset() {
+    let schema = make_test_schema();
+    let temp_dir = tempdir().unwrap();
+    let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
+
+    let doc1 = doc! {
+        "id": 1i64,
+        "name": "Alice",
+        "age": 30i64,
+        "salary": 75000.0,
+        "active": true
+    };
+    let doc2 = doc! {
+        "id": 2i64,
+        "name": "Bob",
+        "age": 25i64,
+        "salary": 65000.0,
+        "active": false
+    };
+    let doc3 = doc! {
+        "id": 3i64,
+        "name": "Charlie",
+        "age": 35i64,
+        "salary": 85000.0,
+        "active": true
+    };
+
+    // Append entries and collect their offsets
+    let offset1 = collection.append_to_log(&Operation::Insert, &doc1).unwrap();
+    let offset2 = collection.append_to_log(&Operation::Update, &doc2).unwrap();
+    let offset3 = collection.append_to_log(&Operation::Delete, &doc3).unwrap();
+
+    // Read each entry by its specific offset
+    let entry1 = collection.read_log_entry_at_offset(offset1).unwrap();
+    let entry2 = collection.read_log_entry_at_offset(offset2).unwrap();
+    let entry3 = collection.read_log_entry_at_offset(offset3).unwrap();
+
+    // Verify that we get the correct entries
+    assert_eq!(entry1.operation, Operation::Insert);
+    assert_eq!(entry1.document, doc1);
+
+    assert_eq!(entry2.operation, Operation::Update);
+    assert_eq!(entry2.document, doc2);
+
+    assert_eq!(entry3.operation, Operation::Delete);
+    assert_eq!(entry3.document, doc3);
+
+    // Test reading from non-existent file
+    let empty_collection = Collection::new("empty", make_test_schema(), temp_dir.path()).unwrap();
+    let result = empty_collection.read_log_entry_at_offset(0);
+    assert!(result.is_err());
+
+    // Test reading with invalid offset
+    let invalid_offset_result = collection.read_log_entry_at_offset(99999);
+    assert!(invalid_offset_result.is_err());
 }

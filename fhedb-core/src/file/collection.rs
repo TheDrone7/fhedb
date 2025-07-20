@@ -3,7 +3,7 @@ use crate::file::types::{LogEntry, Operation};
 use bson::{Bson, Document as BsonDocument};
 use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
-use std::io::{self, Write};
+use std::io::{self, Seek, Write};
 use std::path::PathBuf;
 
 /// Trait for file operations on collections.
@@ -29,9 +29,9 @@ pub trait CollectionFileOps {
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok(())`](Result::Ok) if the operation was appended to the logfile,
+    /// Returns [`Ok(u64)`](Result::Ok) with the file offset where the entry was written,
     /// or [`Err`]\([`io::Error`]) if the operation failed.
-    fn append_to_log(&self, operation: &Operation, document: &BsonDocument) -> io::Result<()>;
+    fn append_to_log(&self, operation: &Operation, document: &BsonDocument) -> io::Result<u64>;
 
     /// Reads all log entries from the collection's logfile.
     ///
@@ -40,6 +40,18 @@ pub trait CollectionFileOps {
     /// Returns [`Ok`]\([`Vec`]\([`LogEntry`]) if the log entries were read successfully,
     /// or [`Err`]\([`io::Error`]) if the log entries could not be read.
     fn read_log_entries(&self) -> io::Result<Vec<LogEntry>>;
+
+    /// Reads a single log entry from the collection's logfile at the specified offset.
+    ///
+    /// ## Arguments
+    ///
+    /// * `offset` - The byte offset in the logfile where the entry begins.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`LogEntry`]) if the log entry was read successfully,
+    /// or [`Err`]\([`io::Error`]) if the entry could not be read or the offset is invalid.
+    fn read_log_entry_at_offset(&self, offset: u64) -> io::Result<LogEntry>;
 
     /// Compacts the logfile by applying all operations and creating a new logfile
     /// with only the final state of each document.
@@ -85,12 +97,13 @@ impl CollectionFileOps for Collection {
         fs::create_dir_all(self.base_path.clone())
     }
 
-    fn append_to_log(&self, operation: &Operation, document: &BsonDocument) -> io::Result<()> {
+    fn append_to_log(&self, operation: &Operation, document: &BsonDocument) -> io::Result<u64> {
         self.ensure_collection_dir()?;
 
         let logfile_path = self.logfile_path();
         let mut file = OpenOptions::new()
             .create(true)
+            .read(true)
             .append(true)
             .open(logfile_path)?;
 
@@ -106,7 +119,10 @@ impl CollectionFileOps for Collection {
         file.write_all(&bson_bytes)?;
         writeln!(file)?; // Add a newline to separate entries
 
-        Ok(())
+        // Get the offset where the entry was written
+        let offset = file.stream_position()? - bson_bytes.len() as u64 - 1;
+
+        Ok(offset)
     }
 
     fn read_log_entries(&self) -> io::Result<Vec<LogEntry>> {
@@ -174,6 +190,74 @@ impl CollectionFileOps for Collection {
         }
 
         Ok(entries)
+    }
+
+    fn read_log_entry_at_offset(&self, offset: u64) -> io::Result<LogEntry> {
+        let logfile_path = self.logfile_path();
+
+        if !logfile_path.exists() {
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                "Logfile does not exist",
+            ));
+        }
+
+        let contents = fs::read(&logfile_path)?;
+        let offset = offset as usize;
+
+        if offset >= contents.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Offset is beyond end of file",
+            ));
+        }
+
+        // Check if we have enough bytes for the BSON length header
+        if offset + 4 >= contents.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "Not enough bytes for BSON length header",
+            ));
+        }
+
+        let length = u32::from_le_bytes([
+            contents[offset],
+            contents[offset + 1],
+            contents[offset + 2],
+            contents[offset + 3],
+        ]) as usize;
+
+        if offset + length > contents.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "BSON entry extends beyond end of file",
+            ));
+        }
+
+        let entry_bytes = &contents[offset..offset + length];
+        let log_doc: BsonDocument = bson::from_slice(entry_bytes).map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Failed to parse BSON: {}", e),
+            )
+        })?;
+
+        let timestamp = log_doc
+            .get_str("timestamp")
+            .unwrap_or("unknown")
+            .to_string();
+        let operation_str = log_doc.get_str("operation").unwrap_or("unknown");
+        let operation = Operation::from_str(operation_str).unwrap_or(Operation::Insert);
+        let document = log_doc
+            .get_document("document")
+            .cloned()
+            .unwrap_or_default();
+
+        Ok(LogEntry {
+            timestamp,
+            operation,
+            document,
+        })
     }
 
     fn compact_logfile(&self) -> io::Result<()> {
