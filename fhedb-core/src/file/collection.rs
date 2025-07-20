@@ -29,9 +29,9 @@ pub trait CollectionFileOps {
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok(u64)`](Result::Ok) with the file offset where the entry was written,
+    /// Returns [`Ok(usize)`](Result::Ok) with the file offset where the entry was written,
     /// or [`Err`]\([`io::Error`]) if the operation failed.
-    fn append_to_log(&self, operation: &Operation, document: &BsonDocument) -> io::Result<u64>;
+    fn append_to_log(&self, operation: &Operation, document: &BsonDocument) -> io::Result<usize>;
 
     /// Reads all log entries from the collection's logfile.
     ///
@@ -51,7 +51,7 @@ pub trait CollectionFileOps {
     ///
     /// Returns [`Ok`]\([`LogEntry`]) if the log entry was read successfully,
     /// or [`Err`]\([`io::Error`]) if the entry could not be read or the offset is invalid.
-    fn read_log_entry_at_offset(&self, offset: u64) -> io::Result<LogEntry>;
+    fn read_log_entry_at_offset(&self, offset: usize) -> io::Result<LogEntry>;
 
     /// Compacts the logfile by applying all operations and creating a new logfile
     /// with only the final state of each document.
@@ -97,7 +97,7 @@ impl CollectionFileOps for Collection {
         fs::create_dir_all(self.base_path.clone())
     }
 
-    fn append_to_log(&self, operation: &Operation, document: &BsonDocument) -> io::Result<u64> {
+    fn append_to_log(&self, operation: &Operation, document: &BsonDocument) -> io::Result<usize> {
         self.ensure_collection_dir()?;
 
         let logfile_path = self.logfile_path();
@@ -120,7 +120,7 @@ impl CollectionFileOps for Collection {
         writeln!(file)?; // Add a newline to separate entries
 
         // Get the offset where the entry was written
-        let offset = file.stream_position()? - bson_bytes.len() as u64 - 1;
+        let offset = file.stream_position()? as usize - bson_bytes.len() - 1;
 
         Ok(offset)
     }
@@ -192,7 +192,7 @@ impl CollectionFileOps for Collection {
         Ok(entries)
     }
 
-    fn read_log_entry_at_offset(&self, offset: u64) -> io::Result<LogEntry> {
+    fn read_log_entry_at_offset(&self, offset: usize) -> io::Result<LogEntry> {
         let logfile_path = self.logfile_path();
 
         if !logfile_path.exists() {

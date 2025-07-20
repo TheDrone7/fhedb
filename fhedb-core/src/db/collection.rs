@@ -1,5 +1,6 @@
 use crate::db::document::{DocId, Document};
 use crate::db::schema::{IdType, Schema};
+use crate::file::{collection::CollectionFileOps, types::Operation};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use uuid::Uuid;
@@ -119,8 +120,17 @@ impl Collection {
                 new_id
             }
         };
-        let _db_doc = Document::new(doc_id.clone(), doc);
-        // self.documents.insert(doc_id.clone(), db_doc);
+        let db_doc = Document::new(doc_id.clone(), doc);
+        // Store the document using the logfile
+        match self.append_to_log(&Operation::Insert, &db_doc.data) {
+            Ok(offset) => {
+                self.document_indices.insert(doc_id.clone(), offset);
+            }
+            Err(e) => {
+                return Err(vec![e.to_string()]);
+            }
+        }
+
         self.inserts += 1;
         Ok(doc_id)
     }
@@ -149,15 +159,15 @@ impl Collection {
     /// ## Returns
     ///
     /// Returns [`Some`]\([`Document`]) if the document was present and removed, or [`None`] if not found.
-    pub fn remove_document(&mut self, _id: DocId) -> Option<Document> {
-        // TODO: Implement log-based document removal
-        // This should:
-        // 1. Check if document exists in document_indices
-        // 2. Read document from log file using the offset
-        // 3. Mark document as deleted in log
-        // 4. Remove from document_indices
-        // 5. Return the document if found
-        unimplemented!("remove_document will be implemented with log-based storage")
+    pub fn remove_document(&mut self, id: DocId) -> Option<Document> {
+        if let Some(offset) = self.document_indices.remove(&id) {
+            if let Ok(log_entry) = self.read_log_entry_at_offset(offset) {
+                self.append_to_log(&Operation::Delete, &log_entry.document)
+                    .ok();
+                return Some(Document::new(id.clone(), log_entry.document));
+            }
+        }
+        None
     }
 
     /// Retrieves a reference to a document by its ID.
@@ -168,14 +178,14 @@ impl Collection {
     ///
     /// ## Returns
     ///
-    /// Returns [`Some`]\(&[`Document`]) if found, or [`None`] if not present.
-    pub fn get_document(&self, _id: DocId) -> Option<&Document> {
-        // TODO: Implement log-based document retrieval
-        // This should:
-        // 1. Check if document exists in document_indices
-        // 2. Read document from log file using the offset
-        // 3. Return reference to the document if found
-        unimplemented!("get_document will be implemented with log-based storage")
+    /// Returns [`Some`]\([`Document`]) if found, or [`None`] if not present.
+    pub fn get_document(&self, id: DocId) -> Option<Document> {
+        if let Some(&offset) = self.document_indices.get(&id) {
+            if let Ok(log_entry) = self.read_log_entry_at_offset(offset) {
+                return Some(Document::new(id.clone(), log_entry.document));
+            }
+        }
+        None
     }
 
     /// Retrieves all documents in the collection.
@@ -183,13 +193,14 @@ impl Collection {
     /// ## Returns
     ///
     /// Returns a [`Vec`] containing references to all [`Document`]s in the collection.
-    pub fn get_documents(&self) -> Vec<&Document> {
-        // TODO: Implement log-based document retrieval for all documents
-        // This should:
-        // 1. Iterate through all offsets in document_indices
-        // 2. Read each document from log file
-        // 3. Return references to all documents
-        unimplemented!("get_documents will be implemented with log-based storage")
+    pub fn get_documents(&self) -> Vec<Document> {
+        let mut entries = Vec::new();
+        for (id, offset) in &self.document_indices {
+            if let Ok(log_entry) = self.read_log_entry_at_offset(*offset) {
+                entries.push(Document::new(id.clone(), log_entry.document));
+            }
+        }
+        entries
     }
 
     /// Gets the schema of this collection.
