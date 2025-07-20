@@ -184,7 +184,8 @@ impl CollectionFileOps for Collection {
     }
 
     fn read_metadata(collection_dir: impl Into<PathBuf>) -> io::Result<Collection> {
-        let collection_dir = collection_dir.into();
+        let collection_dir: PathBuf = collection_dir.into();
+        let base_path = collection_dir.parent().unwrap();
         let metadata_path = collection_dir.join("metadata.bin");
 
         if !metadata_path.exists() {
@@ -202,7 +203,7 @@ impl CollectionFileOps for Collection {
         let inserts = metadata.get_i64("inserts").unwrap_or(0) as u64;
         let schema = Schema::from(metadata.get_document("schema").cloned().unwrap_or_default());
 
-        let mut collection = Collection::new(name, schema, collection_dir).map_err(|e| {
+        let mut collection = Collection::new(name, schema, base_path).map_err(|e| {
             io::Error::new(io::ErrorKind::InvalidData, format!("Invalid schema: {}", e))
         })?;
         collection.inserts = inserts;

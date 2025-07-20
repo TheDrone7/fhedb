@@ -195,22 +195,22 @@ fn parse_field_type(value: &Bson) -> Option<FieldType> {
             _ => None,
         },
         Bson::Document(doc) => {
-            // Handle array types: { "array": "int" }
-            if let Some(Bson::String(inner_type)) = doc.get("array") {
-                let inner_field_type = match inner_type.as_str() {
-                    "int" => FieldType::Int,
-                    "float" => FieldType::Float,
-                    "boolean" => FieldType::Boolean,
-                    "string" => FieldType::String,
-                    "id_string" => FieldType::IdString,
-                    "id_int" => FieldType::IdInt,
-                    _ => return None,
-                };
-                Some(FieldType::Array(Box::new(inner_field_type)))
-            }
-            // Handle reference types: { "reference": "collection_name" }
-            else if let Some(Bson::String(collection_name)) = doc.get("reference") {
-                Some(FieldType::Reference(collection_name.clone()))
+            if doc.contains_key("array") {
+                if let Some(bson) = doc.get("array") {
+                    let inner_field_type = match parse_field_type(bson) {
+                        Some(field_type) => field_type,
+                        None => return None,
+                    };
+                    Some(FieldType::Array(Box::new(inner_field_type)))
+                } else {
+                    None
+                }
+            } else if doc.contains_key("reference") {
+                if let Some(Bson::String(collection_name)) = doc.get("reference") {
+                    Some(FieldType::Reference(collection_name.clone()))
+                } else {
+                    None
+                }
             } else {
                 None
             }

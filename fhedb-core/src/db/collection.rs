@@ -183,4 +183,31 @@ impl Collection {
     pub fn get_documents(&self) -> Vec<&Document> {
         self.documents.values().collect()
     }
+
+    /// Gets the schema of this collection.
+    ///
+    /// ## Returns
+    ///
+    /// A reference to the collection's [`Schema`].
+    pub fn schema(&self) -> &Schema {
+        &self.schema
+    }
+
+    /// Gets the number of inserts performed on this collection.
+    ///
+    /// ## Returns
+    ///
+    /// The number of inserts as a `u64`.
+    pub fn inserts(&self) -> u64 {
+        self.inserts
+    }
+
+    /// Gets the base path of this collection.
+    ///
+    /// ## Returns
+    ///
+    /// The base path as a [`PathBuf`].
+    pub fn base_path(&self) -> &PathBuf {
+        &self.base_path
+    }
 }
