@@ -47,7 +47,7 @@ fn test_append_to_log_creates_file() {
     // Verify persistence by reading back the entry
     let entries = collection.read_log_entries().unwrap();
     assert_eq!(entries.len(), 1);
-    assert_eq!(entries[0].document, document);
+    assert_eq!(entries[0].0.document, document);
 }
 
 #[test]
@@ -93,7 +93,7 @@ fn test_append_and_read_entries() {
     let offset1 = collection.append_to_log(&Operation::Insert, &doc1).unwrap();
     let entries1 = collection.read_log_entries().unwrap();
     assert_eq!(entries1.len(), 1);
-    assert_eq!(entries1[0].document, doc1);
+    assert_eq!(entries1[0].0.document, doc1);
 
     // First entry should start at offset 0
     assert_eq!(offset1, 0);
@@ -102,8 +102,8 @@ fn test_append_and_read_entries() {
     let offset2 = collection.append_to_log(&Operation::Update, &doc2).unwrap();
     let entries2 = collection.read_log_entries().unwrap();
     assert_eq!(entries2.len(), 2);
-    assert_eq!(entries2[0].document, doc1);
-    assert_eq!(entries2[1].document, doc2);
+    assert_eq!(entries2[0].0.document, doc1);
+    assert_eq!(entries2[1].0.document, doc2);
 
     // Second entry should start at a different offset
     assert!(offset2 > offset1);
@@ -119,16 +119,16 @@ fn test_append_and_read_entries() {
     assert_eq!(entries.len(), 3);
 
     // Verify operations
-    assert_eq!(entries[0].operation, Operation::Insert);
-    assert_eq!(entries[0].document, doc1);
-    assert_eq!(entries[1].operation, Operation::Update);
-    assert_eq!(entries[1].document, doc2);
-    assert_eq!(entries[2].operation, Operation::Delete);
-    assert_eq!(entries[2].document, doc3);
+    assert_eq!(entries[0].0.operation, Operation::Insert);
+    assert_eq!(entries[0].0.document, doc1);
+    assert_eq!(entries[1].0.operation, Operation::Update);
+    assert_eq!(entries[1].0.document, doc2);
+    assert_eq!(entries[2].0.operation, Operation::Delete);
+    assert_eq!(entries[2].0.document, doc3);
 
     // Verify timestamps are different (operations happened at different times)
-    assert_ne!(entries[0].timestamp, entries[1].timestamp);
-    assert_ne!(entries[1].timestamp, entries[2].timestamp);
+    assert_ne!(entries[0].0.timestamp, entries[1].0.timestamp);
+    assert_ne!(entries[1].0.timestamp, entries[2].0.timestamp);
 }
 
 #[test]
@@ -156,7 +156,7 @@ fn test_different_operation_types() {
     assert_eq!(entries.len(), 3);
 
     for (i, expected_op) in operations.iter().enumerate() {
-        assert_eq!(entries[i].operation, *expected_op);
+        assert_eq!(entries[i].0.operation, *expected_op);
     }
 }
 
@@ -209,7 +209,7 @@ fn test_log_entries_with_all_field_types() {
 
     let entries = collection.read_log_entries().unwrap();
     assert_eq!(entries.len(), 1);
-    assert_eq!(entries[0].document, doc_with_all_types);
+    assert_eq!(entries[0].0.document, doc_with_all_types);
 }
 
 #[test]
@@ -246,8 +246,8 @@ fn test_multiple_collections_log_isolation() {
 
     assert_eq!(entries1.len(), 1);
     assert_eq!(entries2.len(), 1);
-    assert_eq!(entries1[0].document, doc1);
-    assert_eq!(entries2[0].document, doc2);
+    assert_eq!(entries1[0].0.document, doc1);
+    assert_eq!(entries2[0].0.document, doc2);
 
     // Verify different logfile paths
     assert_ne!(collection1.logfile_path(), collection2.logfile_path());

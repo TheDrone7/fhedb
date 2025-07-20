@@ -37,9 +37,9 @@ pub trait CollectionFileOps {
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok`]\([`Vec`]\([`LogEntry`]) if the log entries were read successfully,
+    /// Returns [`Ok`]\([`Vec`]<\([`LogEntry`], [`usize`])>) if the log entries were read successfully,
     /// or [`Err`]\([`io::Error`]) if the log entries could not be read.
-    fn read_log_entries(&self) -> io::Result<Vec<LogEntry>>;
+    fn read_log_entries(&self) -> io::Result<Vec<(LogEntry, usize)>>;
 
     /// Reads a single log entry from the collection's logfile at the specified offset.
     ///
@@ -125,7 +125,7 @@ impl CollectionFileOps for Collection {
         Ok(offset)
     }
 
-    fn read_log_entries(&self) -> io::Result<Vec<LogEntry>> {
+    fn read_log_entries(&self) -> io::Result<Vec<(LogEntry, usize)>> {
         let logfile_path = self.logfile_path();
 
         if !logfile_path.exists() {
@@ -166,11 +166,14 @@ impl CollectionFileOps for Collection {
                         .cloned()
                         .unwrap_or_default();
 
-                    entries.push(LogEntry {
-                        timestamp,
-                        operation,
-                        document,
-                    });
+                    entries.push((
+                        LogEntry {
+                            timestamp,
+                            operation,
+                            document,
+                        },
+                        offset,
+                    ));
 
                     offset += length;
 
@@ -274,7 +277,7 @@ impl CollectionFileOps for Collection {
         // Apply all operations to reconstruct current state
         let mut current_state: HashMap<String, BsonDocument> = HashMap::new();
 
-        for log_entry in entries {
+        for (log_entry, _) in entries {
             let document = log_entry.document;
             let operation = log_entry.operation;
 

@@ -57,12 +57,12 @@ fn test_compact_logfile_inserts_only() {
     // Verify both documents are present as INSERT operations
     let doc_ids: Vec<_> = entries
         .iter()
-        .map(|e| e.document.get_i64("id").unwrap())
+        .map(|e| e.0.document.get_i64("id").unwrap())
         .collect();
     assert!(doc_ids.contains(&1));
     assert!(doc_ids.contains(&2));
 
-    for entry in entries {
+    for (entry, _) in entries {
         assert_eq!(entry.operation, Operation::Insert);
     }
 }
@@ -100,9 +100,9 @@ fn test_compact_logfile_with_updates() {
     assert_eq!(entries.len(), 1);
 
     let entry = &entries[0];
-    assert_eq!(entry.operation, Operation::Insert);
-    assert_eq!(entry.document.get_str("name").unwrap(), "Alice Smith");
-    assert_eq!(entry.document.get_i64("age").unwrap(), 31);
+    assert_eq!(entry.0.operation, Operation::Insert);
+    assert_eq!(entry.0.document.get_str("name").unwrap(), "Alice Smith");
+    assert_eq!(entry.0.document.get_i64("age").unwrap(), 31);
 }
 
 #[test]
@@ -135,9 +135,9 @@ fn test_compact_logfile_with_deletes() {
     assert_eq!(entries.len(), 1);
 
     let entry = &entries[0];
-    assert_eq!(entry.operation, Operation::Insert);
-    assert_eq!(entry.document.get_i64("id").unwrap(), 2);
-    assert_eq!(entry.document.get_str("name").unwrap(), "Bob");
+    assert_eq!(entry.0.operation, Operation::Insert);
+    assert_eq!(entry.0.document.get_i64("id").unwrap(), 2);
+    assert_eq!(entry.0.document.get_str("name").unwrap(), "Bob");
 }
 
 #[test]
@@ -188,7 +188,7 @@ fn test_compact_logfile_complex_sequence() {
     // Should have doc1 (updated version) and doc3
     let doc_ids: Vec<_> = entries
         .iter()
-        .map(|e| e.document.get_i64("id").unwrap())
+        .map(|e| e.0.document.get_i64("id").unwrap())
         .collect();
     assert!(doc_ids.contains(&1));
     assert!(doc_ids.contains(&3));
@@ -197,8 +197,11 @@ fn test_compact_logfile_complex_sequence() {
     // Verify doc1 has the updated values
     let doc1_entry = entries
         .iter()
-        .find(|e| e.document.get_i64("id").unwrap() == 1)
+        .find(|e| e.0.document.get_i64("id").unwrap() == 1)
         .unwrap();
-    assert_eq!(doc1_entry.document.get_str("name").unwrap(), "Alice Smith");
-    assert_eq!(doc1_entry.document.get_i64("age").unwrap(), 31);
+    assert_eq!(
+        doc1_entry.0.document.get_str("name").unwrap(),
+        "Alice Smith"
+    );
+    assert_eq!(doc1_entry.0.document.get_i64("age").unwrap(), 31);
 }
