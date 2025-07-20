@@ -42,7 +42,9 @@ impl Schema {
     ///
     /// ## Returns
     ///
-    /// Returns [Ok(())](Result::Ok) if the document matches the schema. Returns [`Err`]\([`Vec<String>`]) containing error messages for each field that does not conform to the schema.
+    /// Returns [Ok(())](Result::Ok) if the document matches the schema.
+    ///
+    /// Returns [`Err`]\([`Vec<String>`]) containing error messages for each field that does not conform to the schema.
     pub fn validate_document(&self, doc: &Document) -> Result<(), Vec<String>> {
         let mut errors = Vec::new();
         for (field, field_type) in &self.fields {
@@ -53,6 +55,9 @@ impl Schema {
                     }
                 }
                 None => {
+                    if let FieldType::Id = field_type {
+                        continue;
+                    }
                     errors.push(format!("Missing field: '{}'.", field));
                 }
             }
@@ -61,6 +66,39 @@ impl Schema {
             Ok(())
         } else {
             Err(errors)
+        }
+    }
+
+    /// Ensures the schema has exactly one Id field.
+    ///
+    /// If more than one Id field is found, returns an error.
+    /// If none is found, adds a new field named "id" with type Id.
+    /// If exactly one is found, does nothing.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok(String)`](Result::Ok) containing the name of the Id field.
+    ///
+    /// Returns [`Err`]\([`String`]) containing an error message if the schema contains more than one Id field.
+    pub fn ensure_id(&mut self) -> Result<String, String> {
+        let id_fields: Vec<String> = self
+            .fields
+            .iter()
+            .filter_map(|(field, field_type)| {
+                if let FieldType::Id = field_type {
+                    Some(field.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        match id_fields.len() {
+            0 => {
+                self.fields.insert("id".to_string(), FieldType::Id);
+                Ok("id".to_string())
+            }
+            1 => Ok(id_fields[0].clone()),
+            _ => Err("Schema must contain at most one field with type Id".to_string()),
         }
     }
 }

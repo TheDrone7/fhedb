@@ -63,8 +63,8 @@ impl Document {
     ///
     /// ## Arguments
     ///
-    /// * `id` - The document ID to use.
-    /// * `data` - The BSON document containing the document data.
+    /// * `id` - The [document ID](DocId) to use.
+    /// * `data` - The [BSON document](BsonDocument) containing the document data.
     ///
     /// ## Returns
     ///
@@ -77,7 +77,7 @@ impl Document {
     ///
     /// ## Arguments
     ///
-    /// * `data` - The BSON document containing the document data.
+    /// * `data` - The [BSON document](BsonDocument) containing the document data.
     ///
     /// ## Returns
     ///
@@ -93,19 +93,38 @@ impl Document {
     ///
     /// ## Returns
     ///
-    /// A tuple containing the document ID and the BSON document data.
+    /// A tuple containing the [document ID](DocId) and the [BSON document](BsonDocument) data.
     pub fn into_parts(self) -> (DocId, BsonDocument) {
         (self.id, self.data)
     }
 }
 
 impl From<BsonDocument> for Document {
+    /// Creates a new document with a randomly generated ID and the provided data.
+    ///
+    /// ## Arguments
+    ///
+    /// * `data` - The [BSON document](BsonDocument) containing the document data.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`Document`] with a random ID and the provided data.
     fn from(data: BsonDocument) -> Self {
         Self::with_random_id(data)
     }
 }
 
 impl From<(DocId, BsonDocument)> for Document {
+    /// Creates a new document with the specified ID and data.
+    ///
+    /// ## Arguments
+    ///
+    /// * `id` - The [document ID](DocId) to use.
+    /// * `data` - The [BSON document](BsonDocument) containing the document data.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`Document`] with the specified ID and data.
     fn from((id, data): (DocId, BsonDocument)) -> Self {
         Self::new(id, data)
     }

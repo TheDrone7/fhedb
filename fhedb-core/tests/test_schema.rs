@@ -127,3 +127,100 @@ fn test_invalid_uuid() {
             .any(|e| e.contains("Expected valid UUID string"))
     );
 }
+
+#[test]
+fn test_ensure_id_no_id_field() {
+    let mut fields = HashMap::new();
+    fields.insert("name".to_string(), FieldType::String);
+    fields.insert("age".to_string(), FieldType::Int);
+    let mut schema = Schema { fields };
+    
+    let id_field = schema.ensure_id().unwrap();
+    assert_eq!(id_field, "id");
+    assert!(schema.fields.contains_key("id"));
+    assert_eq!(schema.fields.get("id"), Some(&FieldType::Id));
+}
+
+#[test]
+fn test_ensure_id_with_existing_id_field() {
+    let mut fields = HashMap::new();
+    fields.insert("custom_id".to_string(), FieldType::Id);
+    fields.insert("name".to_string(), FieldType::String);
+    let mut schema = Schema { fields };
+    
+    let id_field = schema.ensure_id().unwrap();
+    assert_eq!(id_field, "custom_id");
+    assert!(schema.fields.contains_key("custom_id"));
+    assert!(!schema.fields.contains_key("id")); // Should not add default "id"
+}
+
+#[test]
+fn test_ensure_id_multiple_id_fields() {
+    let mut fields = HashMap::new();
+    fields.insert("id1".to_string(), FieldType::Id);
+    fields.insert("id2".to_string(), FieldType::Id);
+    fields.insert("name".to_string(), FieldType::String);
+    let mut schema = Schema { fields };
+    
+    let result = schema.ensure_id();
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("Schema must contain at most one field with type Id"));
+}
+
+#[test]
+fn test_validate_document_missing_id_field() {
+    let mut fields = HashMap::new();
+    fields.insert("id".to_string(), FieldType::Id);
+    fields.insert("name".to_string(), FieldType::String);
+    fields.insert("age".to_string(), FieldType::Int);
+    let schema = Schema { fields };
+    
+    let doc = doc! {
+        // Missing id field
+        "name": "Alice",
+        "age": 30i64
+    };
+    
+    // Should pass validation since Id fields are allowed to be missing
+    assert!(schema.validate_document(&doc).is_ok());
+}
+
+#[test]
+fn test_validate_document_missing_other_field() {
+    let mut fields = HashMap::new();
+    fields.insert("id".to_string(), FieldType::Id);
+    fields.insert("name".to_string(), FieldType::String);
+    fields.insert("age".to_string(), FieldType::Int);
+    let schema = Schema { fields };
+    
+    let doc = doc! {
+        "id": uuid::Uuid::new_v4().to_string(),
+        // Missing age field
+        "name": "Alice"
+    };
+    
+    let result = schema.validate_document(&doc);
+    assert!(result.is_err());
+    let errors = result.unwrap_err();
+    assert!(errors.iter().any(|e| e.contains("Missing field: 'age'")));
+}
+
+#[test]
+fn test_validate_document_missing_id_and_other_field() {
+    let mut fields = HashMap::new();
+    fields.insert("id".to_string(), FieldType::Id);
+    fields.insert("name".to_string(), FieldType::String);
+    fields.insert("age".to_string(), FieldType::Int);
+    let schema = Schema { fields };
+    
+    let doc = doc! {
+        // Missing both id and age fields
+        "name": "Alice"
+    };
+    
+    let result = schema.validate_document(&doc);
+    assert!(result.is_err());
+    let errors = result.unwrap_err();
+    assert!(errors.iter().any(|e| e.contains("Missing field: 'age'")));
+    assert!(!errors.iter().any(|e| e.contains("Missing field: 'id'")));
+}
