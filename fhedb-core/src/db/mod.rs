@@ -1,18 +1,12 @@
 //! # Database
 //!
 //! This module contains the core database structures.
-//!
-//! ## Modules
-//!
-//! - [`collection`]: Contains the Collection struct.
-//! - [`schema`]: Contains the Schema struct.
-//! - [`document`]: Contains the Document struct.
 
-/// The collection module - contains the [`Collection`] struct.
+/// The collection module - contains the Collection struct.
 pub mod collection;
 
-/// The schema module - contains the [`Schema`] struct.
+/// The schema module - contains the Schema struct.
 pub mod schema;
 
-/// The document module - contains the [`Document`] struct.
+/// The document module - contains the Document struct.
 pub mod document;
