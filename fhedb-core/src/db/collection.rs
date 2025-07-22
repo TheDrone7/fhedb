@@ -15,7 +15,7 @@ pub struct Collection {
     /// The schema describing the structure of documents in this collection.
     pub(crate) schema: Schema,
     /// The in-memory storage of document indices, mapping document IDs to log file offsets.
-    document_indices: HashMap<DocId, usize>,
+    pub(crate) document_indices: HashMap<DocId, usize>,
     /// The name of the field in the schema with type Id, or "id" if not present in the schema.
     pub(crate) id_field: String,
     /// The type of ID used in this collection (string or integer).
@@ -56,56 +56,6 @@ impl Collection {
             inserts: 0,
             base_path,
         })
-    }
-
-    /// Creates a new [`Collection`] from existing files on disk.
-    ///
-    /// This method reads the collection's metadata from the filesystem and reconstructs
-    /// the collection instance. It reads all log entries and processes them to rebuild
-    /// the collection's state.
-    ///
-    /// ## Arguments
-    ///
-    /// * `base_path` - The base directory path where collections are stored.
-    /// * `name` - The name of the collection to load.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok`]\([`Collection`]) if the collection was loaded successfully,
-    /// or [`Err`]\([`std::io::Error`]) if the collection could not be loaded.
-    pub fn from_files(base_path: impl Into<PathBuf>, name: &str) -> Result<Self, std::io::Error> {
-        let mut collection = Self::read_metadata(base_path, name)?;
-
-        // Read all log entries from the logfile with their offsets
-        let log_entries = collection.read_log_entries()?;
-
-        // Loop over all log entries and rebuild the document indices
-        for (log_entry, log_offset) in log_entries {
-            // Extract the document ID from the BSON document
-            let doc_id = collection
-                .get_doc_id_from_bson(&log_entry.document)
-                .ok_or_else(|| {
-                    std::io::Error::new(
-                        std::io::ErrorKind::InvalidData,
-                        format!(
-                            "Could not extract document ID from log entry at offset {}",
-                            log_offset
-                        ),
-                    )
-                })?;
-
-            // Update collection indices based on operation type
-            match log_entry.operation {
-                Operation::Insert | Operation::Update => {
-                    collection.document_indices.insert(doc_id, log_offset);
-                }
-                Operation::Delete => {
-                    collection.document_indices.remove(&doc_id);
-                }
-            }
-        }
-
-        Ok(collection)
     }
 
     /// Checks if the schema contains a field with the given name.
@@ -201,7 +151,7 @@ impl Collection {
     ///
     /// Returns [`Some`]\([`DocId`]) if the ID was successfully extracted,
     /// or [`None`] if the ID field is missing or of an unsupported type.
-    fn get_doc_id_from_bson(&self, doc: &bson::Document) -> Option<DocId> {
+    pub(crate) fn get_doc_id_from_bson(&self, doc: &bson::Document) -> Option<DocId> {
         let id_field = &self.id_field;
         match doc.get(id_field) {
             Some(bson::Bson::String(s)) => Some(DocId::from_string(s.clone())),
