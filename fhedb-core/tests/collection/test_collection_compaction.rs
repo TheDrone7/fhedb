@@ -1,20 +1,12 @@
 use bson::doc;
 use fhedb_core::prelude::*;
-use std::collections::HashMap;
 use tempfile::tempdir;
 
-/// Creates a test schema with integer ID type
-fn make_test_schema() -> Schema {
-    let mut fields = HashMap::new();
-    fields.insert("id".to_string(), FieldType::IdInt);
-    fields.insert("name".to_string(), FieldType::String);
-    fields.insert("age".to_string(), FieldType::Int);
-    Schema { fields }
-}
+use super::super::common::make_int_schema;
 
 #[test]
 fn test_compact_logfile_empty() {
-    let schema = make_test_schema();
+    let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -28,7 +20,7 @@ fn test_compact_logfile_empty() {
 
 #[test]
 fn test_compact_logfile_inserts_only() {
-    let schema = make_test_schema();
+    let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -69,7 +61,7 @@ fn test_compact_logfile_inserts_only() {
 
 #[test]
 fn test_compact_logfile_with_updates() {
-    let schema = make_test_schema();
+    let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -107,7 +99,7 @@ fn test_compact_logfile_with_updates() {
 
 #[test]
 fn test_compact_logfile_with_deletes() {
-    let schema = make_test_schema();
+    let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -142,7 +134,7 @@ fn test_compact_logfile_with_deletes() {
 
 #[test]
 fn test_compact_logfile_complex_sequence() {
-    let schema = make_test_schema();
+    let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 

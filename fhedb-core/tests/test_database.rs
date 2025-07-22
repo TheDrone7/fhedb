@@ -1,26 +1,10 @@
 use bson::doc;
 use fhedb_core::prelude::*;
-use std::collections::HashMap;
 use std::fs;
 use tempfile::tempdir;
 
-/// Helper function to create a test schema with string ID
-fn make_test_schema_string() -> Schema {
-    let mut fields = HashMap::new();
-    fields.insert("id".to_string(), FieldType::IdString);
-    fields.insert("name".to_string(), FieldType::String);
-    fields.insert("age".to_string(), FieldType::Int);
-    Schema { fields }
-}
-
-/// Helper function to create a test schema with int ID
-fn make_test_schema_int() -> Schema {
-    let mut fields = HashMap::new();
-    fields.insert("id".to_string(), FieldType::IdInt);
-    fields.insert("name".to_string(), FieldType::String);
-    fields.insert("age".to_string(), FieldType::Int);
-    Schema { fields }
-}
+mod common;
+use common::{make_int_schema, make_simple_schema, make_string_schema};
 
 #[test]
 fn test_database_creation_and_basic_properties() {
@@ -40,8 +24,8 @@ fn test_database_creation_and_basic_properties() {
 fn test_database_collection_management() {
     let temp_dir = tempdir().unwrap();
     let mut db = Database::new("test_db", temp_dir.path());
-    let schema1 = make_test_schema_string();
-    let schema2 = make_test_schema_int();
+    let schema1 = make_string_schema();
+    let schema2 = make_int_schema();
 
     // Test collection creation and duplicate handling
     let result1 = db.create_collection("users", schema1);
@@ -60,12 +44,7 @@ fn test_database_collection_management() {
     );
 
     // Test multiple collections
-    let simple_schema = {
-        let mut fields = HashMap::new();
-        fields.insert("id".to_string(), FieldType::IdString);
-        fields.insert("title".to_string(), FieldType::String);
-        Schema { fields }
-    };
+    let simple_schema = make_simple_schema();
     db.create_collection("posts", simple_schema).unwrap();
 
     assert_eq!(db.collection_count(), 2);
@@ -85,10 +64,8 @@ fn test_database_collection_drop_operations() {
     let mut db = Database::new("test_db", temp_dir.path());
 
     // Create collections
-    db.create_collection("users", make_test_schema_string())
-        .unwrap();
-    db.create_collection("posts", make_test_schema_int())
-        .unwrap();
+    db.create_collection("users", make_string_schema()).unwrap();
+    db.create_collection("posts", make_int_schema()).unwrap();
     assert_eq!(db.collection_count(), 2);
 
     // Test successful drop
@@ -136,10 +113,10 @@ fn test_database_file_operations() {
     // Test roundtrip: create, save, and load
     let mut original_db = Database::new("test_db2", temp_dir.path());
     original_db
-        .create_collection("users", make_test_schema_string())
+        .create_collection("users", make_string_schema())
         .unwrap();
     original_db
-        .create_collection("products", make_test_schema_int())
+        .create_collection("products", make_int_schema())
         .unwrap();
 
     // Add test data

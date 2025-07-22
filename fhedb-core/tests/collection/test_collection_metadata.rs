@@ -1,40 +1,13 @@
 use bson::doc;
 use fhedb_core::prelude::*;
-use std::collections::HashMap;
 use std::fs;
 use tempfile::tempdir;
 
-/// Creates a test schema with string ID type
-fn make_test_schema_string() -> Schema {
-    let mut fields = HashMap::new();
-    fields.insert("id".to_string(), FieldType::IdString);
-    fields.insert("name".to_string(), FieldType::String);
-    fields.insert("age".to_string(), FieldType::Int);
-    fields.insert("active".to_string(), FieldType::Boolean);
-    fields.insert(
-        "scores".to_string(),
-        FieldType::Array(Box::new(FieldType::Float)),
-    );
-    fields.insert(
-        "department".to_string(),
-        FieldType::Reference("departments".to_string()),
-    );
-    Schema { fields }
-}
-
-/// Creates a test schema with integer ID type
-fn make_test_schema_int() -> Schema {
-    let mut fields = HashMap::new();
-    fields.insert("id".to_string(), FieldType::IdInt);
-    fields.insert("name".to_string(), FieldType::String);
-    fields.insert("age".to_string(), FieldType::Int);
-    fields.insert("salary".to_string(), FieldType::Float);
-    Schema { fields }
-}
+use super::super::common::{make_complex_schema, make_int_schema, make_string_schema};
 
 #[test]
 fn test_write_metadata_creates_file() {
-    let schema = make_test_schema_string();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -49,7 +22,7 @@ fn test_write_metadata_creates_file() {
 
 #[test]
 fn test_read_metadata_round_trip_string_id() {
-    let schema = make_test_schema_string();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let original_collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -75,7 +48,7 @@ fn test_read_metadata_round_trip_string_id() {
 
 #[test]
 fn test_read_metadata_round_trip_int_id() {
-    let schema = make_test_schema_int();
+    let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let original_collection = Collection::new("employees", schema, temp_dir.path()).unwrap();
 
@@ -101,7 +74,7 @@ fn test_read_metadata_round_trip_int_id() {
 
 #[test]
 fn test_read_metadata_with_inserts() {
-    let schema = make_test_schema_string();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -156,7 +129,7 @@ fn test_read_metadata_file_not_found() {
 
 #[test]
 fn test_metadata_paths() {
-    let schema = make_test_schema_string();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -171,7 +144,7 @@ fn test_metadata_paths() {
 
 #[test]
 fn test_write_metadata_overwrites_existing() {
-    let schema = make_test_schema_string();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -204,34 +177,7 @@ fn test_write_metadata_overwrites_existing() {
 
 #[test]
 fn test_metadata_preserves_complex_schema() {
-    let mut fields = HashMap::new();
-    fields.insert("id".to_string(), FieldType::IdString);
-    fields.insert("name".to_string(), FieldType::String);
-    fields.insert("age".to_string(), FieldType::Int);
-    fields.insert("salary".to_string(), FieldType::Float);
-    fields.insert("active".to_string(), FieldType::Boolean);
-    fields.insert(
-        "tags".to_string(),
-        FieldType::Array(Box::new(FieldType::String)),
-    );
-    fields.insert(
-        "scores".to_string(),
-        FieldType::Array(Box::new(FieldType::Float)),
-    );
-    fields.insert(
-        "nested_scores".to_string(),
-        FieldType::Array(Box::new(FieldType::Array(Box::new(FieldType::Int)))),
-    );
-    fields.insert(
-        "department".to_string(),
-        FieldType::Reference("departments".to_string()),
-    );
-    fields.insert(
-        "manager".to_string(),
-        FieldType::Reference("employees".to_string()),
-    );
-
-    let schema = Schema { fields };
+    let schema = make_complex_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("complex_users", schema, temp_dir.path()).unwrap();
 
@@ -258,7 +204,7 @@ fn test_metadata_preserves_complex_schema() {
 
 #[test]
 fn test_metadata_file_size() {
-    let schema = make_test_schema_string();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -279,8 +225,8 @@ fn test_metadata_file_size() {
 
 #[test]
 fn test_multiple_collections_metadata_isolation() {
-    let schema1 = make_test_schema_string();
-    let schema2 = make_test_schema_int();
+    let schema1 = make_string_schema();
+    let schema2 = make_int_schema();
     let temp_dir = tempdir().unwrap();
 
     let collection1 = Collection::new("users", schema1, temp_dir.path()).unwrap();

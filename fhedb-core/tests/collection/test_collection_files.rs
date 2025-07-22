@@ -1,23 +1,14 @@
 use bson::doc;
 use fhedb_core::file::collection::CollectionFileOps;
 use fhedb_core::prelude::*;
-use std::collections::HashMap;
 use tempfile::tempdir;
 
-/// Creates a test schema with string ID type
-fn make_test_schema() -> Schema {
-    let mut fields = HashMap::new();
-    fields.insert("id".to_string(), FieldType::IdString);
-    fields.insert("name".to_string(), FieldType::String);
-    fields.insert("age".to_string(), FieldType::Int);
-    fields.insert("active".to_string(), FieldType::Boolean);
-    Schema { fields }
-}
+use super::super::common::make_string_schema;
 
 #[test]
 fn test_from_files_empty_collection() {
     let temp_dir = tempdir().unwrap();
-    let schema = make_test_schema();
+    let schema = make_string_schema();
 
     // Create a new collection and save its metadata
     let original_collection = Collection::new("test_collection", schema, temp_dir.path()).unwrap();
@@ -36,7 +27,7 @@ fn test_from_files_empty_collection() {
 #[test]
 fn test_from_files_with_documents() {
     let temp_dir = tempdir().unwrap();
-    let schema = make_test_schema();
+    let schema = make_string_schema();
 
     // Create a new collection and add some documents
     let mut original_collection =
@@ -93,7 +84,7 @@ fn test_from_files_with_documents() {
 #[test]
 fn test_from_files_with_deleted_documents() {
     let temp_dir = tempdir().unwrap();
-    let schema = make_test_schema();
+    let schema = make_string_schema();
 
     // Create a new collection and add some documents
     let mut original_collection =
@@ -161,7 +152,7 @@ fn test_from_files_nonexistent_collection() {
 #[test]
 fn test_from_files_missing_document_id() {
     let temp_dir = tempdir().unwrap();
-    let schema = make_test_schema();
+    let schema = make_string_schema();
 
     // Create a collection and manually corrupt the log file
     let mut original_collection =
@@ -207,7 +198,7 @@ fn test_from_files_missing_document_id() {
 #[test]
 fn test_from_files_complex_operations() {
     let temp_dir = tempdir().unwrap();
-    let schema = make_test_schema();
+    let schema = make_string_schema();
 
     // Create a collection with complex operations: insert, update, delete
     let mut original_collection =

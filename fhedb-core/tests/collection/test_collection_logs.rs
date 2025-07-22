@@ -1,23 +1,13 @@
 use bson::doc;
 use fhedb_core::prelude::*;
-use std::collections::HashMap;
 use std::fs;
 use tempfile::tempdir;
 
-/// Creates a test schema with integer ID type
-fn make_test_schema() -> Schema {
-    let mut fields = HashMap::new();
-    fields.insert("id".to_string(), FieldType::IdInt);
-    fields.insert("name".to_string(), FieldType::String);
-    fields.insert("age".to_string(), FieldType::Int);
-    fields.insert("salary".to_string(), FieldType::Float);
-    fields.insert("active".to_string(), FieldType::Boolean);
-    Schema { fields }
-}
+use super::super::common::{make_complex_schema, make_int_schema};
 
 #[test]
 fn test_append_to_log_creates_file() {
-    let schema = make_test_schema();
+    let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -52,7 +42,7 @@ fn test_append_to_log_creates_file() {
 
 #[test]
 fn test_read_log_entries_empty_file() {
-    let schema = make_test_schema();
+    let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -63,7 +53,7 @@ fn test_read_log_entries_empty_file() {
 
 #[test]
 fn test_append_and_read_entries() {
-    let schema = make_test_schema();
+    let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -133,7 +123,7 @@ fn test_append_and_read_entries() {
 
 #[test]
 fn test_different_operation_types() {
-    let schema = make_test_schema();
+    let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -162,7 +152,7 @@ fn test_different_operation_types() {
 
 #[test]
 fn test_logfile_path() {
-    let schema = make_test_schema();
+    let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -172,32 +162,20 @@ fn test_logfile_path() {
 
 #[test]
 fn test_log_entries_with_all_field_types() {
-    let mut fields = HashMap::new();
-    fields.insert("id".to_string(), FieldType::IdInt);
-    fields.insert("name".to_string(), FieldType::String);
-    fields.insert("age".to_string(), FieldType::Int);
-    fields.insert("salary".to_string(), FieldType::Float);
-    fields.insert("active".to_string(), FieldType::Boolean);
-    fields.insert(
-        "scores".to_string(),
-        FieldType::Array(Box::new(FieldType::Float)),
-    );
-    fields.insert(
-        "department".to_string(),
-        FieldType::Reference("departments".to_string()),
-    );
-    let schema = Schema { fields };
+    let schema = make_complex_schema();
 
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("employees", schema, temp_dir.path()).unwrap();
 
     let doc_with_all_types = doc! {
-        "id": 1i64,
+        "id": "emp_001".to_string(),
         "name": "John Doe",
         "age": 30i64,
         "salary": 85000.0,
         "active": true,
         "scores": [95.5, 88.0, 92.5, 97.0],
+        "tags": ["senior", "mentor"],
+        "nested_numbers": [[1, 2, 3], [4, 5, 6]],
         "department": "engineering"
     };
 
@@ -214,8 +192,8 @@ fn test_log_entries_with_all_field_types() {
 
 #[test]
 fn test_multiple_collections_log_isolation() {
-    let schema1 = make_test_schema();
-    let schema2 = make_test_schema();
+    let schema1 = make_int_schema();
+    let schema2 = make_int_schema();
     let temp_dir = tempdir().unwrap();
 
     let collection1 = Collection::new("users", schema1, temp_dir.path()).unwrap();
@@ -255,7 +233,7 @@ fn test_multiple_collections_log_isolation() {
 
 #[test]
 fn test_read_log_entry_at_offset() {
-    let schema = make_test_schema();
+    let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -302,7 +280,7 @@ fn test_read_log_entry_at_offset() {
     assert_eq!(entry3.document, doc3);
 
     // Test reading from non-existent file
-    let empty_collection = Collection::new("empty", make_test_schema(), temp_dir.path()).unwrap();
+    let empty_collection = Collection::new("empty", make_int_schema(), temp_dir.path()).unwrap();
     let result = empty_collection.read_log_entry_at_offset(0);
     assert!(result.is_err());
 
@@ -313,7 +291,7 @@ fn test_read_log_entry_at_offset() {
 
 #[test]
 fn test_update_document_logs_correctly() {
-    let schema = make_test_schema();
+    let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -366,7 +344,7 @@ fn test_update_document_logs_correctly() {
 
 #[test]
 fn test_collection_from_files_handles_update_operations() {
-    let schema = make_test_schema();
+    let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
 
     // Create a collection and add some documents with updates

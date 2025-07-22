@@ -1,28 +1,13 @@
 use bson::doc;
 use fhedb_core::prelude::*;
-use std::collections::HashMap;
 use tempfile::tempdir;
 
-fn make_test_schema_string() -> Schema {
-    let mut fields = HashMap::new();
-    fields.insert("id".to_string(), FieldType::IdString);
-    fields.insert("name".to_string(), FieldType::String);
-    fields.insert("age".to_string(), FieldType::Int);
-    Schema { fields }
-}
-
-fn make_test_schema_int() -> Schema {
-    let mut fields = HashMap::new();
-    fields.insert("id".to_string(), FieldType::IdInt);
-    fields.insert("name".to_string(), FieldType::String);
-    fields.insert("age".to_string(), FieldType::Int);
-    Schema { fields }
-}
+use super::super::common::{make_int_schema, make_string_schema};
 
 #[test]
 fn test_collection_construction() {
-    let schema = make_test_schema_string();
-    let schema2 = make_test_schema_int();
+    let schema = make_string_schema();
+    let schema2 = make_int_schema();
     let temp_dir1 = tempdir().unwrap();
     let temp_dir2 = tempdir().unwrap();
     let collection = Collection::new("users", schema.clone(), temp_dir1.path()).unwrap();
@@ -33,7 +18,7 @@ fn test_collection_construction() {
 
 #[test]
 fn test_has_field() {
-    let schema = make_test_schema_string();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
     assert!(collection.has_field("id"));
@@ -43,7 +28,7 @@ fn test_has_field() {
 
 #[test]
 fn test_validate_document_valid() {
-    let schema = make_test_schema_string();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
     let doc = doc! {
@@ -56,7 +41,7 @@ fn test_validate_document_valid() {
 
 #[test]
 fn test_get_documents_empty() {
-    let schema = make_test_schema_string();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
     let documents = collection.get_documents();
@@ -66,17 +51,12 @@ fn test_get_documents_empty() {
 #[test]
 fn test_id_type_enforcement() {
     // Test string collection rejects integer IDs
-    let mut string_fields = HashMap::new();
-    string_fields.insert("id".to_string(), FieldType::IdString);
-    string_fields.insert("name".to_string(), FieldType::String);
-    let string_schema = Schema {
-        fields: string_fields,
-    };
+    let string_schema = make_string_schema();
     let temp_dir1 = tempdir().unwrap();
     let mut string_collection =
         Collection::new("string_users", string_schema, temp_dir1.path()).unwrap();
 
-    let doc_with_int_id = doc! { "id": 42i64, "name": "Alice" };
+    let doc_with_int_id = doc! { "id": 42i64, "name": "Alice", "age": 30i64 };
     let result = string_collection.add_document(doc_with_int_id);
     assert!(result.is_err());
     let errors = result.unwrap_err();
@@ -87,14 +67,11 @@ fn test_id_type_enforcement() {
     );
 
     // Test integer collection rejects string IDs
-    let mut int_fields = HashMap::new();
-    int_fields.insert("id".to_string(), FieldType::IdInt);
-    int_fields.insert("name".to_string(), FieldType::String);
-    let int_schema = Schema { fields: int_fields };
+    let int_schema = make_int_schema();
     let temp_dir2 = tempdir().unwrap();
     let mut int_collection = Collection::new("int_users", int_schema, temp_dir2.path()).unwrap();
 
-    let doc_with_string_id = doc! { "id": "user-123", "name": "Bob" };
+    let doc_with_string_id = doc! { "id": "user-123", "name": "Bob", "age": 25i64 };
     let result = int_collection.add_document(doc_with_string_id);
     assert!(result.is_err());
     let errors = result.unwrap_err();

@@ -1,20 +1,13 @@
 use bson::doc;
 use fhedb_core::prelude::*;
-use std::collections::HashMap;
 use tempfile::tempdir;
 use uuid::Uuid;
 
-fn make_test_schema() -> Schema {
-    let mut fields = HashMap::new();
-    fields.insert("id".to_string(), FieldType::IdString);
-    fields.insert("name".to_string(), FieldType::String);
-    fields.insert("age".to_string(), FieldType::Int);
-    Schema { fields }
-}
+use super::super::common::make_string_schema;
 
 #[test]
 fn test_get_documents_with_data() {
-    let schema = make_test_schema();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -50,7 +43,7 @@ fn test_get_documents_with_data() {
 
 #[test]
 fn test_add_document_without_id_field() {
-    let schema = make_test_schema();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -84,7 +77,7 @@ fn test_add_document_without_id_field() {
 
 #[test]
 fn test_add_document_with_custom_string_id() {
-    let schema = make_test_schema();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -105,7 +98,7 @@ fn test_add_document_with_custom_string_id() {
 
 #[test]
 fn test_add_document_with_integer_id_should_fail() {
-    let schema = make_test_schema();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -128,7 +121,7 @@ fn test_add_document_with_integer_id_should_fail() {
 
 #[test]
 fn test_update_document_success() {
-    let schema = make_test_schema();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -163,7 +156,7 @@ fn test_update_document_success() {
 
 #[test]
 fn test_update_document_partial_update() {
-    let schema = make_test_schema();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -192,7 +185,7 @@ fn test_update_document_partial_update() {
 
 #[test]
 fn test_update_document_nonexistent() {
-    let schema = make_test_schema();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -211,7 +204,7 @@ fn test_update_document_nonexistent() {
 
 #[test]
 fn test_update_document_cannot_update_id() {
-    let schema = make_test_schema();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
@@ -239,7 +232,7 @@ fn test_update_document_cannot_update_id() {
 
 #[test]
 fn test_update_document_schema_validation() {
-    let schema = make_test_schema();
+    let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
