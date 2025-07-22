@@ -23,13 +23,19 @@ pub trait DatabaseFileOps {
     ///
     /// Returns [`Ok`]\([`Database`]) if the database was loaded successfully,
     /// or [`Err`]\([`std::io::Error`]) if the database could not be loaded.
-    fn from_files(name: impl Into<String>, base_path: impl Into<PathBuf>) -> Result<Self, std::io::Error>
+    fn from_files(
+        name: impl Into<String>,
+        base_path: impl Into<PathBuf>,
+    ) -> Result<Self, std::io::Error>
     where
         Self: Sized;
 }
 
 impl DatabaseFileOps for Database {
-    fn from_files(name: impl Into<String>, base_path: impl Into<PathBuf>) -> Result<Self, std::io::Error> {
+    fn from_files(
+        name: impl Into<String>,
+        base_path: impl Into<PathBuf>,
+    ) -> Result<Self, std::io::Error> {
         // Create a new database object with the given parameters
         let mut database = Self::new(name, base_path);
 
