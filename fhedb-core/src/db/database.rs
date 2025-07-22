@@ -1,4 +1,6 @@
 use crate::db::collection::Collection;
+use crate::db::schema::Schema;
+use crate::file::collection::CollectionFileOps;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -48,36 +50,67 @@ impl Database {
         &self.base_path
     }
 
-    /// Adds a collection to the database.
+    /// Creates a new collection in the database.
     ///
     /// ## Arguments
     ///
-    /// * `collection` - The collection to add to the database.
+    /// * `name` - The name of the collection.
+    /// * `schema` - The [`Schema`] describing the structure of documents in this collection.
     ///
     /// ## Returns
     ///
-    /// Returns `true` if the collection was added, `false` if a collection with the same name already exists.
-    pub fn add_collection(&mut self, collection: Collection) -> bool {
-        let name = collection.name.clone();
-        if !self.collections.contains_key(&name) {
-            self.collections.insert(name, collection);
-            true
-        } else {
-            false
+    /// Returns [`Ok`]\([`Collection`]) if the collection was created and added successfully,
+    /// or [`Err`]\([`String`]) if a collection with the same name already exists or creation failed.
+    pub fn create_collection(
+        &mut self,
+        name: impl Into<String>,
+        schema: Schema,
+    ) -> Result<&Collection, String> {
+        let collection_name = name.into();
+
+        if self.collections.contains_key(&collection_name) {
+            return Err(format!("Collection '{}' already exists", collection_name));
         }
+
+        let collection = Collection::new(collection_name.clone(), schema, &self.base_path)?;
+
+        // Write metadata to files
+        collection
+            .write_metadata()
+            .map_err(|e| format!("Failed to write collection metadata: {}", e))?;
+
+        self.collections.insert(collection_name.clone(), collection);
+
+        Ok(self.collections.get(&collection_name).unwrap())
     }
 
-    /// Removes a collection from the database.
+    /// Drops a collection from the database and deletes its files.
+    ///
+    /// This method removes the collection from the in-memory cache and deletes
+    /// the entire collection directory and all its files from disk.
     ///
     /// ## Arguments
     ///
-    /// * `collection_name` - The name of the collection to remove.
+    /// * `collection_name` - The name of the collection to drop.
     ///
     /// ## Returns
     ///
-    /// Returns the removed collection if it existed, or [`None`] if it wasn't found.
-    pub fn remove_collection(&mut self, collection_name: &str) -> Option<Collection> {
-        self.collections.remove(collection_name)
+    /// Returns [`Ok`]\([`String`]) with the name of the dropped collection if it existed and was successfully deleted,
+    /// or [`Err`]\([`String`]) if the collection wasn't found or deletion failed.
+    pub fn drop_collection(&mut self, collection_name: &str) -> Result<String, String> {
+        if let Some(collection) = self.collections.remove(collection_name) {
+            // Delete the collection files from disk
+            collection.delete_collection_files().map_err(|e| {
+                // If file deletion fails, we should re-insert the collection back
+                self.collections
+                    .insert(collection_name.to_string(), collection.clone());
+                format!("Failed to delete collection files: {}", e)
+            })?;
+
+            Ok(collection_name.to_string())
+        } else {
+            Err(format!("Collection '{}' not found", collection_name))
+        }
     }
 
     /// Checks if a collection exists in the database.
