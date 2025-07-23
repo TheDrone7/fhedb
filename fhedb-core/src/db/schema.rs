@@ -30,6 +30,8 @@ pub enum FieldType {
     Array(Box<FieldType>),
     /// A reference to another collection, identified by its name.
     Reference(String),
+    /// A nullable value that can be null or of the specified type.
+    Nullable(Box<FieldType>),
     /// A document identifier that must be a string.
     IdString,
     /// A document identifier that must be a u64 integer.
@@ -78,10 +80,18 @@ impl Schema {
                     }
                 }
                 None => {
-                    if let FieldType::IdString | FieldType::IdInt = field_type {
-                        continue;
+                    match field_type {
+                        FieldType::IdString | FieldType::IdInt => {
+                            continue;
+                        }
+                        FieldType::Nullable(_) => {
+                            // Nullable fields can be missing from the document
+                            continue;
+                        }
+                        _ => {
+                            errors.push(format!("Missing field: '{}'.", field));
+                        }
                     }
-                    errors.push(format!("Missing field: '{}'.", field));
                 }
             }
         }
@@ -211,6 +221,16 @@ fn parse_field_type(value: &Bson) -> Option<FieldType> {
                 } else {
                     None
                 }
+            } else if doc.contains_key("nullable") {
+                if let Some(bson) = doc.get("nullable") {
+                    let inner_field_type = match parse_field_type(bson) {
+                        Some(field_type) => field_type,
+                        None => return None,
+                    };
+                    Some(FieldType::Nullable(Box::new(inner_field_type)))
+                } else {
+                    None
+                }
             } else {
                 None
             }
@@ -244,6 +264,11 @@ fn field_type_to_bson(field_type: FieldType) -> Bson {
         FieldType::Reference(collection_name) => {
             let mut doc = Document::new();
             doc.insert("reference", Bson::String(collection_name));
+            Bson::Document(doc)
+        }
+        FieldType::Nullable(inner_type) => {
+            let mut doc = Document::new();
+            doc.insert("nullable", field_type_to_bson(*inner_type));
             Bson::Document(doc)
         }
     }
@@ -291,6 +316,10 @@ fn validate_bson_type(value: &Bson, field_type: &FieldType) -> Result<(), String
         FieldType::Reference(_) => match value {
             Bson::String(_) => Ok(()),
             _ => Err("Expected reference (string)".to_string()),
+        },
+        FieldType::Nullable(inner_type) => match value {
+            Bson::Null => Ok(()),
+            _ => validate_bson_type(value, inner_type),
         },
         FieldType::IdString => match value {
             Bson::String(_) => Ok(()),

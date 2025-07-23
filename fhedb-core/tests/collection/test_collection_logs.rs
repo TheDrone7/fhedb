@@ -176,7 +176,8 @@ fn test_log_entries_with_all_field_types() {
         "scores": [95.5, 88.0, 92.5, 97.0],
         "tags": ["senior", "mentor"],
         "nested_numbers": [[1, 2, 3], [4, 5, 6]],
-        "department": "engineering"
+        "department": "engineering",
+        "nickname": "JD"
     };
 
     assert!(

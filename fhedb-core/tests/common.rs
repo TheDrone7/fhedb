@@ -52,5 +52,9 @@ pub fn make_complex_schema() -> Schema {
         "department".to_string(),
         FieldType::Reference("departments".to_string()),
     );
+    fields.insert(
+        "nickname".to_string(),
+        FieldType::Nullable(Box::new(FieldType::String)),
+    );
     Schema { fields }
 }

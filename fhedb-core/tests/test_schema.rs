@@ -221,3 +221,59 @@ fn test_validate_document_missing_id_and_other_field() {
     assert!(errors.iter().any(|e| e.contains("Missing field: 'age'")));
     assert!(!errors.iter().any(|e| e.contains("Missing field: 'id'")));
 }
+
+#[test]
+fn test_nullable_fields() {
+    let mut fields = HashMap::new();
+    fields.insert("id".to_string(), FieldType::IdInt);
+    fields.insert("name".to_string(), FieldType::String);
+    fields.insert(
+        "nickname".to_string(),
+        FieldType::Nullable(Box::new(FieldType::String)),
+    );
+    fields.insert(
+        "tags".to_string(),
+        FieldType::Nullable(Box::new(FieldType::Array(Box::new(FieldType::String)))),
+    );
+    let schema = Schema { fields };
+
+    // Test with all nullable fields present
+    let doc1 = doc! {
+        "id": 1i64,
+        "name": "Alice",
+        "nickname": "Al",
+        "tags": ["tag1", "tag2"],
+    };
+    assert!(schema.validate_document(&doc1).is_ok());
+
+    // Test with nullable fields as null
+    let doc2 = doc! {
+        "id": 2i64,
+        "name": "Bob",
+        "nickname": null,
+        "tags": null,
+    };
+    assert!(schema.validate_document(&doc2).is_ok());
+
+    // Test with nullable fields missing
+    let doc3 = doc! {
+        "id": 3i64,
+        "name": "Charlie",
+    };
+    assert!(schema.validate_document(&doc3).is_ok());
+
+    // Test with wrong type for nullable field
+    let doc4 = doc! {
+        "id": 4i64,
+        "name": "Dave",
+        "nickname": 123i64, // Wrong type
+    };
+    let result = schema.validate_document(&doc4);
+    assert!(result.is_err());
+    let errors = result.unwrap_err();
+    assert!(
+        errors
+            .iter()
+            .any(|e| e.contains("nickname") && e.contains("Expected string"))
+    );
+}
