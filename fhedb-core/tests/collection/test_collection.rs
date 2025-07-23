@@ -2,7 +2,7 @@ use bson::doc;
 use fhedb_core::prelude::*;
 use tempfile::tempdir;
 
-use super::super::common::{make_int_schema, make_string_schema};
+use super::super::common::{make_int_schema, make_schema_with_defaults, make_string_schema};
 
 #[test]
 fn test_collection_construction() {
@@ -80,4 +80,55 @@ fn test_id_type_enforcement() {
             .iter()
             .any(|e| e.contains("Field 'id': Expected ID as integer"))
     );
+}
+
+#[test]
+fn test_collection_with_default_values() {
+    let schema = make_schema_with_defaults();
+    let temp_dir = tempdir().unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
+
+    // Test adding document with only required fields - defaults should be applied
+    let doc = doc! {
+        "name": "Alice",
+        "email": "alice@example.com"
+        // id will be generated, age/active/role/score will use defaults
+    };
+
+    let doc_id = collection.add_document(doc).unwrap();
+    let retrieved_doc = collection.get_document(doc_id).unwrap();
+
+    // Verify the document has the default values applied
+    assert_eq!(retrieved_doc.data.get_str("name").unwrap(), "Alice");
+    assert_eq!(
+        retrieved_doc.data.get_str("email").unwrap(),
+        "alice@example.com"
+    );
+    assert_eq!(retrieved_doc.data.get_i64("age").unwrap(), 18); // default value
+    assert_eq!(retrieved_doc.data.get_bool("active").unwrap(), true); // default value
+    assert_eq!(retrieved_doc.data.get_str("role").unwrap(), "user"); // default value
+    assert_eq!(retrieved_doc.data.get_f64("score").unwrap(), 0.0); // default value
+
+    // Test adding document with some defaults overridden
+    let doc2 = doc! {
+        "name": "Bob",
+        "email": "bob@example.com",
+        "age": 25i64, // Override default
+        "role": "admin" // Override default
+        // active and score will use defaults
+    };
+
+    let doc_id2 = collection.add_document(doc2).unwrap();
+    let retrieved_doc2 = collection.get_document(doc_id2).unwrap();
+
+    // Verify the document has the right mix of provided and default values
+    assert_eq!(retrieved_doc2.data.get_str("name").unwrap(), "Bob");
+    assert_eq!(
+        retrieved_doc2.data.get_str("email").unwrap(),
+        "bob@example.com"
+    );
+    assert_eq!(retrieved_doc2.data.get_i64("age").unwrap(), 25); // provided value
+    assert_eq!(retrieved_doc2.data.get_bool("active").unwrap(), true); // default value
+    assert_eq!(retrieved_doc2.data.get_str("role").unwrap(), "admin"); // provided value
+    assert_eq!(retrieved_doc2.data.get_f64("score").unwrap(), 0.0); // default value
 }

@@ -13,7 +13,7 @@ pub mod prelude {
     pub use crate::db::collection::Collection;
     pub use crate::db::database::Database;
     pub use crate::db::document::{DocId, Document};
-    pub use crate::db::schema::{FieldType, IdType, Schema};
+    pub use crate::db::schema::{FieldDefinition, FieldType, IdType, Schema};
     pub use crate::file::collection::CollectionFileOps;
     pub use crate::file::database::DatabaseFileOps;
     pub use crate::file::types::{LogEntry, Operation};

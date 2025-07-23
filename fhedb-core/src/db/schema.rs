@@ -38,13 +38,76 @@ pub enum FieldType {
     IdInt,
 }
 
+/// Represents a field definition in a document schema.
+///
+/// This struct contains both the type of the field and its default value.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FieldDefinition {
+    /// The type of the field.
+    pub field_type: FieldType,
+    /// The default value for the field. If None, the field is required.
+    pub default_value: Option<Bson>,
+}
+
+impl FieldDefinition {
+    /// Creates a new required field definition (no default value).
+    ///
+    /// ## Arguments
+    ///
+    /// * `field_type` - The type of the field.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`FieldDefinition`] with no default value.
+    pub fn new(field_type: FieldType) -> Self {
+        Self {
+            field_type,
+            default_value: None,
+        }
+    }
+
+    /// Creates a new field definition with a default value.
+    ///
+    /// ## Arguments
+    ///
+    /// * `field_type` - The type of the field.
+    /// * `default_value` - The default value for the field.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`FieldDefinition`] with the specified default value.
+    pub fn with_default(field_type: FieldType, default_value: Bson) -> Self {
+        Self {
+            field_type,
+            default_value: Some(default_value),
+        }
+    }
+
+    /// Creates a new field definition with an optional default value.
+    ///
+    /// ## Arguments
+    ///
+    /// * `field_type` - The type of the field.
+    /// * `default_value` - The optional default value for the field.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`FieldDefinition`] with the specified optional default value.
+    pub fn with_optional_default(field_type: FieldType, default_value: Option<Bson>) -> Self {
+        Self {
+            field_type,
+            default_value,
+        }
+    }
+}
+
 /// Describes the schema for a document.
 ///
-/// The schema maps field names to their expected types.
+/// The schema maps field names to their field definitions (type and default value).
 #[derive(Debug, Clone)]
 pub struct Schema {
-    /// A map from field names to their corresponding types.
-    pub fields: HashMap<String, FieldType>,
+    /// A map from field names to their corresponding field definitions.
+    pub fields: HashMap<String, FieldDefinition>,
 }
 
 impl Schema {
@@ -72,15 +135,15 @@ impl Schema {
     /// Returns [`Err`]\([`Vec<String>`]) containing error messages for each field that does not conform to the schema.
     pub fn validate_document(&self, doc: &Document) -> Result<(), Vec<String>> {
         let mut errors = Vec::new();
-        for (field, field_type) in &self.fields {
+        for (field, field_def) in &self.fields {
             match doc.get(field) {
                 Some(value) => {
-                    if let Err(e) = validate_bson_type(value, field_type) {
+                    if let Err(e) = validate_bson_type(value, &field_def.field_type) {
                         errors.push(format!("Field '{}': {}", field, e));
                     }
                 }
                 None => {
-                    match field_type {
+                    match &field_def.field_type {
                         FieldType::IdString | FieldType::IdInt => {
                             continue;
                         }
@@ -89,7 +152,10 @@ impl Schema {
                             continue;
                         }
                         _ => {
-                            errors.push(format!("Missing field: '{}'.", field));
+                            // If the field has a default value, it's not required
+                            if field_def.default_value.is_none() {
+                                errors.push(format!("Missing field: '{}'.", field));
+                            }
                         }
                     }
                 }
@@ -105,7 +171,7 @@ impl Schema {
     /// Ensures the schema has exactly one Id field.
     ///
     /// If more than one Id field is found, returns an error.
-    /// If none is found, adds a new field named "id" with type IdString.
+    /// If none is found, adds a new field named "id" with type IdInt.
     /// If exactly one is found, does nothing.
     ///
     /// ## Returns
@@ -117,7 +183,7 @@ impl Schema {
         let id_fields: Vec<(String, IdType)> = self
             .fields
             .iter()
-            .filter_map(|(field, field_type)| match field_type {
+            .filter_map(|(field, field_def)| match &field_def.field_type {
                 FieldType::IdString => Some((field.clone(), IdType::String)),
                 FieldType::IdInt => Some((field.clone(), IdType::Int)),
                 _ => None,
@@ -125,7 +191,13 @@ impl Schema {
             .collect();
         match id_fields.len() {
             0 => {
-                self.fields.insert("id".to_string(), FieldType::IdInt);
+                self.fields.insert(
+                    "id".to_string(),
+                    FieldDefinition {
+                        field_type: FieldType::IdInt,
+                        default_value: None,
+                    },
+                );
                 Ok(("id".to_string(), IdType::Int))
             }
             1 => Ok(id_fields[0].clone()),
@@ -134,13 +206,50 @@ impl Schema {
             }
         }
     }
+
+    /// Applies default values to a document for any missing fields that have defaults.
+    ///
+    /// ## Arguments
+    ///
+    /// * `doc` - A mutable reference to the BSON document to update.
+    ///
+    /// ## Returns
+    ///
+    /// The number of fields that had default values applied.
+    pub fn apply_defaults(&self, doc: &mut Document) -> usize {
+        let mut applied_count = 0;
+
+        for (field_name, field_def) in &self.fields {
+            // Skip if field already exists in the document
+            if doc.contains_key(field_name) {
+                continue;
+            }
+
+            // Skip ID fields and nullable fields - they are handled elsewhere
+            match &field_def.field_type {
+                FieldType::IdString | FieldType::IdInt => continue,
+                FieldType::Nullable(_) => continue,
+                _ => {}
+            }
+
+            // Apply default value if present
+            if let Some(default_value) = &field_def.default_value {
+                doc.insert(field_name.clone(), default_value.clone());
+                applied_count += 1;
+            }
+        }
+
+        applied_count
+    }
 }
 
 impl From<Document> for Schema {
     /// Creates a [`Schema`] from a BSON document.
     ///
-    /// The BSON document should directly contain field names as keys
-    /// and field type representations as values.
+    /// The BSON document should contain field names as keys and field definition
+    /// representations as values. Each field definition can be either:
+    /// - A simple type string (for required fields without defaults)
+    /// - A document with "type" and "default" keys
     ///
     /// ## Arguments
     ///
@@ -152,9 +261,9 @@ impl From<Document> for Schema {
     fn from(doc: Document) -> Self {
         let mut schema = Schema::new();
 
-        for (field_name, field_type_value) in doc {
-            if let Some(field_type) = parse_field_type(&field_type_value) {
-                schema.fields.insert(field_name, field_type);
+        for (field_name, field_definition_value) in doc {
+            if let Some(field_def) = parse_field_definition(&field_definition_value) {
+                schema.fields.insert(field_name, field_def);
             }
         }
 
@@ -175,11 +284,59 @@ impl From<Schema> for Document {
     fn from(schema: Schema) -> Self {
         let mut doc = Document::new();
 
-        for (field_name, field_type) in schema.fields {
-            doc.insert(field_name, field_type_to_bson(field_type));
+        for (field_name, field_def) in schema.fields {
+            doc.insert(field_name, field_definition_to_bson(field_def));
         }
 
         doc
+    }
+}
+
+/// Parses a BSON value into a [`FieldDefinition`].
+///
+/// ## Arguments
+///
+/// * `value` - The BSON value to parse.
+///
+/// ## Returns
+///
+/// Returns [`Some`]\([`FieldDefinition`]) if the value represents a valid field definition,
+/// or [`None`] if the value is not recognized.
+fn parse_field_definition(value: &Bson) -> Option<FieldDefinition> {
+    match value {
+        // Simple type string - creates required field without default
+        Bson::String(_) => {
+            if let Some(field_type) = parse_field_type(value) {
+                Some(FieldDefinition {
+                    field_type,
+                    default_value: None,
+                })
+            } else {
+                None
+            }
+        }
+        // Document with type and possibly default value
+        Bson::Document(doc) => {
+            if doc.contains_key("type") {
+                let field_type = parse_field_type(doc.get("type")?)?;
+                let default_value = doc.get("default").cloned();
+                Some(FieldDefinition {
+                    field_type,
+                    default_value,
+                })
+            } else {
+                // For backward compatibility, try parsing as field type directly
+                if let Some(field_type) = parse_field_type(value) {
+                    Some(FieldDefinition {
+                        field_type,
+                        default_value: None,
+                    })
+                } else {
+                    None
+                }
+            }
+        }
+        _ => None,
     }
 }
 
@@ -269,6 +426,27 @@ fn field_type_to_bson(field_type: FieldType) -> Bson {
         FieldType::Nullable(inner_type) => {
             let mut doc = Document::new();
             doc.insert("nullable", field_type_to_bson(*inner_type));
+            Bson::Document(doc)
+        }
+    }
+}
+
+/// Converts a [`FieldDefinition`] to a BSON value.
+///
+/// ## Arguments
+///
+/// * `field_def` - The field definition to convert.
+///
+/// ## Returns
+///
+/// A BSON value representing the field definition.
+fn field_definition_to_bson(field_def: FieldDefinition) -> Bson {
+    match field_def.default_value {
+        None => field_type_to_bson(field_def.field_type),
+        Some(default) => {
+            let mut doc = Document::new();
+            doc.insert("type", field_type_to_bson(field_def.field_type));
+            doc.insert("default", default);
             Bson::Document(doc)
         }
     }

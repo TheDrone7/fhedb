@@ -94,6 +94,9 @@ impl Collection {
     ///
     /// Returns [`Ok`]\([`DocId`]) if the document is valid and added, or [`Err`]\([`Vec<String>`]) with validation errors. Returns an error if the schema does not have an ID field.
     pub fn add_document(&mut self, mut doc: bson::Document) -> Result<DocId, Vec<String>> {
+        // Apply default values for missing fields
+        self.schema.apply_defaults(&mut doc);
+
         if let Err(errors) = self.validate_document(&doc) {
             return Err(errors);
         }
