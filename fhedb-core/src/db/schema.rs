@@ -152,10 +152,7 @@ impl Schema {
                             continue;
                         }
                         _ => {
-                            // If the field has a default value, it's not required
-                            if field_def.default_value.is_none() {
-                                errors.push(format!("Missing field: '{}'.", field));
-                            }
+                            errors.push(format!("Missing field: '{}'.", field));
                         }
                     }
                 }

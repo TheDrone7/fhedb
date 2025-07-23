@@ -337,13 +337,13 @@ fn test_default_values() {
     };
     assert!(schema.validate_document(&doc1).is_ok());
 
-    // Test with only required fields - should validate successfully (missing fields have defaults)
+    // Test with only required fields - should not validate (fields are missing even if they have defaults)
     let doc2 = doc! {
         "id": 2i64,
         "name": "Bob",
         "email": "bob@example.com"
     };
-    assert!(schema.validate_document(&doc2).is_ok());
+    assert!(schema.validate_document(&doc2).is_err());
 
     // Test missing required field without default - should fail validation
     let doc3 = doc! {
