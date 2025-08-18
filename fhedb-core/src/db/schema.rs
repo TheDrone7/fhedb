@@ -142,20 +142,17 @@ impl Schema {
                         errors.push(format!("Field '{}': {}", field, e));
                     }
                 }
-                None => {
-                    match &field_def.field_type {
-                        FieldType::IdString | FieldType::IdInt => {
-                            continue;
-                        }
-                        FieldType::Nullable(_) => {
-                            // Nullable fields can be missing from the document
-                            continue;
-                        }
-                        _ => {
-                            errors.push(format!("Missing field: '{}'.", field));
-                        }
+                None => match &field_def.field_type {
+                    FieldType::IdString | FieldType::IdInt => {
+                        continue;
                     }
-                }
+                    FieldType::Nullable(_) => {
+                        continue;
+                    }
+                    _ => {
+                        errors.push(format!("Missing field: '{}'.", field));
+                    }
+                },
             }
         }
         if errors.is_empty() {
@@ -217,19 +214,16 @@ impl Schema {
         let mut applied_count = 0;
 
         for (field_name, field_def) in &self.fields {
-            // Skip if field already exists in the document
             if doc.contains_key(field_name) {
                 continue;
             }
 
-            // Skip ID fields and nullable fields - they are handled elsewhere
             match &field_def.field_type {
                 FieldType::IdString | FieldType::IdInt => continue,
                 FieldType::Nullable(_) => continue,
                 _ => {}
             }
 
-            // Apply default value if present
             if let Some(default_value) = &field_def.default_value {
                 doc.insert(field_name.clone(), default_value.clone());
                 applied_count += 1;
@@ -301,7 +295,6 @@ impl From<Schema> for Document {
 /// or [`None`] if the value is not recognized.
 fn parse_field_definition(value: &Bson) -> Option<FieldDefinition> {
     match value {
-        // Simple type string - creates required field without default
         Bson::String(_) => {
             if let Some(field_type) = parse_field_type(value) {
                 Some(FieldDefinition {
@@ -312,7 +305,6 @@ fn parse_field_definition(value: &Bson) -> Option<FieldDefinition> {
                 None
             }
         }
-        // Document with type and possibly default value
         Bson::Document(doc) => {
             if doc.contains_key("type") {
                 let field_type = parse_field_type(doc.get("type")?)?;
@@ -322,7 +314,6 @@ fn parse_field_definition(value: &Bson) -> Option<FieldDefinition> {
                     default_value,
                 })
             } else {
-                // For backward compatibility, try parsing as field type directly
                 if let Some(field_type) = parse_field_type(value) {
                     Some(FieldDefinition {
                         field_type,

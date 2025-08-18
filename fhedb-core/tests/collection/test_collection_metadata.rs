@@ -10,11 +10,8 @@ fn test_write_metadata_creates_file() {
     let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
-
-    // Write metadata
     assert!(collection.write_metadata().is_ok());
 
-    // Check that metadata file exists
     let metadata_path = collection.metadata_path();
     assert!(metadata_path.exists());
     assert!(metadata_path.is_file());
@@ -25,18 +22,14 @@ fn test_read_metadata_round_trip_string_id() {
     let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let original_collection = Collection::new("users", schema, temp_dir.path()).unwrap();
-
-    // Write metadata
     assert!(original_collection.write_metadata().is_ok());
 
-    // Read metadata back
     let read_collection = Collection::read_metadata(
         original_collection.base_path().clone().parent().unwrap(),
         &original_collection.name,
     )
     .unwrap();
 
-    // Verify all fields match
     assert_eq!(read_collection.name, original_collection.name);
     assert_eq!(
         read_collection.schema().fields,
@@ -51,18 +44,14 @@ fn test_read_metadata_round_trip_int_id() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let original_collection = Collection::new("employees", schema, temp_dir.path()).unwrap();
-
-    // Write metadata
     assert!(original_collection.write_metadata().is_ok());
 
-    // Read metadata back
     let read_collection = Collection::read_metadata(
         original_collection.base_path().clone().parent().unwrap(),
         &original_collection.name,
     )
     .unwrap();
 
-    // Verify all fields match
     assert_eq!(read_collection.name, original_collection.name);
     assert_eq!(
         read_collection.schema().fields,
@@ -78,7 +67,6 @@ fn test_read_metadata_with_inserts() {
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
-    // Add some documents to increment the inserts counter
     let doc1 = doc! {
         "id": uuid::Uuid::new_v4().to_string(),
         "name": "Alice",
@@ -98,18 +86,14 @@ fn test_read_metadata_with_inserts() {
 
     collection.add_document(doc1).unwrap();
     collection.add_document(doc2).unwrap();
-
-    // Write metadata
     assert!(collection.write_metadata().is_ok());
 
-    // Read metadata back
     let read_collection = Collection::read_metadata(
         collection.base_path().clone().parent().unwrap(),
         &collection.name,
     )
     .unwrap();
 
-    // Verify inserts count is preserved
     assert_eq!(read_collection.inserts(), 2);
     assert_eq!(read_collection.inserts(), collection.inserts());
 }
@@ -118,7 +102,6 @@ fn test_read_metadata_with_inserts() {
 fn test_read_metadata_file_not_found() {
     let temp_dir = tempdir().unwrap();
 
-    // Try to read metadata from non-existent collection
     let result = Collection::read_metadata(temp_dir.path(), "nonexistent_collection");
     assert!(result.is_err());
 
@@ -133,11 +116,9 @@ fn test_metadata_paths() {
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
-    // Test metadata path
     let expected_metadata_path = collection.base_path().join("metadata.bin");
     assert_eq!(collection.metadata_path(), expected_metadata_path);
 
-    // Test logfile path
     let expected_logfile_path = collection.base_path().join("logfile.log");
     assert_eq!(collection.logfile_path(), expected_logfile_path);
 }
@@ -147,11 +128,8 @@ fn test_write_metadata_overwrites_existing() {
     let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
-
-    // Write metadata initially
     assert!(collection.write_metadata().is_ok());
 
-    // Add a document to change the inserts count
     let doc = doc! {
         "id": uuid::Uuid::new_v4().to_string(),
         "name": "Alice",
@@ -161,11 +139,8 @@ fn test_write_metadata_overwrites_existing() {
         "department": "engineering"
     };
     collection.add_document(doc).unwrap();
-
-    // Write metadata again
     assert!(collection.write_metadata().is_ok());
 
-    // Read metadata back and verify it was updated
     let read_collection = Collection::read_metadata(
         collection.base_path().clone().parent().unwrap(),
         &collection.name,
@@ -180,18 +155,13 @@ fn test_metadata_preserves_complex_schema() {
     let schema = make_complex_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("complex_users", schema, temp_dir.path()).unwrap();
-
-    // Write metadata
     assert!(collection.write_metadata().is_ok());
 
-    // Read metadata back
     let read_collection = Collection::read_metadata(
         collection.base_path().clone().parent().unwrap(),
         &collection.name,
     )
     .unwrap();
-
-    // Verify complex schema is preserved exactly
     assert_eq!(
         read_collection.schema().fields.len(),
         collection.schema().fields.len()
@@ -207,16 +177,12 @@ fn test_metadata_file_size() {
     let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
-
-    // Write metadata
     assert!(collection.write_metadata().is_ok());
 
-    // Check that metadata file has content
     let metadata_path = collection.metadata_path();
     let metadata = fs::read(&metadata_path).unwrap();
     assert!(!metadata.is_empty());
 
-    // Verify it's valid BSON by trying to parse it
     let parsed: bson::Document = bson::from_slice(&metadata).unwrap();
     assert!(parsed.contains_key("name"));
     assert!(parsed.contains_key("inserts"));
@@ -232,15 +198,12 @@ fn test_multiple_collections_metadata_isolation() {
     let collection1 = Collection::new("users", schema1, temp_dir.path()).unwrap();
     let collection2 = Collection::new("employees", schema2, temp_dir.path()).unwrap();
 
-    // Write metadata for both collections
     assert!(collection1.write_metadata().is_ok());
     assert!(collection2.write_metadata().is_ok());
 
-    // Verify both metadata files exist
     assert!(collection1.metadata_path().exists());
     assert!(collection2.metadata_path().exists());
 
-    // Read both back and verify they're different
     let read_collection1 = Collection::read_metadata(
         collection1.base_path().clone().parent().unwrap(),
         &collection1.name,

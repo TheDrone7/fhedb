@@ -50,7 +50,6 @@ fn test_get_documents_empty() {
 
 #[test]
 fn test_id_type_enforcement() {
-    // Test string collection rejects integer IDs
     let string_schema = make_string_schema();
     let temp_dir1 = tempdir().unwrap();
     let mut string_collection =
@@ -66,7 +65,6 @@ fn test_id_type_enforcement() {
             .any(|e| e.contains("Field 'id': Expected ID as string"))
     );
 
-    // Test integer collection rejects string IDs
     let int_schema = make_int_schema();
     let temp_dir2 = tempdir().unwrap();
     let mut int_collection = Collection::new("int_users", int_schema, temp_dir2.path()).unwrap();
@@ -88,47 +86,41 @@ fn test_collection_with_default_values() {
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
-    // Test adding document with only required fields - defaults should be applied
     let doc = doc! {
         "name": "Alice",
         "email": "alice@example.com"
-        // id will be generated, age/active/role/score will use defaults
     };
 
     let doc_id = collection.add_document(doc).unwrap();
     let retrieved_doc = collection.get_document(doc_id).unwrap();
 
-    // Verify the document has the default values applied
     assert_eq!(retrieved_doc.data.get_str("name").unwrap(), "Alice");
     assert_eq!(
         retrieved_doc.data.get_str("email").unwrap(),
         "alice@example.com"
     );
-    assert_eq!(retrieved_doc.data.get_i64("age").unwrap(), 18); // default value
-    assert_eq!(retrieved_doc.data.get_bool("active").unwrap(), true); // default value
-    assert_eq!(retrieved_doc.data.get_str("role").unwrap(), "user"); // default value
-    assert_eq!(retrieved_doc.data.get_f64("score").unwrap(), 0.0); // default value
+    assert_eq!(retrieved_doc.data.get_i64("age").unwrap(), 18);
+    assert_eq!(retrieved_doc.data.get_bool("active").unwrap(), true);
+    assert_eq!(retrieved_doc.data.get_str("role").unwrap(), "user");
+    assert_eq!(retrieved_doc.data.get_f64("score").unwrap(), 0.0);
 
-    // Test adding document with some defaults overridden
     let doc2 = doc! {
         "name": "Bob",
         "email": "bob@example.com",
-        "age": 25i64, // Override default
-        "role": "admin" // Override default
-        // active and score will use defaults
+        "age": 25i64,
+        "role": "admin"
     };
 
     let doc_id2 = collection.add_document(doc2).unwrap();
     let retrieved_doc2 = collection.get_document(doc_id2).unwrap();
 
-    // Verify the document has the right mix of provided and default values
     assert_eq!(retrieved_doc2.data.get_str("name").unwrap(), "Bob");
     assert_eq!(
         retrieved_doc2.data.get_str("email").unwrap(),
         "bob@example.com"
     );
-    assert_eq!(retrieved_doc2.data.get_i64("age").unwrap(), 25); // provided value
-    assert_eq!(retrieved_doc2.data.get_bool("active").unwrap(), true); // default value
-    assert_eq!(retrieved_doc2.data.get_str("role").unwrap(), "admin"); // provided value
-    assert_eq!(retrieved_doc2.data.get_f64("score").unwrap(), 0.0); // default value
+    assert_eq!(retrieved_doc2.data.get_i64("age").unwrap(), 25);
+    assert_eq!(retrieved_doc2.data.get_bool("active").unwrap(), true);
+    assert_eq!(retrieved_doc2.data.get_str("role").unwrap(), "admin");
+    assert_eq!(retrieved_doc2.data.get_f64("score").unwrap(), 0.0);
 }

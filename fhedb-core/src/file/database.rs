@@ -36,10 +36,8 @@ impl DatabaseFileOps for Database {
         name: impl Into<String>,
         base_path: impl Into<PathBuf>,
     ) -> Result<Self, std::io::Error> {
-        // Create a new database object with the given parameters
         let mut database = Self::new(name, base_path);
 
-        // Check if the database directory exists
         if !database.base_path.exists() {
             return Err(io::Error::new(
                 io::ErrorKind::NotFound,
@@ -50,18 +48,14 @@ impl DatabaseFileOps for Database {
             ));
         }
 
-        // Read all entries in the database directory
         let entries = fs::read_dir(&database.base_path)?;
 
-        // For each directory under the database path, load it as a collection
         for entry in entries {
             let entry = entry?;
             let path = entry.path();
 
-            // Only process directories (skip files)
             if path.is_dir() {
                 if let Some(collection_name) = path.file_name().and_then(|n| n.to_str()) {
-                    // Try to load the collection from files using the trait method
                     let collection = Collection::from_files(&database.base_path, collection_name)?;
                     database
                         .collections

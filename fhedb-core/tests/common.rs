@@ -2,7 +2,6 @@
 use fhedb_core::prelude::*;
 use std::collections::HashMap;
 
-/// Creates a simple test schema with just string ID and title
 pub fn make_simple_schema() -> Schema {
     let mut fields = HashMap::new();
     fields.insert("id".to_string(), FieldDefinition::new(FieldType::IdString));
@@ -10,7 +9,6 @@ pub fn make_simple_schema() -> Schema {
     Schema { fields }
 }
 
-/// Creates a test schema with string ID type (basic fields: id, name, age)
 pub fn make_string_schema() -> Schema {
     let mut fields = HashMap::new();
     fields.insert("id".to_string(), FieldDefinition::new(FieldType::IdString));
@@ -19,7 +17,6 @@ pub fn make_string_schema() -> Schema {
     Schema { fields }
 }
 
-/// Creates a test schema with integer ID type (basic fields: id, name, age)
 pub fn make_int_schema() -> Schema {
     let mut fields = HashMap::new();
     fields.insert("id".to_string(), FieldDefinition::new(FieldType::IdInt));
@@ -28,7 +25,6 @@ pub fn make_int_schema() -> Schema {
     Schema { fields }
 }
 
-/// Creates a complex test schema with all field types including nested arrays
 pub fn make_complex_schema() -> Schema {
     let mut fields = HashMap::new();
     fields.insert("id".to_string(), FieldDefinition::new(FieldType::IdString));
@@ -64,16 +60,15 @@ pub fn make_complex_schema() -> Schema {
     Schema { fields }
 }
 
-/// Creates a test schema with default values
 pub fn make_schema_with_defaults() -> Schema {
     use bson::Bson;
 
     let mut fields = HashMap::new();
     fields.insert("id".to_string(), FieldDefinition::new(FieldType::IdString));
     fields.insert("name".to_string(), FieldDefinition::new(FieldType::String));
-    // Required field without default
+
     fields.insert("email".to_string(), FieldDefinition::new(FieldType::String));
-    // Fields with default values
+
     fields.insert(
         "age".to_string(),
         FieldDefinition::with_default(FieldType::Int, Bson::Int64(18)),

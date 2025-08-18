@@ -74,7 +74,6 @@ impl Database {
 
         let collection = Collection::new(collection_name.clone(), schema, &self.base_path)?;
 
-        // Write metadata to files
         collection
             .write_metadata()
             .map_err(|e| format!("Failed to write collection metadata: {}", e))?;
@@ -99,9 +98,7 @@ impl Database {
     /// or [`Err`]\([`String`]) if the collection wasn't found or deletion failed.
     pub fn drop_collection(&mut self, collection_name: &str) -> Result<String, String> {
         if let Some(collection) = self.collections.remove(collection_name) {
-            // Delete the collection files from disk
             collection.delete_collection_files().map_err(|e| {
-                // If file deletion fails, we should re-insert the collection back
                 self.collections
                     .insert(collection_name.to_string(), collection.clone());
                 format!("Failed to delete collection files: {}", e)

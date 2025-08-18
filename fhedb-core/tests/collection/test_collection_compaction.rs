@@ -10,10 +10,8 @@ fn test_compact_logfile_empty() {
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
-    // Compact empty logfile
     assert!(collection.compact_logfile().is_ok());
 
-    // Verify logfile still doesn't exist (was empty)
     let logfile_path = collection.logfile_path();
     assert!(!logfile_path.exists());
 }
@@ -35,18 +33,13 @@ fn test_compact_logfile_inserts_only() {
         "age": 25i64
     };
 
-    // Add some documents to the log
     collection.append_to_log(&Operation::Insert, &doc1).unwrap();
     collection.append_to_log(&Operation::Insert, &doc2).unwrap();
 
-    // Compact the logfile
     assert!(collection.compact_logfile().is_ok());
-
-    // Read back the compacted entries
     let entries = collection.read_log_entries().unwrap();
     assert_eq!(entries.len(), 2);
 
-    // Verify both documents are present as INSERT operations
     let doc_ids: Vec<_> = entries
         .iter()
         .map(|e| e.0.document.get_i64("id").unwrap())
@@ -76,7 +69,6 @@ fn test_compact_logfile_with_updates() {
         "age": 31i64
     };
 
-    // Add document, then update it
     collection
         .append_to_log(&Operation::Insert, &doc1_original)
         .unwrap();
@@ -84,10 +76,7 @@ fn test_compact_logfile_with_updates() {
         .append_to_log(&Operation::Update, &doc1_updated)
         .unwrap();
 
-    // Compact the logfile
     assert!(collection.compact_logfile().is_ok());
-
-    // Read back the compacted entries
     let entries = collection.read_log_entries().unwrap();
     assert_eq!(entries.len(), 1);
 
@@ -114,15 +103,11 @@ fn test_compact_logfile_with_deletes() {
         "age": 25i64
     };
 
-    // Add two documents, then delete one
     collection.append_to_log(&Operation::Insert, &doc1).unwrap();
     collection.append_to_log(&Operation::Insert, &doc2).unwrap();
     collection.append_to_log(&Operation::Delete, &doc1).unwrap();
 
-    // Compact the logfile
     assert!(collection.compact_logfile().is_ok());
-
-    // Read back the compacted entries
     let entries = collection.read_log_entries().unwrap();
     assert_eq!(entries.len(), 1);
 
@@ -159,7 +144,6 @@ fn test_compact_logfile_complex_sequence() {
         "age": 35i64
     };
 
-    // Complex sequence: insert, update, insert, delete, insert
     collection
         .append_to_log(&Operation::Insert, &doc1_v1)
         .unwrap();
@@ -170,23 +154,18 @@ fn test_compact_logfile_complex_sequence() {
     collection.append_to_log(&Operation::Delete, &doc2).unwrap();
     collection.append_to_log(&Operation::Insert, &doc3).unwrap();
 
-    // Compact the logfile
     assert!(collection.compact_logfile().is_ok());
-
-    // Read back the compacted entries
     let entries = collection.read_log_entries().unwrap();
     assert_eq!(entries.len(), 2);
 
-    // Should have doc1 (updated version) and doc3
     let doc_ids: Vec<_> = entries
         .iter()
         .map(|e| e.0.document.get_i64("id").unwrap())
         .collect();
     assert!(doc_ids.contains(&1));
     assert!(doc_ids.contains(&3));
-    assert!(!doc_ids.contains(&2)); // Should be deleted
+    assert!(!doc_ids.contains(&2));
 
-    // Verify doc1 has the updated values
     let doc1_entry = entries
         .iter()
         .find(|e| e.0.document.get_i64("id").unwrap() == 1)

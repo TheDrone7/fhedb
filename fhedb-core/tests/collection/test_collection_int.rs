@@ -10,7 +10,6 @@ fn test_get_documents_with_data() {
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
-    // Add some documents
     let doc1 = doc! {
         "id": 1i64,
         "name": "Alice",
@@ -31,7 +30,6 @@ fn test_get_documents_with_data() {
     let documents = collection.get_documents();
     assert_eq!(documents.len(), 2);
 
-    // Check that both documents are present
     let doc_ids: Vec<_> = documents.iter().map(|doc| doc.id.clone()).collect();
     assert!(doc_ids.contains(&id1));
     assert!(doc_ids.contains(&id2));
@@ -43,24 +41,18 @@ fn test_add_document_without_id_field() {
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
-    // Add a document without an id field
     let doc = doc! {
         "name": "Alice",
         "age": 30i64
     };
 
-    // Should succeed and generate an id automatically
     let doc_id = collection.add_document(doc).unwrap();
 
-    // Verify the document was added
     let retrieved_doc = collection.get_document(doc_id.clone()).unwrap();
     assert_eq!(retrieved_doc.data.get_str("name").unwrap(), "Alice");
     assert_eq!(retrieved_doc.data.get_i64("age").unwrap(), 30);
-
-    // Verify the id field was added to the document
     assert!(retrieved_doc.data.contains_key("id"));
 
-    // Check the ID value - should be an integer (0 for first document)
     match retrieved_doc.data.get("id").unwrap() {
         bson::Bson::Int64(i) => {
             assert_eq!(*i, 0);
@@ -76,7 +68,6 @@ fn test_add_document_with_custom_integer_id() {
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
-    // Add a document with a custom integer ID
     let doc = doc! {
         "id": 999i64,
         "name": "Alice",
@@ -86,7 +77,6 @@ fn test_add_document_with_custom_integer_id() {
     let doc_id = collection.add_document(doc).unwrap();
     assert_eq!(doc_id.to_string(), "999");
 
-    // Verify the document was added
     let retrieved_doc = collection.get_document(doc_id.clone()).unwrap();
     assert_eq!(retrieved_doc.data.get_i64("id").unwrap(), 999);
 }
@@ -97,7 +87,6 @@ fn test_add_document_with_string_id_should_fail() {
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
-    // Try to add a document with a string ID to an integer ID collection
     let doc = doc! {
         "id": "user-123",
         "name": "Alice",
@@ -120,7 +109,6 @@ fn test_sequential_id_generation() {
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
-    // Add documents without IDs to test sequential generation
     let doc1 = doc! { "name": "Alice", "age": 30i64 };
     let doc2 = doc! { "name": "Bob", "age": 25i64 };
     let doc3 = doc! { "name": "Charlie", "age": 35i64 };
@@ -129,12 +117,10 @@ fn test_sequential_id_generation() {
     let id2 = collection.add_document(doc2).unwrap();
     let id3 = collection.add_document(doc3).unwrap();
 
-    // Should be sequential starting from 0
     assert_eq!(id1.to_string(), "0");
     assert_eq!(id2.to_string(), "1");
     assert_eq!(id3.to_string(), "2");
 
-    // Verify the documents were stored with correct IDs
     let retrieved1 = collection.get_document(id1).unwrap();
     let retrieved2 = collection.get_document(id2).unwrap();
     let retrieved3 = collection.get_document(id3).unwrap();
@@ -150,7 +136,6 @@ fn test_update_document_success() {
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
-    // Add a document
     let doc = doc! {
         "id": 1i64,
         "name": "Alice",
@@ -158,7 +143,6 @@ fn test_update_document_success() {
     };
     let doc_id = collection.add_document(doc).unwrap();
 
-    // Update the document
     let update_doc = doc! {
         "name": "Alice Updated",
         "age": 31i64
@@ -169,9 +153,8 @@ fn test_update_document_success() {
     let updated_doc = result.unwrap();
     assert_eq!(updated_doc.data.get_str("name").unwrap(), "Alice Updated");
     assert_eq!(updated_doc.data.get_i64("age").unwrap(), 31);
-    assert_eq!(updated_doc.data.get_i64("id").unwrap(), 1); // ID should remain unchanged
+    assert_eq!(updated_doc.data.get_i64("id").unwrap(), 1);
 
-    // Verify the document was updated in the collection
     let retrieved_doc = collection.get_document(doc_id).unwrap();
     assert_eq!(retrieved_doc.data.get_str("name").unwrap(), "Alice Updated");
     assert_eq!(retrieved_doc.data.get_i64("age").unwrap(), 31);
@@ -183,7 +166,6 @@ fn test_update_document_partial_update() {
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
-    // Add a document
     let doc = doc! {
         "id": 1i64,
         "name": "Alice",
@@ -191,7 +173,6 @@ fn test_update_document_partial_update() {
     };
     let doc_id = collection.add_document(doc).unwrap();
 
-    // Update only the name field
     let update_doc = doc! {
         "name": "Alice Smith"
     };
@@ -200,7 +181,7 @@ fn test_update_document_partial_update() {
 
     let updated_doc = result.unwrap();
     assert_eq!(updated_doc.data.get_str("name").unwrap(), "Alice Smith");
-    assert_eq!(updated_doc.data.get_i64("age").unwrap(), 30); // Age should remain unchanged
+    assert_eq!(updated_doc.data.get_i64("age").unwrap(), 30);
     assert_eq!(updated_doc.data.get_i64("id").unwrap(), 1);
 }
 
@@ -210,7 +191,6 @@ fn test_update_document_nonexistent() {
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
-    // Try to update a non-existent document
     let non_existent_id = DocId::from_u64(999);
     let update_doc = doc! {
         "name": "Alice"
@@ -229,7 +209,6 @@ fn test_update_document_cannot_update_id() {
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
-    // Add a document
     let doc = doc! {
         "id": 1i64,
         "name": "Alice",
@@ -237,7 +216,6 @@ fn test_update_document_cannot_update_id() {
     };
     let doc_id = collection.add_document(doc).unwrap();
 
-    // Try to update the ID field
     let update_doc = doc! {
         "id": 2i64,
         "name": "Alice Updated"
@@ -255,7 +233,6 @@ fn test_update_document_schema_validation() {
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
-    // Add a document
     let doc = doc! {
         "id": 1i64,
         "name": "Alice",
@@ -263,7 +240,6 @@ fn test_update_document_schema_validation() {
     };
     let doc_id = collection.add_document(doc).unwrap();
 
-    // Try to update with invalid data (age as string instead of int)
     let update_doc = doc! {
         "age": "thirty"
     };

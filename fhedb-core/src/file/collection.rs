@@ -147,7 +147,6 @@ impl CollectionFileOps for Collection {
         file.write_all(&bson_bytes)?;
         writeln!(file)?; // Add a newline to separate entries
 
-        // Get the offset where the entry was written
         let offset = file.stream_position()? as usize - bson_bytes.len() - 1;
 
         Ok(offset)
@@ -243,7 +242,6 @@ impl CollectionFileOps for Collection {
             ));
         }
 
-        // Check if we have enough bytes for the BSON length header
         if offset + 4 >= contents.len() {
             return Err(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
@@ -294,22 +292,16 @@ impl CollectionFileOps for Collection {
     fn compact_logfile(&self) -> io::Result<()> {
         let logfile_path = self.logfile_path();
 
-        // Read all log entries
         let entries = self.read_log_entries()?;
-
-        // If no entries, nothing to compact
         if entries.is_empty() {
             return Ok(());
         }
 
-        // Apply all operations to reconstruct current state
         let mut current_state: HashMap<String, BsonDocument> = HashMap::new();
-
         for (log_entry, _) in entries {
             let document = log_entry.document;
             let operation = log_entry.operation;
 
-            // Extract document ID for tracking
             let id_field = self.id_field.clone();
             let doc_id = match document.get(id_field) {
                 Some(bson::Bson::String(s)) => s.clone(),
@@ -331,14 +323,12 @@ impl CollectionFileOps for Collection {
             }
         }
 
-        // Create a temporary file for the compacted log
         let temp_path = logfile_path.with_extension("tmp");
         let mut temp_file = OpenOptions::new()
             .create(true)
             .write(true)
             .open(&temp_path)?;
 
-        // Write compacted entries (only final state as INSERT operations)
         for (_, document) in current_state {
             let timestamp = chrono::Utc::now().to_rfc3339();
             let mut log_entry = BsonDocument::new();
@@ -356,7 +346,6 @@ impl CollectionFileOps for Collection {
             writeln!(temp_file)?;
         }
 
-        // Atomically replace the old logfile with the compacted one
         fs::rename(temp_path, logfile_path)?;
 
         Ok(())
@@ -412,13 +401,9 @@ impl CollectionFileOps for Collection {
 
     fn from_files(base_path: impl Into<PathBuf>, name: &str) -> io::Result<Collection> {
         let mut collection = Self::read_metadata(base_path, name)?;
-
-        // Read all log entries from the logfile with their offsets
         let log_entries = collection.read_log_entries()?;
 
-        // Loop over all log entries and rebuild the document indices
         for (log_entry, log_offset) in log_entries {
-            // Extract the document ID from the BSON document
             let doc_id = collection
                 .get_doc_id_from_bson(&log_entry.document)
                 .ok_or_else(|| {
@@ -431,7 +416,6 @@ impl CollectionFileOps for Collection {
                     )
                 })?;
 
-            // Update collection indices based on operation type
             match log_entry.operation {
                 Operation::Insert | Operation::Update => {
                     collection.document_indices.insert(doc_id, log_offset);

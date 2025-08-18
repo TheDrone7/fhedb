@@ -55,7 +55,6 @@ fn test_missing_field() {
     let schema = make_schema();
     let doc = doc! {
         "int_field": 69i64,
-        // missing float_field
         "bool_field": true,
         "string_field": "hello world",
         "array_field": [1i32, 2i32, 3i32],
@@ -165,7 +164,7 @@ fn test_ensure_id_with_existing_id_field() {
     assert_eq!(id_field, "custom_id");
     assert_eq!(id_type, IdType::String);
     assert!(schema.fields.contains_key("custom_id"));
-    assert!(!schema.fields.contains_key("id")); // Should not add default "id"
+    assert!(!schema.fields.contains_key("id"));
 }
 
 #[test]
@@ -194,12 +193,11 @@ fn test_validate_document_missing_id_field() {
     let schema = Schema { fields };
 
     let doc = doc! {
-        // Missing id field
+
         "name": "Alice",
         "age": 30i64
     };
 
-    // Should pass validation since Id fields are allowed to be missing
     assert!(schema.validate_document(&doc).is_ok());
 }
 
@@ -213,7 +211,7 @@ fn test_validate_document_missing_other_field() {
 
     let doc = doc! {
         "id": "some-uuid-string",
-        // Missing age field
+
         "name": "Alice"
     };
 
@@ -232,7 +230,7 @@ fn test_validate_document_missing_id_and_other_field() {
     let schema = Schema { fields };
 
     let doc = doc! {
-        // Missing both id and age fields
+
         "name": "Alice"
     };
 
@@ -260,7 +258,6 @@ fn test_nullable_fields() {
     );
     let schema = Schema { fields };
 
-    // Test with all nullable fields present
     let doc1 = doc! {
         "id": 1i64,
         "name": "Alice",
@@ -269,7 +266,6 @@ fn test_nullable_fields() {
     };
     assert!(schema.validate_document(&doc1).is_ok());
 
-    // Test with nullable fields as null
     let doc2 = doc! {
         "id": 2i64,
         "name": "Bob",
@@ -278,18 +274,16 @@ fn test_nullable_fields() {
     };
     assert!(schema.validate_document(&doc2).is_ok());
 
-    // Test with nullable fields missing
     let doc3 = doc! {
         "id": 3i64,
         "name": "Charlie",
     };
     assert!(schema.validate_document(&doc3).is_ok());
 
-    // Test with wrong type for nullable field
     let doc4 = doc! {
         "id": 4i64,
         "name": "Dave",
-        "nickname": 123i64, // Wrong type
+        "nickname": 123i64,
     };
     let result = schema.validate_document(&doc4);
     assert!(result.is_err());
@@ -308,9 +302,9 @@ fn test_default_values() {
     let mut fields = HashMap::new();
     fields.insert("id".to_string(), FieldDefinition::new(FieldType::IdInt));
     fields.insert("name".to_string(), FieldDefinition::new(FieldType::String));
-    // Required field without default
+
     fields.insert("email".to_string(), FieldDefinition::new(FieldType::String));
-    // Fields with default values
+
     fields.insert(
         "age".to_string(),
         FieldDefinition::with_default(FieldType::Int, Bson::Int64(18)),
@@ -326,7 +320,6 @@ fn test_default_values() {
 
     let schema = Schema { fields };
 
-    // Test with all fields present - should validate successfully
     let doc1 = doc! {
         "id": 1i64,
         "name": "Alice",
@@ -337,7 +330,6 @@ fn test_default_values() {
     };
     assert!(schema.validate_document(&doc1).is_ok());
 
-    // Test with only required fields - should not validate (fields are missing even if they have defaults)
     let doc2 = doc! {
         "id": 2i64,
         "name": "Bob",
@@ -345,18 +337,16 @@ fn test_default_values() {
     };
     assert!(schema.validate_document(&doc2).is_err());
 
-    // Test missing required field without default - should fail validation
     let doc3 = doc! {
         "id": 3i64,
         "name": "Charlie"
-        // missing email field (no default)
+
     };
     let result = schema.validate_document(&doc3);
     assert!(result.is_err());
     let errors = result.unwrap_err();
     assert!(errors.iter().any(|e| e.contains("Missing field: 'email'")));
 
-    // Test apply_defaults functionality
     let mut doc4 = doc! {
         "id": 4i64,
         "name": "David",
@@ -364,22 +354,21 @@ fn test_default_values() {
     };
 
     let applied_count = schema.apply_defaults(&mut doc4);
-    assert_eq!(applied_count, 3); // age, active, role should be applied
+    assert_eq!(applied_count, 3);
     assert_eq!(doc4.get_i64("age").unwrap(), 18);
     assert_eq!(doc4.get_bool("active").unwrap(), true);
     assert_eq!(doc4.get_str("role").unwrap(), "user");
 
-    // Test apply_defaults when some fields already exist
     let mut doc5 = doc! {
         "id": 5i64,
         "name": "Eve",
         "email": "eve@example.com",
-        "age": 30i64  // This field already exists, should not be overwritten
+        "age": 30i64
     };
 
     let applied_count = schema.apply_defaults(&mut doc5);
-    assert_eq!(applied_count, 2); // only active and role should be applied
-    assert_eq!(doc5.get_i64("age").unwrap(), 30); // Should not be changed
+    assert_eq!(applied_count, 2);
+    assert_eq!(doc5.get_i64("age").unwrap(), 30);
     assert_eq!(doc5.get_bool("active").unwrap(), true);
     assert_eq!(doc5.get_str("role").unwrap(), "user");
 }
