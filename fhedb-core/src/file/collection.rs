@@ -401,6 +401,7 @@ impl CollectionFileOps for Collection {
 
     fn from_files(base_path: impl Into<PathBuf>, name: &str) -> io::Result<Collection> {
         let mut collection = Self::read_metadata(base_path, name)?;
+        collection.compact_logfile()?;
         let log_entries = collection.read_log_entries()?;
 
         for (log_entry, log_offset) in log_entries {

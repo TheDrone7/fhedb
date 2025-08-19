@@ -1,3 +1,4 @@
+use crate::db::collection_schema_ops::CollectionSchemaOps;
 use crate::db::document::{DocId, Document};
 use crate::db::schema::{IdType, Schema};
 use crate::file::{collection::CollectionFileOps, types::Operation};
@@ -58,32 +59,6 @@ impl Collection {
         })
     }
 
-    /// Checks if the schema contains a field with the given name.
-    ///
-    /// ## Arguments
-    ///
-    /// * `field` - The name of the field to check.
-    ///
-    /// ## Returns
-    ///
-    /// `true` if the field exists in the schema, `false` otherwise.
-    pub fn has_field(&self, field: &str) -> bool {
-        self.schema.fields.contains_key(field)
-    }
-
-    /// Validates a BSON document against this collection's schema.
-    ///
-    /// ## Arguments
-    ///
-    /// * `doc` - A reference to the [`bson::Document`] to validate.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok(())`](Result::Ok) if the document matches the schema. Returns [`Err(Vec<String>)`](Result::Err) containing error messages for each field that does not conform to the schema.
-    pub fn validate_document(&self, doc: &bson::Document) -> Result<(), Vec<String>> {
-        self.schema.validate_document(doc)
-    }
-
     /// Adds a BSON document to the collection after validating it against the schema.
     ///
     /// ## Arguments
@@ -94,25 +69,22 @@ impl Collection {
     ///
     /// Returns [`Ok`]\([`DocId`]) if the document is valid and added, or [`Err`]\([`Vec<String>`]) with validation errors. Returns an error if the schema does not have an ID field.
     pub fn add_document(&mut self, mut doc: bson::Document) -> Result<DocId, Vec<String>> {
-        // Apply default values for missing fields
         self.schema.apply_defaults(&mut doc);
 
         if let Err(errors) = self.validate_document(&doc) {
             return Err(errors);
         }
-        // Use the id_field (from schema or default)
         let id_field = &self.id_field;
         let doc_id = match self.get_doc_id_from_bson(&doc) {
             Some(value) => value,
             None => {
-                // No ID provided, generate new one
                 let new_id = self.generate_id();
                 doc.insert(id_field, new_id.to_bson());
                 new_id
             }
         };
         let db_doc = Document::new(doc_id.clone(), doc);
-        // Store the document using the logfile
+
         match self.append_to_log(&Operation::Insert, &db_doc.data) {
             Ok(offset) => {
                 self.document_indices.insert(doc_id.clone(), offset);
@@ -134,7 +106,7 @@ impl Collection {
     /// ## Returns
     ///
     /// A new [`DocId`] with the appropriate type and value.
-    fn generate_id(&self) -> DocId {
+    pub(crate) fn generate_id(&self) -> DocId {
         match self.id_type {
             IdType::String => DocId::from_uuid(Uuid::new_v4()),
             IdType::Int => DocId::from_u64(self.inserts),

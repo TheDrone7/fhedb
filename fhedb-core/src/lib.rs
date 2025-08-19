@@ -11,6 +11,7 @@ pub mod file;
 /// Re-exports commonly used types for easy access.
 pub mod prelude {
     pub use crate::db::collection::Collection;
+    pub use crate::db::collection_schema_ops::CollectionSchemaOps;
     pub use crate::db::database::Database;
     pub use crate::db::document::{DocId, Document};
     pub use crate::db::schema::{FieldDefinition, FieldType, IdType, Schema};
