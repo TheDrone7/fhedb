@@ -42,7 +42,16 @@ fn create_database(input: &str) -> IResult<&str, DatabaseQuery> {
             tag_no_case("database"),
             multispace1,
             identifier,
-            opt(preceded(multispace1, tag_no_case("drop if exists"))),
+            opt(preceded(
+                multispace1,
+                (
+                    tag_no_case("drop"),
+                    multispace1,
+                    tag_no_case("if"),
+                    multispace1,
+                    tag_no_case("exists"),
+                ),
+            )),
         ),
         |(_, _, _, _, name, drop_if_exists)| DatabaseQuery::Create {
             name: name.to_string(),
