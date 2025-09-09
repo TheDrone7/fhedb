@@ -21,3 +21,12 @@ jobs:
         run: cargo build --verbose
       - name: Run tests
         run: cargo test --verbose
+  server:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./fhedb-server
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --verbose
