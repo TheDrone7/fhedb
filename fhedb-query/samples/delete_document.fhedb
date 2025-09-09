@@ -1,0 +1,3 @@
+collection <collection_name> delete|remove {
+    <id_field_name>: <id_field_value>
+}

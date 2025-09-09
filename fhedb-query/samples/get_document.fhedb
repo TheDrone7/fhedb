@@ -1,0 +1,18 @@
+1. Get only id, field_1 and field_2 in response.
+collection <collection_name> get {
+    <id_field_name>: <id_field_value>,
+    <field_1_name>,
+    <field_2_name>
+}
+
+2. Get all fields in response
+collection <collection_name> get {
+    <id_field_name>: <id_field_value>,
+    *
+}
+
+3. Get all fields values (and recursively join references)
+collection <collection_name> get {
+    <id_field_name>: <id_field_value>,
+    **
+}
