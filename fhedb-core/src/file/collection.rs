@@ -298,7 +298,7 @@ impl CollectionFileOps for Collection {
         }
 
         let mut current_state: HashMap<String, BsonDocument> = HashMap::new();
-        for (log_entry, _) in entries {
+        for (log_entry, log_offset) in entries {
             let document = log_entry.document;
             let operation = log_entry.operation;
 
@@ -307,7 +307,15 @@ impl CollectionFileOps for Collection {
                 Some(bson::Bson::String(s)) => s.clone(),
                 Some(bson::Bson::Int32(i)) => i.to_string(),
                 Some(bson::Bson::Int64(i)) => i.to_string(),
-                _ => continue, // Skip documents without valid ID
+                _ => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        format!(
+                            "Could not extract document ID from log entry at offset {}",
+                            log_offset
+                        ),
+                    ));
+                }
             };
 
             match operation {
