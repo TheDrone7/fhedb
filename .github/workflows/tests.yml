@@ -30,3 +30,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build
         run: cargo build --verbose
+  query-parser:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./fhedb-query
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --verbose
+      - name: Run tests
+        run: cargo test --verbose
