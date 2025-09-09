@@ -5,7 +5,7 @@ use tempfile::tempdir;
 use super::super::common::{make_int_schema, make_schema_with_defaults, make_string_schema};
 
 #[test]
-fn test_collection_construction() {
+fn construction() {
     let schema = make_string_schema();
     let schema2 = make_int_schema();
     let temp_dir1 = tempdir().unwrap();
@@ -17,30 +17,7 @@ fn test_collection_construction() {
 }
 
 #[test]
-fn test_has_field() {
-    let schema = make_string_schema();
-    let temp_dir = tempdir().unwrap();
-    let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
-    assert!(collection.has_field("id"));
-    assert!(collection.has_field("name"));
-    assert!(!collection.has_field("email"));
-}
-
-#[test]
-fn test_validate_document_valid() {
-    let schema = make_string_schema();
-    let temp_dir = tempdir().unwrap();
-    let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
-    let doc = doc! {
-        "id": uuid::Uuid::new_v4().to_string(),
-        "name": "Alice",
-        "age": 30i64
-    };
-    assert!(collection.validate_document(&doc).is_ok());
-}
-
-#[test]
-fn test_get_documents_empty() {
+fn get_documents_empty() {
     let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
@@ -49,7 +26,7 @@ fn test_get_documents_empty() {
 }
 
 #[test]
-fn test_id_type_enforcement() {
+fn id_type_enforcement() {
     let string_schema = make_string_schema();
     let temp_dir1 = tempdir().unwrap();
     let mut string_collection =
@@ -81,7 +58,7 @@ fn test_id_type_enforcement() {
 }
 
 #[test]
-fn test_collection_with_default_values() {
+fn with_default_values() {
     let schema = make_schema_with_defaults();
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();

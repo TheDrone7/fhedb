@@ -5,7 +5,7 @@ use tempfile::tempdir;
 use super::super::common::make_int_schema;
 
 #[test]
-fn test_compact_logfile_empty() {
+fn logfile_empty() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
@@ -17,7 +17,7 @@ fn test_compact_logfile_empty() {
 }
 
 #[test]
-fn test_compact_logfile_inserts_only() {
+fn logfile_inserts_only() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
@@ -53,7 +53,7 @@ fn test_compact_logfile_inserts_only() {
 }
 
 #[test]
-fn test_compact_logfile_with_updates() {
+fn logfile_with_updates() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
@@ -87,7 +87,7 @@ fn test_compact_logfile_with_updates() {
 }
 
 #[test]
-fn test_compact_logfile_with_deletes() {
+fn logfile_with_deletes() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
@@ -118,7 +118,7 @@ fn test_compact_logfile_with_deletes() {
 }
 
 #[test]
-fn test_compact_logfile_complex_sequence() {
+fn logfile_complex_sequence() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();

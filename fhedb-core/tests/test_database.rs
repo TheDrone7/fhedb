@@ -7,7 +7,7 @@ mod common;
 use common::{make_int_schema, make_simple_schema, make_string_schema};
 
 #[test]
-fn test_database_creation_and_basic_properties() {
+fn database_creation_and_basic_properties() {
     let temp_dir = tempdir().unwrap();
     let db = Database::new("test_db", temp_dir.path());
     let expected_path = temp_dir.path().join("test_db");
@@ -20,7 +20,7 @@ fn test_database_creation_and_basic_properties() {
 }
 
 #[test]
-fn test_database_collection_management() {
+fn database_collection_management() {
     let temp_dir = tempdir().unwrap();
     let mut db = Database::new("test_db", temp_dir.path());
     let schema1 = make_string_schema();
@@ -54,7 +54,7 @@ fn test_database_collection_management() {
 }
 
 #[test]
-fn test_database_collection_drop_operations() {
+fn database_collection_drop_operations() {
     let temp_dir = tempdir().unwrap();
     let mut db = Database::new("test_db", temp_dir.path());
 
@@ -83,7 +83,7 @@ fn test_database_collection_drop_operations() {
 }
 
 #[test]
-fn test_database_file_operations() {
+fn database_file_operations() {
     let temp_dir = tempdir().unwrap();
 
     let nonexistent_path = temp_dir.path().join("nonexistent");

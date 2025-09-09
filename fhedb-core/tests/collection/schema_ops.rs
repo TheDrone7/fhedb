@@ -57,7 +57,7 @@ fn create_collection_with_defaults() -> (Collection, TempDir) {
 }
 
 #[test]
-fn test_has_field() {
+fn has_field() {
     let (collection, _temp_dir) = create_test_collection();
 
     assert!(collection.has_field("name"));
@@ -67,7 +67,7 @@ fn test_has_field() {
 }
 
 #[test]
-fn test_validate_document() {
+fn validate_document() {
     let (collection, _temp_dir) = create_test_collection();
 
     let valid_doc = doc! {
@@ -84,7 +84,7 @@ fn test_validate_document() {
 }
 
 #[test]
-fn test_add_field_success() {
+fn add_field_success() {
     let (mut collection, _temp_dir) = create_test_collection();
 
     let field_def =
@@ -100,7 +100,7 @@ fn test_add_field_success() {
 }
 
 #[test]
-fn test_add_field_already_exists() {
+fn add_field_already_exists() {
     let (mut collection, _temp_dir) = create_test_collection();
 
     let field_def = FieldDefinition::new(FieldType::String);
@@ -111,7 +111,7 @@ fn test_add_field_already_exists() {
 }
 
 #[test]
-fn test_add_field_without_default_with_existing_docs() {
+fn add_field_without_default_with_existing_docs() {
     let (mut collection, _temp_dir) = create_test_collection_with_data();
 
     let field_def = FieldDefinition::new(FieldType::String);
@@ -122,7 +122,7 @@ fn test_add_field_without_default_with_existing_docs() {
 }
 
 #[test]
-fn test_add_field_nullable_auto_default() {
+fn add_field_nullable_auto_default() {
     let (mut collection, _temp_dir) = create_test_collection_with_data();
 
     let field_def = FieldDefinition::new(FieldType::Nullable(Box::new(FieldType::String)));
@@ -139,7 +139,7 @@ fn test_add_field_nullable_auto_default() {
 }
 
 #[test]
-fn test_add_field_with_default_applies_to_existing_docs() {
+fn add_field_with_default_applies_to_existing_docs() {
     let (mut collection, _temp_dir) = create_test_collection_with_data();
 
     let field_def = FieldDefinition::with_default(
@@ -161,7 +161,7 @@ fn test_add_field_with_default_applies_to_existing_docs() {
 }
 
 #[test]
-fn test_remove_field_success() {
+fn remove_field_success() {
     let (mut collection, _temp_dir) = create_test_collection_with_data();
 
     let result = collection.remove_field("age");
@@ -177,7 +177,7 @@ fn test_remove_field_success() {
 }
 
 #[test]
-fn test_remove_field_not_exists() {
+fn remove_field_not_exists() {
     let (mut collection, _temp_dir) = create_test_collection();
 
     let result = collection.remove_field("nonexistent");
@@ -187,7 +187,7 @@ fn test_remove_field_not_exists() {
 }
 
 #[test]
-fn test_modify_field_success() {
+fn modify_field_success() {
     let (mut collection, _temp_dir) = create_test_collection();
 
     let new_def =
@@ -199,7 +199,7 @@ fn test_modify_field_success() {
 }
 
 #[test]
-fn test_modify_field_not_exists() {
+fn modify_field_not_exists() {
     let (mut collection, _temp_dir) = create_test_collection();
 
     let new_def = FieldDefinition::new(FieldType::String);
@@ -210,7 +210,7 @@ fn test_modify_field_not_exists() {
 }
 
 #[test]
-fn test_rename_field_success() {
+fn rename_field_success() {
     let (mut collection, _temp_dir) = create_test_collection_with_data();
 
     let result = collection.rename_field("name", "full_name".to_string());
@@ -227,7 +227,7 @@ fn test_rename_field_success() {
 }
 
 #[test]
-fn test_rename_field_old_not_exists() {
+fn rename_field_old_not_exists() {
     let (mut collection, _temp_dir) = create_test_collection();
 
     let result = collection.rename_field("nonexistent", "new_name".to_string());
@@ -237,7 +237,7 @@ fn test_rename_field_old_not_exists() {
 }
 
 #[test]
-fn test_rename_field_new_already_exists() {
+fn rename_field_new_already_exists() {
     let (mut collection, _temp_dir) = create_test_collection();
 
     let result = collection.rename_field("name", "age".to_string());
@@ -247,7 +247,7 @@ fn test_rename_field_new_already_exists() {
 }
 
 #[test]
-fn test_apply_defaults_to_existing_success() {
+fn apply_defaults_to_existing_success() {
     let (mut collection, _temp_dir) = create_test_collection_with_data();
 
     let field_def = FieldDefinition::with_default(
@@ -262,7 +262,7 @@ fn test_apply_defaults_to_existing_success() {
 }
 
 #[test]
-fn test_apply_defaults_to_existing_no_default() {
+fn apply_defaults_to_existing_no_default() {
     let (mut collection, _temp_dir) = create_test_collection_with_data();
 
     let field_def = FieldDefinition::new(FieldType::String);
@@ -273,7 +273,7 @@ fn test_apply_defaults_to_existing_no_default() {
 }
 
 #[test]
-fn test_cleanup_removed_field() {
+fn cleanup_removed_field() {
     let (mut collection, _temp_dir) = create_test_collection_with_data();
 
     let result = collection.cleanup_removed_field("age");
@@ -290,7 +290,7 @@ fn test_cleanup_removed_field() {
 }
 
 #[test]
-fn test_rename_field_in_documents() {
+fn rename_field_in_documents() {
     let (mut collection, _temp_dir) = create_test_collection_with_data();
 
     let result = collection.rename_field_in_documents("name", "full_name");
@@ -307,7 +307,7 @@ fn test_rename_field_in_documents() {
 }
 
 #[test]
-fn test_list_fields() {
+fn list_fields() {
     let (collection, _temp_dir) = create_test_collection();
 
     let fields = collection.list_fields();
@@ -318,7 +318,7 @@ fn test_list_fields() {
 }
 
 #[test]
-fn test_add_ids_to_all_documents() {
+fn add_ids_to_all_documents() {
     let (mut collection, _temp_dir) = create_test_collection_with_data();
 
     let result = collection.add_ids_to_all_documents("id", "new_id");
@@ -338,7 +338,7 @@ fn test_add_ids_to_all_documents() {
 }
 
 #[test]
-fn test_add_field_id_type_error() {
+fn add_field_id_type_error() {
     let (mut collection, _temp_dir) = create_test_collection();
 
     let field_def = FieldDefinition::new(FieldType::IdString);
@@ -349,7 +349,7 @@ fn test_add_field_id_type_error() {
 }
 
 #[test]
-fn test_remove_id_field_creates_new_default_id() {
+fn remove_id_field_creates_new_default_id() {
     let (mut collection, _temp_dir) = create_test_collection_with_data();
     let original_id_field = collection.id_field_name().to_string();
 
@@ -362,7 +362,7 @@ fn test_remove_id_field_creates_new_default_id() {
 }
 
 #[test]
-fn test_string_id_collection_operations() {
+fn string_id_collection_operations() {
     let temp_dir = TempDir::new().expect("Failed to create temp directory");
     let schema = common::make_string_schema();
     let mut collection = Collection::new("string_id_collection", schema, temp_dir.path())
@@ -388,7 +388,7 @@ fn test_string_id_collection_operations() {
 }
 
 #[test]
-fn test_integration_add_modify_remove_field() {
+fn integration_add_modify_remove_field() {
     let (mut collection, _temp_dir) = create_test_collection_with_data();
 
     let field_def = FieldDefinition::with_default(
@@ -426,7 +426,7 @@ fn test_integration_add_modify_remove_field() {
 }
 
 #[test]
-fn test_complex_schema_operations() {
+fn complex_schema_operations() {
     let (mut collection, _temp_dir) = create_complex_collection();
 
     assert!(collection.has_field("scores"));
@@ -447,7 +447,7 @@ fn test_complex_schema_operations() {
 }
 
 #[test]
-fn test_schema_with_defaults() {
+fn schema_with_defaults() {
     let (mut collection, _temp_dir) = create_collection_with_defaults();
 
     collection

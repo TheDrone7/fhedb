@@ -36,7 +36,7 @@ fn make_schema() -> Schema {
 }
 
 #[test]
-fn test_valid_document() {
+fn valid_document() {
     let schema = make_schema();
     let doc = doc! {
         "int_field": 69i64,
@@ -51,7 +51,7 @@ fn test_valid_document() {
 }
 
 #[test]
-fn test_missing_field() {
+fn missing_field() {
     let schema = make_schema();
     let doc = doc! {
         "int_field": 69i64,
@@ -72,7 +72,7 @@ fn test_missing_field() {
 }
 
 #[test]
-fn test_type_mismatch() {
+fn type_mismatch() {
     let schema = make_schema();
     let doc = doc! {
         "int_field": "not an int",
@@ -94,7 +94,7 @@ fn test_type_mismatch() {
 }
 
 #[test]
-fn test_array_type_mismatch() {
+fn array_type_mismatch() {
     let schema = make_schema();
     let doc = doc! {
         "int_field": 69i64,
@@ -116,7 +116,7 @@ fn test_array_type_mismatch() {
 }
 
 #[test]
-fn test_invalid_id_type() {
+fn invalid_id_type() {
     let schema = make_schema();
     let doc = doc! {
         "int_field": 69i64,
@@ -134,7 +134,7 @@ fn test_invalid_id_type() {
 }
 
 #[test]
-fn test_ensure_id_no_id_field() {
+fn ensure_id_no_id_field() {
     let mut fields = HashMap::new();
     fields.insert("name".to_string(), FieldDefinition::new(FieldType::String));
     fields.insert("age".to_string(), FieldDefinition::new(FieldType::Int));
@@ -151,7 +151,7 @@ fn test_ensure_id_no_id_field() {
 }
 
 #[test]
-fn test_ensure_id_with_existing_id_field() {
+fn ensure_id_with_existing_id_field() {
     let mut fields = HashMap::new();
     fields.insert(
         "custom_id".to_string(),
@@ -168,7 +168,7 @@ fn test_ensure_id_with_existing_id_field() {
 }
 
 #[test]
-fn test_ensure_id_multiple_id_fields() {
+fn ensure_id_multiple_id_fields() {
     let mut fields = HashMap::new();
     fields.insert("id1".to_string(), FieldDefinition::new(FieldType::IdString));
     fields.insert("id2".to_string(), FieldDefinition::new(FieldType::IdInt));
@@ -185,7 +185,7 @@ fn test_ensure_id_multiple_id_fields() {
 }
 
 #[test]
-fn test_validate_document_missing_id_field() {
+fn validate_document_missing_id_field() {
     let mut fields = HashMap::new();
     fields.insert("id".to_string(), FieldDefinition::new(FieldType::IdString));
     fields.insert("name".to_string(), FieldDefinition::new(FieldType::String));
@@ -202,7 +202,7 @@ fn test_validate_document_missing_id_field() {
 }
 
 #[test]
-fn test_validate_document_missing_other_field() {
+fn validate_document_missing_other_field() {
     let mut fields = HashMap::new();
     fields.insert("id".to_string(), FieldDefinition::new(FieldType::IdString));
     fields.insert("name".to_string(), FieldDefinition::new(FieldType::String));
@@ -222,7 +222,7 @@ fn test_validate_document_missing_other_field() {
 }
 
 #[test]
-fn test_validate_document_missing_id_and_other_field() {
+fn validate_document_missing_id_and_other_field() {
     let mut fields = HashMap::new();
     fields.insert("id".to_string(), FieldDefinition::new(FieldType::IdString));
     fields.insert("name".to_string(), FieldDefinition::new(FieldType::String));
@@ -242,7 +242,7 @@ fn test_validate_document_missing_id_and_other_field() {
 }
 
 #[test]
-fn test_nullable_fields() {
+fn nullable_fields() {
     let mut fields = HashMap::new();
     fields.insert("id".to_string(), FieldDefinition::new(FieldType::IdInt));
     fields.insert("name".to_string(), FieldDefinition::new(FieldType::String));
@@ -296,7 +296,7 @@ fn test_nullable_fields() {
 }
 
 #[test]
-fn test_default_values() {
+fn default_values() {
     use bson::Bson;
 
     let mut fields = HashMap::new();

@@ -6,7 +6,7 @@ use tempfile::tempdir;
 use super::super::common::{make_complex_schema, make_int_schema};
 
 #[test]
-fn test_append_to_log_creates_file() {
+fn append_to_log_creates_file() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
@@ -38,7 +38,7 @@ fn test_append_to_log_creates_file() {
 }
 
 #[test]
-fn test_read_log_entries_empty_file() {
+fn read_log_entries_empty_file() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
@@ -48,7 +48,7 @@ fn test_read_log_entries_empty_file() {
 }
 
 #[test]
-fn test_append_and_read_entries() {
+fn append_and_read_entries() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
@@ -107,7 +107,7 @@ fn test_append_and_read_entries() {
 }
 
 #[test]
-fn test_different_operation_types() {
+fn different_operation_types() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
@@ -135,7 +135,7 @@ fn test_different_operation_types() {
 }
 
 #[test]
-fn test_logfile_path() {
+fn logfile_path() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
@@ -145,7 +145,7 @@ fn test_logfile_path() {
 }
 
 #[test]
-fn test_log_entries_with_all_field_types() {
+fn log_entries_with_all_field_types() {
     let schema = make_complex_schema();
 
     let temp_dir = tempdir().unwrap();
@@ -176,7 +176,7 @@ fn test_log_entries_with_all_field_types() {
 }
 
 #[test]
-fn test_multiple_collections_log_isolation() {
+fn multiple_collections_log_isolation() {
     let schema1 = make_int_schema();
     let schema2 = make_int_schema();
     let temp_dir = tempdir().unwrap();
@@ -214,7 +214,7 @@ fn test_multiple_collections_log_isolation() {
 }
 
 #[test]
-fn test_read_log_entry_at_offset() {
+fn read_log_entry_at_offset() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
@@ -267,7 +267,7 @@ fn test_read_log_entry_at_offset() {
 }
 
 #[test]
-fn test_update_document_logs_correctly() {
+fn update_document_logs_correctly() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
     let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
@@ -313,7 +313,7 @@ fn test_update_document_logs_correctly() {
 }
 
 #[test]
-fn test_collection_from_files_handles_update_operations() {
+fn collection_from_files_handles_update_operations() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
 

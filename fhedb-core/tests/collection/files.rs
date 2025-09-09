@@ -6,7 +6,7 @@ use tempfile::tempdir;
 use super::super::common::make_string_schema;
 
 #[test]
-fn test_from_files_empty_collection() {
+fn from_files_empty_collection() {
     let temp_dir = tempdir().unwrap();
     let schema = make_string_schema();
 
@@ -21,7 +21,7 @@ fn test_from_files_empty_collection() {
 }
 
 #[test]
-fn test_from_files_with_documents() {
+fn from_files_with_documents() {
     let temp_dir = tempdir().unwrap();
     let schema = make_string_schema();
 
@@ -71,7 +71,7 @@ fn test_from_files_with_documents() {
 }
 
 #[test]
-fn test_from_files_with_deleted_documents() {
+fn from_files_with_deleted_documents() {
     let temp_dir = tempdir().unwrap();
     let schema = make_string_schema();
 
@@ -118,7 +118,7 @@ fn test_from_files_with_deleted_documents() {
 }
 
 #[test]
-fn test_from_files_nonexistent_collection() {
+fn from_files_nonexistent_collection() {
     let temp_dir = tempdir().unwrap();
 
     let result = Collection::from_files(temp_dir.path(), "nonexistent_collection");
@@ -129,7 +129,7 @@ fn test_from_files_nonexistent_collection() {
 }
 
 #[test]
-fn test_from_files_missing_document_id() {
+fn from_files_missing_document_id() {
     let temp_dir = tempdir().unwrap();
     let schema = make_string_schema();
 
@@ -170,7 +170,7 @@ fn test_from_files_missing_document_id() {
 }
 
 #[test]
-fn test_from_files_complex_operations() {
+fn from_files_complex_operations() {
     let temp_dir = tempdir().unwrap();
     let schema = make_string_schema();
 
