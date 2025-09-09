@@ -141,8 +141,9 @@ impl CollectionFileOps for Collection {
         log_entry.insert("operation", Bson::String(operation.as_str().to_string()));
         log_entry.insert("document", Bson::Document(document.clone()));
 
-        let bson_bytes =
-            bson::to_vec(&log_entry).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        let bson_bytes = log_entry
+            .to_vec()
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
         file.write_all(&bson_bytes)?;
         writeln!(file)?; // Add a newline to separate entries
@@ -180,7 +181,7 @@ impl CollectionFileOps for Collection {
             }
 
             let entry_bytes = &contents[offset..offset + length];
-            match bson::from_slice::<BsonDocument>(entry_bytes) {
+            match bson::Document::from_reader(entry_bytes) {
                 Ok(log_doc) => {
                     let timestamp = log_doc
                         .get_str("timestamp")
@@ -264,7 +265,7 @@ impl CollectionFileOps for Collection {
         }
 
         let entry_bytes = &contents[offset..offset + length];
-        let log_doc: BsonDocument = bson::from_slice(entry_bytes).map_err(|e| {
+        let log_doc: BsonDocument = bson::Document::from_reader(entry_bytes).map_err(|e| {
             io::Error::new(
                 io::ErrorKind::InvalidData,
                 format!("Failed to parse BSON: {}", e),
@@ -347,7 +348,8 @@ impl CollectionFileOps for Collection {
             );
             log_entry.insert("document", Bson::Document(document));
 
-            let bson_bytes = bson::to_vec(&log_entry)
+            let bson_bytes = log_entry
+                .to_vec()
                 .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
             temp_file.write_all(&bson_bytes)?;
@@ -373,8 +375,9 @@ impl CollectionFileOps for Collection {
         metadata.insert("inserts", Bson::Int64(self.inserts as i64));
         metadata.insert("schema", Bson::Document(self.schema.clone().into()));
 
-        let bson_bytes =
-            bson::to_vec(&metadata).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        let bson_bytes = metadata
+            .to_vec()
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
         file.write_all(&bson_bytes)?;
         Ok(())
@@ -393,9 +396,10 @@ impl CollectionFileOps for Collection {
         }
 
         let contents = fs::read(&metadata_path)?;
-        let metadata: BsonDocument = bson::from_slice(&contents).map_err(|e| {
-            io::Error::new(io::ErrorKind::InvalidData, format!("Invalid BSON: {}", e))
-        })?;
+        let metadata: BsonDocument = bson::Document::from_reader(&mut contents.as_slice())
+            .map_err(|e| {
+                io::Error::new(io::ErrorKind::InvalidData, format!("Invalid BSON: {}", e))
+            })?;
         let stored_name = metadata.get_str("name").unwrap_or("unknown");
         let inserts = metadata.get_i64("inserts").unwrap_or(0) as u64;
         let schema = Schema::from(metadata.get_document("schema").cloned().unwrap_or_default());

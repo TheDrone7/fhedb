@@ -158,7 +158,7 @@ fn from_files_missing_document_id() {
         }
     };
 
-    let bson_bytes = bson::to_vec(&corrupt_entry).unwrap();
+    let bson_bytes = corrupt_entry.to_vec().unwrap();
     std::fs::write(&logfile_path, bson_bytes).unwrap();
 
     let result = Collection::from_files(temp_dir.path(), "test_collection");

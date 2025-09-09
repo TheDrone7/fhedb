@@ -183,7 +183,7 @@ fn metadata_file_size() {
     let metadata = fs::read(&metadata_path).unwrap();
     assert!(!metadata.is_empty());
 
-    let parsed: bson::Document = bson::from_slice(&metadata).unwrap();
+    let parsed: bson::Document = bson::Document::from_reader(&mut metadata.as_slice()).unwrap();
     assert!(parsed.contains_key("name"));
     assert!(parsed.contains_key("inserts"));
     assert!(parsed.contains_key("schema"));
