@@ -1,0 +1,5 @@
+collection <collection_name> create [drop if exists] {
+    <field_1_name>: <field_1_type> [(nullable)] [(default=<default_value>)],
+    <field_2_name>: <field_2_type> [(nullable)] [(default=<default_value>)],
+    ...
+}

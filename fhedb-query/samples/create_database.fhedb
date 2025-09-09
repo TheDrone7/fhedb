@@ -1,0 +1,1 @@
+create database <database_name> [drop if exists]

@@ -1,0 +1,4 @@
+collection <collection_name> modify {
+    <field_to_change>: <drop | new_field_type> [new_constraints],
+    ...
+}

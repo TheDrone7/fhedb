@@ -1,0 +1,5 @@
+collection <collection_name> insert {
+    <field_1_name>: <field_1_value>,
+    <field_2_name>: <field_2_value>,
+    ...
+}
