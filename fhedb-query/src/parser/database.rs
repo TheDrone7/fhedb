@@ -18,15 +18,6 @@ use nom::{
 
 /// Parses a CREATE DATABASE query.
 ///
-/// This function parses a CREATE DATABASE statement, which creates a new database
-/// with the specified name. It also supports an optional "DROP IF EXISTS" clause.
-///
-/// ## Syntax
-///
-/// ```text
-/// CREATE DATABASE <database_name> [DROP IF EXISTS]
-/// ```
-///
 /// ## Arguments
 ///
 /// * `input` - The input string to parse.
@@ -62,15 +53,6 @@ fn create_database(input: &str) -> IResult<&str, DatabaseQuery> {
 }
 
 /// Parses a DROP DATABASE query.
-///
-/// This function parses a DROP DATABASE statement, which removes an existing database
-/// with the specified name.
-///
-/// ## Syntax
-///
-/// ```text
-/// DROP DATABASE <database_name>
-/// ```
 ///
 /// ## Arguments
 ///
