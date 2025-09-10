@@ -104,7 +104,7 @@ impl FieldDefinition {
 /// Describes the schema for a document.
 ///
 /// The schema maps field names to their field definitions (type and default value).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Schema {
     /// A map from field names to their corresponding field definitions.
     pub fields: HashMap<String, FieldDefinition>,
