@@ -3,6 +3,8 @@
 //! This module defines the core data structures that represent the parsed
 //! form of FHEDB query language statements.
 
+use fhedb_core::db::schema::Schema;
+
 /// Represents a query in the FHEDB query language.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Query {
@@ -48,7 +50,15 @@ pub enum ContextualQuery {
 /// such as creating collections, dropping collections, or modifying collection schemas.
 #[derive(Debug, Clone, PartialEq)]
 pub enum CollectionQuery {
-    // TODO: Add collection operations
+    /// Create a new collection with the specified name and schema.
+    Create {
+        /// The name of the collection to create.
+        name: String,
+        /// Whether to drop an existing collection with the same name before creating.
+        drop_if_exists: bool,
+        /// The schema definition for the collection.
+        schema: Schema,
+    },
 }
 
 /// Represents queries on documents within a database's collections,
