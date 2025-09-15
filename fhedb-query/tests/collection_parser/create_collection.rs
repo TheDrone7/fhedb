@@ -169,7 +169,7 @@ fn invalid_empty() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Unknown collection query");
+            assert_eq!(message, "Failed to parse collection query: Parsing Error: Error { input: \"\", code: Tag }");
         }
     }
 }
@@ -182,7 +182,7 @@ fn invalid_missing_name() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Unknown collection query");
+            assert_eq!(message, "Failed to parse collection query: Parsing Error: Error { input: \"CREATE COLLECTION\", code: Tag }");
         }
     }
 }
@@ -195,7 +195,7 @@ fn invalid_missing_schema() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Unknown collection query");
+            assert_eq!(message, "Failed to parse collection query: Parsing Error: Error { input: \"CREATE COLLECTION test_collection\", code: Tag }");
         }
     }
 }
@@ -208,7 +208,7 @@ fn invalid_extra_input() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Unexpected input after query");
+            assert_eq!(message, "Unexpected input after collection query");
         }
     }
 }
@@ -221,7 +221,7 @@ fn invalid_no_keyword() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Unknown collection query");
+            assert_eq!(message, "Failed to parse collection query: Parsing Error: Error { input: \"CREATE test_collection {id: id_int}\", code: Tag }");
         }
     }
 }
@@ -234,7 +234,7 @@ fn invalid_wrong_order() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Unknown collection query");
+            assert_eq!(message, "Failed to parse collection query: Parsing Error: Error { input: \"COLLECTION CREATE test_collection {id: id_int}\", code: Tag }");
         }
     }
 }
@@ -260,7 +260,7 @@ fn invalid_missing_braces() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Unknown collection query");
+            assert_eq!(message, "Failed to parse collection query: Parsing Error: Error { input: \"CREATE COLLECTION test_collection id: id_int\", code: Tag }");
         }
     }
 }
