@@ -1,6 +1,6 @@
 use bson::Bson;
 use fhedb_core::db::schema::FieldType;
-use fhedb_query::prelude::parse_schema;
+use fhedb_query::prelude::{FieldModification, parse_field_modifications, parse_schema};
 
 #[test]
 fn field_types() {
@@ -457,4 +457,22 @@ fn invalid_constraints() {
 
     assert!(parse_schema("name: string(default)").is_err());
     assert!(parse_schema("name: string(= test)").is_err());
+}
+
+#[test]
+fn field_modifications() {
+    let modifications = parse_field_modifications("name: string, age: drop").unwrap();
+    assert_eq!(modifications.len(), 2);
+
+    match &modifications["name"] {
+        FieldModification::Set(field_def) => {
+            assert_eq!(field_def.field_type, FieldType::String);
+        }
+        _ => panic!("Expected FieldModification::Set for name field"),
+    }
+
+    match &modifications["age"] {
+        FieldModification::Drop => {}
+        _ => panic!("Expected FieldModification::Drop for age field"),
+    }
 }

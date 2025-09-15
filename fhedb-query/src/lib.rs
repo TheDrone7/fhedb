@@ -14,6 +14,8 @@ pub mod prelude {
     pub use crate::ast::*;
     pub use crate::error::ParseError;
     pub use crate::parser::{
-        collection::parse_collection_query, database::parse_database_query, schema::parse_schema,
+        collection::parse_collection_query,
+        database::parse_database_query,
+        schema::{parse_field_modifications, parse_schema},
     };
 }
