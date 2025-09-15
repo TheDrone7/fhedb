@@ -81,6 +81,13 @@ pub enum CollectionQuery {
         /// A map of field names to their modification operations.
         modifications: HashMap<String, FieldModification>,
     },
+    /// Lists all collections in the database.
+    List,
+    /// Gets the schema of a specific collection.
+    GetSchema {
+        /// The name of the collection to get the schema for.
+        name: String,
+    },
 }
 
 /// Represents queries on documents within a database's collections,

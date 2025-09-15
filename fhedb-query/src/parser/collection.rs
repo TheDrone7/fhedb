@@ -117,6 +117,50 @@ fn modify_collection(input: &str) -> IResult<&str, CollectionQuery> {
     .parse(input)
 }
 
+/// Parses a LIST COLLECTIONS query.
+///
+/// ## Arguments
+///
+/// * `input` - The input string to parse.
+///
+/// ## Returns
+///
+/// Returns an [`IResult`] containing the remaining input and the parsed [`CollectionQuery::List`].
+fn list_collections(input: &str) -> IResult<&str, CollectionQuery> {
+    map(
+        (tag_no_case("list"), multispace1, tag_no_case("collections")),
+        |(_, _, _)| CollectionQuery::List,
+    )
+    .parse(input)
+}
+
+/// Parses a GET SCHEMA FROM query.
+///
+/// ## Arguments
+///
+/// * `input` - The input string to parse.
+///
+/// ## Returns
+///
+/// Returns an [`IResult`] containing the remaining input and the parsed [`CollectionQuery::GetSchema`].
+fn get_collection_schema(input: &str) -> IResult<&str, CollectionQuery> {
+    map(
+        (
+            tag_no_case("get"),
+            multispace1,
+            tag_no_case("schema"),
+            multispace1,
+            tag_no_case("from"),
+            multispace1,
+            identifier,
+        ),
+        |(_, _, _, _, _, _, name)| CollectionQuery::GetSchema {
+            name: name.to_string(),
+        },
+    )
+    .parse(input)
+}
+
 /// Parses a complete collection query from the input string.
 ///
 /// ## Arguments
@@ -131,7 +175,13 @@ pub fn parse_collection_query(input: &str) -> ParseResult<CollectionQuery> {
     trim_parse(input, "collection query", |input| {
         preceded(
             multispace0,
-            alt((create_collection, drop_collection, modify_collection)),
+            alt((
+                create_collection,
+                drop_collection,
+                modify_collection,
+                list_collections,
+                get_collection_schema,
+            )),
         )
         .parse(input)
     })
