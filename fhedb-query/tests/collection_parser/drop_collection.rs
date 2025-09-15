@@ -47,7 +47,10 @@ fn invalid_empty() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Failed to parse collection query: Parsing Error: Error { input: \"\", code: Tag }");
+            assert_eq!(
+                message,
+                "Failed to parse collection query: Parsing Error: Error { input: \"\", code: Tag }"
+            );
         }
     }
 }
@@ -60,7 +63,10 @@ fn invalid_missing_name() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Failed to parse collection query: Parsing Error: Error { input: \"DROP COLLECTION\", code: Tag }");
+            assert_eq!(
+                message,
+                "Failed to parse collection query: Parsing Error: Error { input: \"DROP COLLECTION\", code: Tag }"
+            );
         }
     }
 }
@@ -86,7 +92,10 @@ fn invalid_no_keyword() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Failed to parse collection query: Parsing Error: Error { input: \"DROP test_collection\", code: Tag }");
+            assert_eq!(
+                message,
+                "Failed to parse collection query: Parsing Error: Error { input: \"DROP test_collection\", code: Tag }"
+            );
         }
     }
 }
@@ -99,7 +108,10 @@ fn invalid_wrong_order() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Failed to parse collection query: Parsing Error: Error { input: \"COLLECTION DROP test_collection\", code: Tag }");
+            assert_eq!(
+                message,
+                "Failed to parse collection query: Parsing Error: Error { input: \"COLLECTION DROP test_collection\", code: Tag }"
+            );
         }
     }
 }

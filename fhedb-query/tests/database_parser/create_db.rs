@@ -90,7 +90,10 @@ fn invalid_empty() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Failed to parse database query: Parsing Error: Error { input: \"\", code: Tag }");
+            assert_eq!(
+                message,
+                "Failed to parse database query: Parsing Error: Error { input: \"\", code: Tag }"
+            );
         }
     }
 }
@@ -103,7 +106,10 @@ fn invalid_missing_name() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Failed to parse database query: Parsing Error: Error { input: \"CREATE DATABASE\", code: Tag }");
+            assert_eq!(
+                message,
+                "Failed to parse database query: Parsing Error: Error { input: \"CREATE DATABASE\", code: Tag }"
+            );
         }
     }
 }
@@ -129,7 +135,10 @@ fn invalid_no_keyword() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Failed to parse database query: Parsing Error: Error { input: \"CREATE test_db\", code: Tag }");
+            assert_eq!(
+                message,
+                "Failed to parse database query: Parsing Error: Error { input: \"CREATE test_db\", code: Tag }"
+            );
         }
     }
 }
@@ -142,7 +151,10 @@ fn invalid_wrong_order() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Failed to parse database query: Parsing Error: Error { input: \"DATABASE CREATE test_db\", code: Tag }");
+            assert_eq!(
+                message,
+                "Failed to parse database query: Parsing Error: Error { input: \"DATABASE CREATE test_db\", code: Tag }"
+            );
         }
     }
 }

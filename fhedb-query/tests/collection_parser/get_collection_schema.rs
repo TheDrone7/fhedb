@@ -47,7 +47,10 @@ fn invalid_empty() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Failed to parse collection query: Parsing Error: Error { input: \"\", code: Tag }");
+            assert_eq!(
+                message,
+                "Failed to parse collection query: Parsing Error: Error { input: \"\", code: Tag }"
+            );
         }
     }
 }
@@ -60,7 +63,10 @@ fn invalid_missing_schema() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Failed to parse collection query: Parsing Error: Error { input: \"\", code: MultiSpace }");
+            assert_eq!(
+                message,
+                "Failed to parse collection query: Parsing Error: Error { input: \"\", code: MultiSpace }"
+            );
         }
     }
 }
@@ -73,7 +79,10 @@ fn invalid_missing_from() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Failed to parse collection query: Parsing Error: Error { input: \"\", code: MultiSpace }");
+            assert_eq!(
+                message,
+                "Failed to parse collection query: Parsing Error: Error { input: \"\", code: MultiSpace }"
+            );
         }
     }
 }
@@ -86,7 +95,10 @@ fn invalid_missing_collection_name() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Failed to parse collection query: Parsing Error: Error { input: \"\", code: MultiSpace }");
+            assert_eq!(
+                message,
+                "Failed to parse collection query: Parsing Error: Error { input: \"\", code: MultiSpace }"
+            );
         }
     }
 }
@@ -112,7 +124,10 @@ fn invalid_wrong_keyword() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Failed to parse collection query: Parsing Error: Error { input: \"S FROM users\", code: MultiSpace }");
+            assert_eq!(
+                message,
+                "Failed to parse collection query: Parsing Error: Error { input: \"S FROM users\", code: MultiSpace }"
+            );
         }
     }
 }
@@ -125,7 +140,10 @@ fn invalid_wrong_order() {
 
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
-            assert_eq!(message, "Failed to parse collection query: Parsing Error: Error { input: \"SCHEMA GET FROM users\", code: Tag }");
+            assert_eq!(
+                message,
+                "Failed to parse collection query: Parsing Error: Error { input: \"SCHEMA GET FROM users\", code: Tag }"
+            );
         }
     }
 }
