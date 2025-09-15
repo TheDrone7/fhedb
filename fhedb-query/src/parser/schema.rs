@@ -242,18 +242,31 @@ fn parse_field_definition(input: &str) -> IResult<&str, (String, FieldDefinition
 ///
 /// Returns an [`IResult`] containing the remaining input and the parsed [`Schema`].
 pub fn parse_schema(input: &str) -> IResult<&str, Schema> {
-    map(
-        separated_list0(
-            delimited(multispace0, char(','), multispace0),
-            delimited(multispace0, parse_field_definition, multispace0),
-        ),
-        |field_definitions| {
-            let mut schema = Schema::new();
-            for (field_name, field_def) in field_definitions {
-                schema.fields.insert(field_name, field_def);
-            }
-            schema
-        },
+    let input = input.trim();
+
+    let (remaining, fields) = separated_list0(
+        delimited(multispace0, char(','), multispace0),
+        delimited(multispace0, parse_field_definition, multispace0),
     )
-    .parse(input)
+    .parse(input)?;
+
+    if !remaining.trim().is_empty() {
+        return Err(nom::Err::Failure(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::NonEmpty,
+        )));
+    }
+
+    let mut schema = Schema::new();
+    for (name, field_def) in fields {
+        if schema.fields.contains_key(&name) {
+            return Err(nom::Err::Failure(nom::error::Error::new(
+                input,
+                nom::error::ErrorKind::Fail,
+            )));
+        }
+        schema.fields.insert(name, field_def);
+    }
+
+    Ok((remaining, schema))
 }
