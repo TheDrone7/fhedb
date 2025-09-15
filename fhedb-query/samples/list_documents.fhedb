@@ -1,15 +1,15 @@
 1. Get only field_1 and field_2
-collection <collection_name> get {
+get doc|document|documents from <collection_name> {
     <field_1_name>,
     <field_2_name>
 }
 
 2. Get all fields
-collection <collection_name> get {
+get doc|document|documents from <collection_name> {
     *
 }
 
 3. Get all fields (and recursively join references)
-collection <collection_name> get {
+get doc|document|documents from <collection_name> {
     **
 }

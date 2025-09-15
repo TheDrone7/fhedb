@@ -1,1 +1,1 @@
-collection <collection_name> get_schema
+get schema from <collection_name>

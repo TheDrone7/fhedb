@@ -1,1 +1,1 @@
-collection <collection_name> drop
+drop collection <collection_name>
