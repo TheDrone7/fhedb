@@ -84,6 +84,34 @@ fn field_types() {
         schema.fields["metadata"].field_type,
         FieldType::Array(Box::new(FieldType::Array(Box::new(FieldType::String))))
     );
+
+    let (remaining, schema) = parse_schema(
+        "name: STRING, age: INT, height: FLOAT, active: BOOLEAN, id: ID_INT, email: ID_STRING",
+    )
+    .unwrap();
+    assert_eq!(remaining, "");
+    assert_eq!(schema.fields.len(), 6);
+
+    assert_eq!(schema.fields["name"].field_type, FieldType::String);
+    assert_eq!(schema.fields["age"].field_type, FieldType::Int);
+    assert_eq!(schema.fields["height"].field_type, FieldType::Float);
+    assert_eq!(schema.fields["active"].field_type, FieldType::Boolean);
+    assert_eq!(schema.fields["id"].field_type, FieldType::IdInt);
+    assert_eq!(schema.fields["email"].field_type, FieldType::IdString);
+
+    let (remaining, schema) =
+        parse_schema("items: ARRAY<STRING>, refs: Array<Ref<users>>").unwrap();
+    assert_eq!(remaining, "");
+    assert_eq!(schema.fields.len(), 2);
+
+    assert_eq!(
+        schema.fields["items"].field_type,
+        FieldType::Array(Box::new(FieldType::String))
+    );
+    assert_eq!(
+        schema.fields["refs"].field_type,
+        FieldType::Array(Box::new(FieldType::Reference("users".to_string())))
+    );
 }
 
 #[test]
@@ -119,6 +147,21 @@ fn nullable_constraint() {
     assert_eq!(
         schema.fields["user_ref"].field_type,
         FieldType::Nullable(Box::new(FieldType::Reference("users".to_string())))
+    );
+
+    let (remaining, schema) =
+        parse_schema("name: String(NULLABLE), active: Boolean(Default = true)").unwrap();
+    assert_eq!(remaining, "");
+    assert_eq!(schema.fields.len(), 2);
+
+    assert_eq!(
+        schema.fields["name"].field_type,
+        FieldType::Nullable(Box::new(FieldType::String))
+    );
+    assert_eq!(schema.fields["active"].field_type, FieldType::Boolean);
+    assert_eq!(
+        schema.fields["active"].default_value,
+        Some(Bson::Boolean(true))
     );
 }
 
@@ -309,24 +352,24 @@ fn default_values_invalid() {
     assert!(res.is_err());
     assert!(parse_schema("user_id: id_string(default = abc123)").is_err());
     assert!(parse_schema("uuid: id_string(default = \"uuid-123\")").is_err());
-    
+
     assert!(parse_schema("tags: array<string>(default = [])").is_err());
     assert!(parse_schema("numbers: array<int>(default = [1,2,3])").is_err());
     assert!(parse_schema("matrix: array<array<int>>(default = [[1]])").is_err());
-    
+
     assert!(parse_schema("age: int(default = abc)").is_err());
     assert!(parse_schema("age: int(default = 3.14)").is_err());
     assert!(parse_schema("height: float(default = not_a_number)").is_err());
     assert!(parse_schema("active: boolean(default = maybe)").is_err());
     assert!(parse_schema("active: boolean(default = 1)").is_err());
-    
+
     assert!(parse_schema("age: int(default = null)").is_err());
     assert!(parse_schema("score: float(default = null)").is_err());
     assert!(parse_schema("active: boolean(default = null)").is_err());
 }
 
 #[test]
-fn schema_empty() {
+fn empty() {
     let (remaining, schema) = parse_schema("").unwrap();
     assert_eq!(remaining, "");
     assert_eq!(schema.fields.len(), 0);
@@ -341,7 +384,7 @@ fn schema_empty() {
 }
 
 #[test]
-fn schema_whitespace_handling() {
+fn extra_whitespace() {
     let (remaining, schema) = parse_schema("  name:string,age:int  ").unwrap();
     assert_eq!(remaining, "");
     assert_eq!(schema.fields.len(), 2);
@@ -354,7 +397,8 @@ fn schema_whitespace_handling() {
     assert_eq!(schema.fields["name"].field_type, FieldType::String);
     assert_eq!(schema.fields["age"].field_type, FieldType::Int);
 
-    let (remaining, schema) = parse_schema("name : string ( nullable ) ( default = John )").unwrap();
+    let (remaining, schema) =
+        parse_schema("name : string ( nullable ) ( default = John )").unwrap();
     assert_eq!(remaining, "");
     assert_eq!(schema.fields.len(), 1);
     assert_eq!(
@@ -384,7 +428,7 @@ fn schema_whitespace_handling() {
 }
 
 #[test]
-fn schema_invalid_syntax() {
+fn invalid_syntax() {
     assert!(parse_schema("name string").is_err());
     assert!(parse_schema("name:").is_err());
     assert!(parse_schema(":string").is_err());
@@ -415,7 +459,7 @@ fn schema_invalid_syntax() {
 }
 
 #[test]
-fn schema_invalid_field_types() {
+fn invalid_field_types() {
     assert!(parse_schema("name: text").is_err());
     assert!(parse_schema("age: integer").is_err());
     assert!(parse_schema("price: double").is_err());
@@ -436,15 +480,10 @@ fn schema_invalid_field_types() {
     assert!(parse_schema("data: json").is_err());
     assert!(parse_schema("timestamp: datetime").is_err());
     assert!(parse_schema("timestamp: date").is_err());
-
-    assert!(parse_schema("name: String").is_err());
-    assert!(parse_schema("age: INT").is_err());
-    assert!(parse_schema("height: Float").is_err());
-    assert!(parse_schema("active: Boolean").is_err());
 }
 
 #[test]
-fn schema_invalid_constraints() {
+fn invalid_constraints() {
     assert!(parse_schema("name: string(required)").is_err());
     assert!(parse_schema("name: string(optional)").is_err());
     assert!(parse_schema("name: string(unique)").is_err());

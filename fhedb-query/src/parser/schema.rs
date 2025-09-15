@@ -11,7 +11,7 @@ use fhedb_core::db::schema::{FieldDefinition, FieldType, Schema};
 use nom::{
     IResult, Parser,
     branch::alt,
-    bytes::complete::{tag, take_until},
+    bytes::complete::{tag_no_case, take_until},
     character::complete::{char, multispace0},
     combinator::{map, map_res},
     multi::{many0, separated_list0},
@@ -38,12 +38,13 @@ fn parse_field_constraint(input: &str) -> IResult<&str, FieldConstraint> {
     delimited(
         char('('),
         alt((
-            map(delimited(multispace0, tag("nullable"), multispace0), |_| {
-                FieldConstraint::Nullable
-            }),
+            map(
+                delimited(multispace0, tag_no_case("nullable"), multispace0),
+                |_| FieldConstraint::Nullable,
+            ),
             map(
                 preceded(
-                    delimited(multispace0, tag("default"), multispace0),
+                    delimited(multispace0, tag_no_case("default"), multispace0),
                     delimited(
                         char('='),
                         delimited(multispace0, take_until(")"), multispace0),
@@ -71,7 +72,7 @@ fn parse_field_type(input: &str) -> IResult<&str, FieldType> {
     alt((
         map(
             (
-                tag("array"),
+                tag_no_case("array"),
                 multispace0,
                 delimited(
                     delimited(multispace0, char('<'), multispace0),
@@ -83,7 +84,7 @@ fn parse_field_type(input: &str) -> IResult<&str, FieldType> {
         ),
         map(
             (
-                tag("ref"),
+                tag_no_case("ref"),
                 multispace0,
                 delimited(
                     delimited(multispace0, char('<'), multispace0),
@@ -93,12 +94,12 @@ fn parse_field_type(input: &str) -> IResult<&str, FieldType> {
             ),
             |(_, _, collection_name)| FieldType::Reference(collection_name.to_string()),
         ),
-        map(tag("id_string"), |_| FieldType::IdString),
-        map(tag("id_int"), |_| FieldType::IdInt),
-        map(tag("int"), |_| FieldType::Int),
-        map(tag("float"), |_| FieldType::Float),
-        map(tag("boolean"), |_| FieldType::Boolean),
-        map(tag("string"), |_| FieldType::String),
+        map(tag_no_case("id_string"), |_| FieldType::IdString),
+        map(tag_no_case("id_int"), |_| FieldType::IdInt),
+        map(tag_no_case("int"), |_| FieldType::Int),
+        map(tag_no_case("float"), |_| FieldType::Float),
+        map(tag_no_case("boolean"), |_| FieldType::Boolean),
+        map(tag_no_case("string"), |_| FieldType::String),
     ))
     .parse(input)
 }
