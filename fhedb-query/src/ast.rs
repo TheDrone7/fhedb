@@ -3,7 +3,8 @@
 //! This module defines the core data structures that represent the parsed
 //! form of FHEDB query language statements.
 
-use fhedb_core::db::schema::Schema;
+use fhedb_core::db::schema::{FieldDefinition, Schema};
+use std::collections::HashMap;
 
 /// Represents a query in the FHEDB query language.
 #[derive(Debug, Clone, PartialEq)]
@@ -46,6 +47,15 @@ pub enum ContextualQuery {
     Document(DocumentQuery),
 }
 
+/// Represents a modification operation on a collection field.
+#[derive(Debug, Clone, PartialEq)]
+pub enum FieldModification {
+    /// Drop the field from the collection schema.
+    Drop,
+    /// Set the field to a new definition (add or modify).
+    Set(FieldDefinition),
+}
+
 /// Represents queries on collections within a database,
 /// such as creating collections, dropping collections, or modifying collection schemas.
 #[derive(Debug, Clone, PartialEq)]
@@ -63,6 +73,13 @@ pub enum CollectionQuery {
     Drop {
         /// The name of the collection to drop.
         name: String,
+    },
+    /// Modifies an existing collection's schema by adding, dropping, or changing fields.
+    Modify {
+        /// The name of the collection to modify.
+        name: String,
+        /// A map of field names to their modification operations.
+        modifications: HashMap<String, FieldModification>,
     },
 }
 
