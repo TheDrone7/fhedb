@@ -4,8 +4,7 @@
 
 use crate::{
     ast::*,
-    error::ParseError,
-    parser::utilities::{ParseResult, identifier},
+    parser::utilities::{ParseResult, identifier, trim_parse},
 };
 use nom::{
     IResult, Parser,
@@ -94,19 +93,7 @@ fn drop_database(input: &str) -> IResult<&str, DatabaseQuery> {
 /// - The input doesn't match any known database query pattern
 /// - There is unexpected input remaining after a valid query
 pub fn parse_database_query(input: &str) -> ParseResult<DatabaseQuery> {
-    let input = input.trim();
-
-    let (remaining, query) = preceded(multispace0, alt((create_database, drop_database)))
-        .parse(input)
-        .map_err(|_| ParseError::SyntaxError {
-            message: "Unknown database query".to_string(),
-        })?;
-
-    if !remaining.trim().is_empty() {
-        return Err(ParseError::SyntaxError {
-            message: "Unexpected input after query".to_string(),
-        });
-    }
-
-    Ok(query)
+    trim_parse(input, "database query", |input| {
+        preceded(multispace0, alt((create_database, drop_database))).parse(input)
+    })
 }

@@ -3,8 +3,9 @@
 //! This module provides parsers for schema definitions used in collection operations.
 
 use crate::{
+    ast::FieldModification,
     error::ParseError,
-    parser::utilities::{ParseResult, identifier},
+    parser::utilities::{ParseResult, identifier, trim_parse},
 };
 use bson::Bson;
 use fhedb_core::db::schema::{FieldDefinition, FieldType, Schema};
@@ -233,6 +234,67 @@ fn parse_field_definition(input: &str) -> IResult<&str, (String, FieldDefinition
     .parse(input)
 }
 
+/// Parses a single field modification in the format: field_name: drop | field_name: field_type [constraints...]
+///
+/// ## Arguments
+///
+/// * `input` - The input string to parse.
+///
+/// ## Returns
+///
+/// Returns an [`IResult`] containing the remaining input and a tuple of (field_name, FieldModification).
+fn parse_field_modification(input: &str) -> IResult<&str, (String, FieldModification)> {
+    alt((
+        // Parse drop operation: field_name: drop
+        map(
+            (
+                identifier,
+                delimited(multispace0, char(':'), multispace0),
+                tag_no_case("drop"),
+            ),
+            |(name, _, _)| (name.to_string(), FieldModification::Drop),
+        ),
+        // Parse field definition operation: field_name: field_type [constraints...]
+        map(parse_field_definition, |(name, field_def)| {
+            (name, FieldModification::Set(field_def))
+        }),
+    ))
+    .parse(input)
+}
+
+/// Parses multiple field modifications (the part inside the braces of a modify collection statement).
+///
+/// ## Arguments
+///
+/// * `input` - The input string to parse.
+///
+/// ## Returns
+///
+/// Returns a [`ParseResult`] containing the parsed map of field modifications.
+pub fn parse_field_modifications(
+    input: &str,
+) -> ParseResult<std::collections::HashMap<String, FieldModification>> {
+    let modifications = trim_parse(input, "field modifications", |input| {
+        separated_list0(
+            delimited(multispace0, char(','), multispace0),
+            delimited(multispace0, parse_field_modification, multispace0),
+        )
+        .parse(input)
+    })?;
+
+    let mut modification_map = std::collections::HashMap::new();
+    for (name, modification) in modifications {
+        if modification_map.contains_key(&name) {
+            return Err(ParseError::SyntaxError {
+                message: format!("Duplicate field modification: {}", name),
+            });
+        }
+        modification_map.insert(name, modification);
+    }
+
+    Ok(modification_map)
+}
+
 /// Parses a schema definition (the part inside the braces).
 ///
 /// ## Arguments
@@ -243,22 +305,13 @@ fn parse_field_definition(input: &str) -> IResult<&str, (String, FieldDefinition
 ///
 /// Returns a [`ParseResult`] containing the parsed [`Schema`].
 pub fn parse_schema(input: &str) -> ParseResult<Schema> {
-    let input = input.trim();
-
-    let (remaining, fields) = separated_list0(
-        delimited(multispace0, char(','), multispace0),
-        delimited(multispace0, parse_field_definition, multispace0),
-    )
-    .parse(input)
-    .map_err(|e| ParseError::SyntaxError {
-        message: format!("Failed to parse schema definition: {}", e),
+    let fields = trim_parse(input, "schema definition", |input| {
+        separated_list0(
+            delimited(multispace0, char(','), multispace0),
+            delimited(multispace0, parse_field_definition, multispace0),
+        )
+        .parse(input)
     })?;
-
-    if !remaining.trim().is_empty() {
-        return Err(ParseError::SyntaxError {
-            message: "Unexpected content after schema definition".to_string(),
-        });
-    }
 
     let mut schema = Schema::new();
     for (name, field_def) in fields {

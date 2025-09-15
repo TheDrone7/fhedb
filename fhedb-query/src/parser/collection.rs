@@ -7,7 +7,7 @@ use crate::{
     error::ParseError,
     parser::{
         schema::parse_schema,
-        utilities::{ParseResult, identifier},
+        utilities::{ParseResult, identifier, trim_parse},
     },
 };
 use nom::{
@@ -97,19 +97,7 @@ fn drop_collection(input: &str) -> IResult<&str, CollectionQuery> {
 /// Returns a [`ParseResult<CollectionQuery>`] containing the parsed query on success,
 /// or a [`ParseError`] if the parsing fails.
 pub fn parse_collection_query(input: &str) -> ParseResult<CollectionQuery> {
-    let input = input.trim();
-
-    let (remaining, query) = preceded(multispace0, alt((create_collection, drop_collection)))
-        .parse(input)
-        .map_err(|_| ParseError::SyntaxError {
-            message: "Unknown collection query".to_string(),
-        })?;
-
-    if !remaining.trim().is_empty() {
-        return Err(ParseError::SyntaxError {
-            message: "Unexpected input after query".to_string(),
-        });
-    }
-
-    Ok(query)
+    trim_parse(input, "collection query", |input| {
+        preceded(multispace0, alt((create_collection, drop_collection))).parse(input)
+    })
 }
