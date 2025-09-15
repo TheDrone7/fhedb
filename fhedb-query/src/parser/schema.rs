@@ -245,7 +245,6 @@ fn parse_field_definition(input: &str) -> IResult<&str, (String, FieldDefinition
 /// Returns an [`IResult`] containing the remaining input and a tuple of (field_name, FieldModification).
 fn parse_field_modification(input: &str) -> IResult<&str, (String, FieldModification)> {
     alt((
-        // Parse drop operation: field_name: drop
         map(
             (
                 identifier,
@@ -254,7 +253,6 @@ fn parse_field_modification(input: &str) -> IResult<&str, (String, FieldModifica
             ),
             |(name, _, _)| (name.to_string(), FieldModification::Drop),
         ),
-        // Parse field definition operation: field_name: field_type [constraints...]
         map(parse_field_definition, |(name, field_def)| {
             (name, FieldModification::Set(field_def))
         }),

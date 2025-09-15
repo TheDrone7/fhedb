@@ -6,7 +6,7 @@ use crate::{
     ast::*,
     error::ParseError,
     parser::{
-        schema::parse_schema,
+        schema::{parse_field_modifications, parse_schema},
         utilities::{ParseResult, identifier, trim_parse},
     },
 };
@@ -86,6 +86,37 @@ fn drop_collection(input: &str) -> IResult<&str, CollectionQuery> {
     .parse(input)
 }
 
+/// Parses a MODIFY COLLECTION query.
+///
+/// ## Arguments
+///
+/// * `input` - The input string to parse.
+///
+/// ## Returns
+///
+/// Returns an [`IResult`] containing the remaining input and the parsed [`CollectionQuery::Modify`].
+fn modify_collection(input: &str) -> IResult<&str, CollectionQuery> {
+    map_res(
+        (
+            alt((tag_no_case("modify"), tag_no_case("alter"))),
+            multispace1,
+            tag_no_case("collection"),
+            multispace1,
+            identifier,
+            multispace0,
+            delimited(char('{'), take_until("}"), char('}')),
+        ),
+        |(_, _, _, _, name, _, modifications_text)| -> Result<CollectionQuery, ParseError> {
+            let modifications = parse_field_modifications(modifications_text)?;
+            Ok(CollectionQuery::Modify {
+                name: name.to_string(),
+                modifications,
+            })
+        },
+    )
+    .parse(input)
+}
+
 /// Parses a complete collection query from the input string.
 ///
 /// ## Arguments
@@ -98,6 +129,10 @@ fn drop_collection(input: &str) -> IResult<&str, CollectionQuery> {
 /// or a [`ParseError`] if the parsing fails.
 pub fn parse_collection_query(input: &str) -> ParseResult<CollectionQuery> {
     trim_parse(input, "collection query", |input| {
-        preceded(multispace0, alt((create_collection, drop_collection))).parse(input)
+        preceded(
+            multispace0,
+            alt((create_collection, drop_collection, modify_collection)),
+        )
+        .parse(input)
     })
 }
