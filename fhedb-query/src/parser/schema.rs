@@ -5,9 +5,8 @@
 use crate::{
     ast::FieldModification,
     error::ParseError,
-    parser::utilities::{ParseResult, identifier, trim_parse},
+    parser::utilities::{ParseResult, identifier, parse_bson_value, trim_parse},
 };
-use bson::Bson;
 use fhedb_core::db::schema::{FieldDefinition, FieldType, Schema};
 use nom::{
     IResult, Parser,
@@ -105,86 +104,6 @@ fn parse_field_type(input: &str) -> IResult<&str, FieldType> {
     .parse(input)
 }
 
-/// Parses a default value string into a BSON value based on the field type.
-///
-/// ## Arguments
-///
-/// * `value_str` - The string representation of the default value.
-/// * `field_type` - The type that the default value should conform to.
-///
-/// ## Returns
-///
-/// Returns `Ok(Bson)` if the value can be parsed according to the field type,
-/// or `Err(ParseError)` with an error message if parsing fails.
-fn parse_default_value(value_str: String, field_type: &FieldType) -> ParseResult<Bson> {
-    let trimmed = value_str.trim();
-
-    match field_type {
-        FieldType::Int => {
-            trimmed
-                .parse::<i64>()
-                .map(Bson::Int64)
-                .map_err(|_| ParseError::SyntaxError {
-                    message: format!("Cannot parse '{}' as integer", trimmed),
-                })
-        }
-        FieldType::Float => {
-            trimmed
-                .parse::<f64>()
-                .map(Bson::Double)
-                .map_err(|_| ParseError::SyntaxError {
-                    message: format!("Cannot parse '{}' as float", trimmed),
-                })
-        }
-        FieldType::Boolean => match trimmed.to_lowercase().as_str() {
-            "true" => Ok(Bson::Boolean(true)),
-            "false" => Ok(Bson::Boolean(false)),
-            _ => Err(ParseError::SyntaxError {
-                message: format!(
-                    "Cannot parse '{}' as boolean (expected 'true' or 'false')",
-                    trimmed
-                ),
-            }),
-        },
-        FieldType::String => {
-            let unquoted = if (trimmed.starts_with('"') && trimmed.ends_with('"'))
-                || (trimmed.starts_with('\'') && trimmed.ends_with('\''))
-            {
-                &trimmed[1..trimmed.len() - 1]
-            } else {
-                trimmed
-            };
-            Ok(Bson::String(unquoted.to_string()))
-        }
-        FieldType::IdString => Err(ParseError::SyntaxError {
-            message: "ID fields cannot have default values as they must be unique".to_string(),
-        }),
-        FieldType::IdInt => Err(ParseError::SyntaxError {
-            message: "ID fields cannot have default values as they must be unique".to_string(),
-        }),
-        FieldType::Nullable(inner_type) => {
-            if trimmed.to_lowercase() == "null" {
-                Ok(Bson::Null)
-            } else {
-                parse_default_value(value_str, inner_type)
-            }
-        }
-        FieldType::Array(_) => Err(ParseError::SyntaxError {
-            message: "Array default values are not supported yet".to_string(),
-        }),
-        FieldType::Reference(_) => {
-            let unquoted = if (trimmed.starts_with('"') && trimmed.ends_with('"'))
-                || (trimmed.starts_with('\'') && trimmed.ends_with('\''))
-            {
-                &trimmed[1..trimmed.len() - 1]
-            } else {
-                trimmed
-            };
-            Ok(Bson::String(unquoted.to_string()))
-        }
-    }
-}
-
 /// Parses a single field definition in the format: field_name: field_type [constraints...]
 ///
 /// ## Arguments
@@ -220,7 +139,26 @@ fn parse_field_definition(input: &str) -> IResult<&str, (String, FieldDefinition
             };
 
             let field_def = if let Some(default_str) = default_value_str {
-                match parse_default_value(default_str, &final_type) {
+                match &final_type {
+                    FieldType::IdString | FieldType::IdInt => {
+                        return Err(ParseError::SyntaxError {
+                            message: "ID fields cannot have default values as they must be unique"
+                                .to_string(),
+                        });
+                    }
+                    FieldType::Nullable(inner_type) => {
+                        if matches!(inner_type.as_ref(), FieldType::IdString | FieldType::IdInt) {
+                            return Err(ParseError::SyntaxError {
+                                message:
+                                    "ID fields cannot have default values as they must be unique"
+                                        .to_string(),
+                            });
+                        }
+                    }
+                    _ => {}
+                }
+
+                match parse_bson_value(default_str, &final_type) {
                     Ok(default_bson) => FieldDefinition::with_default(final_type, default_bson),
                     Err(e) => return Err(e),
                 }
