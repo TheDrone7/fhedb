@@ -59,6 +59,11 @@ pub enum CollectionQuery {
         /// The schema definition for the collection.
         schema: Schema,
     },
+    /// Drops an existing collection with the specified name.
+    Drop {
+        /// The name of the collection to drop.
+        name: String,
+    },
 }
 
 /// Represents queries on documents within a database's collections,

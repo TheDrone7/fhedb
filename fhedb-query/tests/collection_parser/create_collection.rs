@@ -19,6 +19,7 @@ fn basic() {
             assert_eq!(schema.fields["name"].field_type, FieldType::String);
             assert_eq!(schema.fields["age"].field_type, FieldType::Int);
         }
+        _ => panic!("Expected CollectionQuery::Create, got {:?}", result),
     }
 }
 
@@ -39,6 +40,7 @@ fn case_insensitive() {
             assert_eq!(schema.fields["id"].field_type, FieldType::IdString);
             assert_eq!(schema.fields["title"].field_type, FieldType::String);
         }
+        _ => panic!("Expected CollectionQuery::Create, got {:?}", result),
     }
 }
 
@@ -59,6 +61,7 @@ fn with_drop_if_exists() {
             assert_eq!(schema.fields["id"].field_type, FieldType::IdInt);
             assert_eq!(schema.fields["data"].field_type, FieldType::String);
         }
+        _ => panic!("Expected CollectionQuery::Create, got {:?}", result),
     }
 }
 
@@ -79,6 +82,7 @@ fn with_extra_whitespace() {
             assert_eq!(schema.fields["id"].field_type, FieldType::IdInt);
             assert_eq!(schema.fields["name"].field_type, FieldType::String);
         }
+        _ => panic!("Expected CollectionQuery::Create, got {:?}", result),
     }
 
     let input =
@@ -96,6 +100,7 @@ fn with_extra_whitespace() {
             assert_eq!(schema.fields.len(), 1);
             assert_eq!(schema.fields["id"].field_type, FieldType::IdString);
         }
+        _ => panic!("Expected CollectionQuery::Create, got {:?}", result),
     }
 }
 
@@ -133,6 +138,7 @@ fn complex_schema() {
                 FieldType::Nullable(Box::new(FieldType::Reference("categories".to_string())))
             );
         }
+        _ => panic!("Expected CollectionQuery::Create, got {:?}", result),
     }
 }
 
@@ -151,6 +157,7 @@ fn empty_schema() {
             assert_eq!(drop_if_exists, false);
             assert_eq!(schema.fields.len(), 0);
         }
+        _ => panic!("Expected CollectionQuery::Create, got {:?}", result),
     }
 }
 
