@@ -12,9 +12,10 @@ use crate::{
 };
 use nom::{
     IResult, Parser,
+    branch::alt,
     bytes::complete::{tag_no_case, take_until},
     character::complete::{char, multispace0, multispace1},
-    combinator::{map_res, opt},
+    combinator::{map, map_res, opt},
     sequence::{delimited, preceded},
 };
 
@@ -60,6 +61,31 @@ fn create_collection(input: &str) -> IResult<&str, CollectionQuery> {
     .parse(input)
 }
 
+/// Parses a DROP COLLECTION query.
+///
+/// ## Arguments
+///
+/// * `input` - The input string to parse.
+///
+/// ## Returns
+///
+/// Returns an [`IResult`] containing the remaining input and the parsed [`CollectionQuery::Drop`].
+fn drop_collection(input: &str) -> IResult<&str, CollectionQuery> {
+    map(
+        (
+            tag_no_case("drop"),
+            multispace1,
+            tag_no_case("collection"),
+            multispace1,
+            identifier,
+        ),
+        |(_, _, _, _, name)| CollectionQuery::Drop {
+            name: name.to_string(),
+        },
+    )
+    .parse(input)
+}
+
 /// Parses a complete collection query from the input string.
 ///
 /// ## Arguments
@@ -73,7 +99,7 @@ fn create_collection(input: &str) -> IResult<&str, CollectionQuery> {
 pub fn parse_collection_query(input: &str) -> ParseResult<CollectionQuery> {
     let input = input.trim();
 
-    let (remaining, query) = preceded(multispace0, create_collection)
+    let (remaining, query) = preceded(multispace0, alt((create_collection, drop_collection)))
         .parse(input)
         .map_err(|_| ParseError::SyntaxError {
             message: "Unknown collection query".to_string(),
