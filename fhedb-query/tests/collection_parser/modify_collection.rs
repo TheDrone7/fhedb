@@ -133,7 +133,7 @@ fn invalid_missing_name() {
         ParseError::SyntaxError { message } => {
             assert_eq!(
                 message,
-                "Failed to parse collection query: Parsing Error: Error { input: \"\", code: MultiSpace }"
+                "Failed to parse collection query: Parsing Error: Error { input: \"MODIFY COLLECTION\", code: Tag }"
             );
         }
     }
@@ -162,7 +162,7 @@ fn invalid_no_keyword() {
         ParseError::SyntaxError { message } => {
             assert_eq!(
                 message,
-                "Failed to parse collection query: Parsing Error: Error { input: \"test_collection {field: int}\", code: Tag }"
+                "Failed to parse collection query: Parsing Error: Error { input: \"MODIFY test_collection {field: int}\", code: Tag }"
             );
         }
     }
