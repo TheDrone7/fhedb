@@ -12,9 +12,9 @@ use crate::{
 };
 use nom::{
     IResult, Parser,
-    bytes::complete::tag,
+    bytes::complete::{tag_no_case, take_until},
     character::complete::{char, multispace0, multispace1},
-    combinator::{map, opt},
+    combinator::{map_res, opt},
     sequence::{delimited, preceded},
 };
 
@@ -28,30 +28,33 @@ use nom::{
 ///
 /// Returns an [`IResult`] containing the remaining input and the parsed [`CollectionQuery::Create`].
 fn create_collection(input: &str) -> IResult<&str, CollectionQuery> {
-    map(
+    map_res(
         (
-            tag("collection"),
+            tag_no_case("create"),
+            multispace1,
+            tag_no_case("collection"),
             multispace1,
             identifier,
-            multispace1,
-            tag("create"),
             opt(preceded(
                 multispace1,
                 (
-                    tag("drop"),
+                    tag_no_case("drop"),
                     multispace1,
-                    tag("if"),
+                    tag_no_case("if"),
                     multispace1,
-                    tag("exists"),
+                    tag_no_case("exists"),
                 ),
             )),
             multispace0,
-            delimited(char('{'), parse_schema, char('}')),
+            delimited(char('{'), take_until("}"), char('}')),
         ),
-        |(_, _, name, _, _, drop_if_exists, _, schema)| CollectionQuery::Create {
-            name: name.to_string(),
-            drop_if_exists: drop_if_exists.is_some(),
-            schema,
+        |(_, _, _, _, name, drop_if_exists, _, schema_text)| -> Result<CollectionQuery, ParseError> {
+            let schema = parse_schema(schema_text)?;
+            Ok(CollectionQuery::Create {
+                name: name.to_string(),
+                drop_if_exists: drop_if_exists.is_some(),
+                schema,
+            })
         },
     )
     .parse(input)
