@@ -433,6 +433,40 @@ fn default_values_array() {
             Bson::String("array[key]".to_string())
         ]))
     );
+
+    let schema =
+        parse_schema(r#"quotes: array<string>(default = ["He said \"Hello\"", "She said 'Hi'"])"#)
+            .unwrap();
+    assert_eq!(schema.fields.len(), 1);
+    assert_eq!(
+        schema.fields["quotes"].field_type,
+        FieldType::Array(Box::new(FieldType::String))
+    );
+    assert_eq!(
+        schema.fields["quotes"].default_value,
+        Some(Bson::Array(vec![
+            Bson::String("He said \"Hello\"".to_string()),
+            Bson::String("She said 'Hi'".to_string())
+        ]))
+    );
+
+    let schema = parse_schema(
+        r#"escaped: array<string>(default = ["Line1\nLine2", "Tab\tSeparated", "Back\\slash"])"#,
+    )
+    .unwrap();
+    assert_eq!(schema.fields.len(), 1);
+    assert_eq!(
+        schema.fields["escaped"].field_type,
+        FieldType::Array(Box::new(FieldType::String))
+    );
+    assert_eq!(
+        schema.fields["escaped"].default_value,
+        Some(Bson::Array(vec![
+            Bson::String("Line1\nLine2".to_string()),
+            Bson::String("Tab\tSeparated".to_string()),
+            Bson::String("Back\\slash".to_string())
+        ]))
+    );
 }
 
 #[test]

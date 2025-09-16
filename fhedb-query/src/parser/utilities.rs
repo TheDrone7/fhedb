@@ -133,8 +133,9 @@ fn parse_array_elements(input: &str) -> IResult<&str, Vec<String>> {
     let mut end_pos = None;
     let mut in_string = false;
     let mut string_delimiter = '\0';
+    let mut chars = trimmed.char_indices();
 
-    for (i, ch) in trimmed.char_indices() {
+    while let Some((i, ch)) = chars.next() {
         match ch {
             '"' | '\'' if !in_string => {
                 in_string = true;
@@ -143,6 +144,9 @@ fn parse_array_elements(input: &str) -> IResult<&str, Vec<String>> {
             '"' | '\'' if in_string && ch == string_delimiter => {
                 in_string = false;
                 string_delimiter = '\0';
+            }
+            '\\' if in_string => {
+                chars.next();
             }
             '[' if !in_string => bracket_count += 1,
             ']' if !in_string => {
@@ -172,8 +176,9 @@ fn parse_array_elements(input: &str) -> IResult<&str, Vec<String>> {
     let mut bracket_depth = 0;
     let mut in_string = false;
     let mut string_delimiter = '\0';
+    let mut chars = content.chars();
 
-    for ch in content.chars() {
+    while let Some(ch) = chars.next() {
         match ch {
             '"' | '\'' if !in_string => {
                 in_string = true;
@@ -184,6 +189,12 @@ fn parse_array_elements(input: &str) -> IResult<&str, Vec<String>> {
                 in_string = false;
                 string_delimiter = '\0';
                 current_element.push(ch);
+            }
+            '\\' if in_string => {
+                current_element.push(ch);
+                if let Some(next_ch) = chars.next() {
+                    current_element.push(next_ch);
+                }
             }
             '[' if !in_string => {
                 bracket_depth += 1;
