@@ -42,3 +42,21 @@ create database <database_name> [drop if exists]
 
 > **NOTE**: Difference between querying a single document and listing all documents is merely specifying a value for the ID field.
 > This can later be expanded to full querying support easily.
+
+---
+
+## Operators
+
+Within document-related queries, the following operators can be used:
+- `:` (colon): The assignment operator assigns values to fields in documents.
+  - Example: `name: "John Doe"` assigns the value "John Doe" to the field `name`.
+- `=` (equals): The equality operator checks if a field's value matches a specified value.
+  - Example: `age = 30` checks if the field `age` is equal
+- `!=` (not equals): The inequality operator checks if a field's value does not match a specified value.
+    - Example: `status != "inactive"` checks if the field `status` is not
+- `>` (greater than): The greater-than operator checks if a field's value is greater than a specified value.
+    - Example: `age > 18` checks if the field `age` is greater
+- `<` (less than): The less-than operator checks if a field's value is less
+    - Example: `age < 65` checks if the field `age` is less
+- `==` (similar to): The similarity operator checks if a field's value is similar to a specified value.
+    - Example: `description == "fast car"` checks if the field `description` is similar (eg. contains the phrase "fast car".) This should also support regex in the future.

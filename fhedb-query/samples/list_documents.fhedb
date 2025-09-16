@@ -1,6 +1,6 @@
 1. Get only field_1 and field_2
 get doc|document|documents from <collection_name> {
-    <field_1_name>,
+    <field_1_name> [<|>|=|!=|== <some_value>],
     <field_2_name>
 }
 
