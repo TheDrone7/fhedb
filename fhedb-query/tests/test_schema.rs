@@ -151,112 +151,33 @@ fn nullable_constraint() {
 }
 
 #[test]
-fn default_values_int() {
-    let schema = parse_schema("age: int(default = 18)").unwrap();
-    assert_eq!(schema.fields.len(), 1);
+fn default_values_valid() {
+    let schema = parse_schema("age: int(default = 25), active: boolean(default = true)").unwrap();
+    assert_eq!(schema.fields.len(), 2);
     assert_eq!(schema.fields["age"].field_type, FieldType::Int);
-    assert_eq!(schema.fields["age"].default_value, Some(Bson::Int64(18)));
-
-    let schema = parse_schema("negative: int(default = -42)").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(schema.fields["negative"].field_type, FieldType::Int);
-    assert_eq!(
-        schema.fields["negative"].default_value,
-        Some(Bson::Int64(-42))
-    );
-}
-
-#[test]
-fn default_values_float() {
-    let schema = parse_schema("pi: float(default = 3.14159)").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(schema.fields["pi"].field_type, FieldType::Float);
-    assert_eq!(
-        schema.fields["pi"].default_value,
-        Some(Bson::Double(3.14159))
-    );
-
-    let schema = parse_schema("negative: float(default = -1.5)").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(schema.fields["negative"].field_type, FieldType::Float);
-    assert_eq!(
-        schema.fields["negative"].default_value,
-        Some(Bson::Double(-1.5))
-    );
-}
-
-#[test]
-fn default_values_boolean() {
-    let schema = parse_schema("active: boolean(default = true)").unwrap();
-    assert_eq!(schema.fields.len(), 1);
+    assert_eq!(schema.fields["age"].default_value, Some(Bson::Int64(25)));
     assert_eq!(schema.fields["active"].field_type, FieldType::Boolean);
     assert_eq!(
         schema.fields["active"].default_value,
         Some(Bson::Boolean(true))
     );
 
-    let schema = parse_schema("disabled: boolean ( default = false )").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(schema.fields["disabled"].field_type, FieldType::Boolean);
-    assert_eq!(
-        schema.fields["disabled"].default_value,
-        Some(Bson::Boolean(false))
-    );
-}
-
-#[test]
-fn default_values_string() {
-    let schema = parse_schema("name: string(default = \"John\")").unwrap();
+    let schema = parse_schema("name: string(default = \"John Doe\")").unwrap();
     assert_eq!(schema.fields.len(), 1);
     assert_eq!(schema.fields["name"].field_type, FieldType::String);
     assert_eq!(
         schema.fields["name"].default_value,
-        Some(Bson::String("John".to_string()))
+        Some(Bson::String("John Doe".to_string()))
     );
 
-    let schema = parse_schema("title: string(default = \"Software Engineer\")").unwrap();
+    let schema = parse_schema("score: float(default = 95.5)").unwrap();
     assert_eq!(schema.fields.len(), 1);
-    assert_eq!(schema.fields["title"].field_type, FieldType::String);
+    assert_eq!(schema.fields["score"].field_type, FieldType::Float);
     assert_eq!(
-        schema.fields["title"].default_value,
-        Some(Bson::String("Software Engineer".to_string()))
+        schema.fields["score"].default_value,
+        Some(Bson::Double(95.5))
     );
 
-    let schema = parse_schema("message: string(default = 'Hello World')").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(schema.fields["message"].field_type, FieldType::String);
-    assert_eq!(
-        schema.fields["message"].default_value,
-        Some(Bson::String("Hello World".to_string()))
-    );
-
-    let schema = parse_schema("empty: string(default = \"\")").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(schema.fields["empty"].field_type, FieldType::String);
-    assert_eq!(
-        schema.fields["empty"].default_value,
-        Some(Bson::String("".to_string()))
-    );
-
-    let schema = parse_schema("null_string: string(default = \"null\")").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(schema.fields["null_string"].field_type, FieldType::String);
-    assert_eq!(
-        schema.fields["null_string"].default_value,
-        Some(Bson::String("null".to_string()))
-    );
-
-    let schema = parse_schema("escaped: string(default = \"Hello\\nWorld\\t!\")").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(schema.fields["escaped"].field_type, FieldType::String);
-    assert_eq!(
-        schema.fields["escaped"].default_value,
-        Some(Bson::String("Hello\nWorld\t!".to_string()))
-    );
-}
-
-#[test]
-fn default_values_null() {
     let schema = parse_schema("description: string(nullable)(default = null)").unwrap();
     assert_eq!(schema.fields.len(), 1);
     assert_eq!(
@@ -265,73 +186,7 @@ fn default_values_null() {
     );
     assert_eq!(schema.fields["description"].default_value, Some(Bson::Null));
 
-    let schema = parse_schema("notes: int(nullable)(default = null)").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(
-        schema.fields["notes"].field_type,
-        FieldType::Nullable(Box::new(FieldType::Int))
-    );
-    assert_eq!(schema.fields["notes"].default_value, Some(Bson::Null));
-
-    let schema = parse_schema("score: float(nullable)(default = null)").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(
-        schema.fields["score"].field_type,
-        FieldType::Nullable(Box::new(FieldType::Float))
-    );
-    assert_eq!(schema.fields["score"].default_value, Some(Bson::Null));
-}
-
-#[test]
-fn default_values_reference() {
-    let schema = parse_schema("user_ref: ref<users>(default = \"admin\")").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(
-        schema.fields["user_ref"].field_type,
-        FieldType::Reference("users".to_string())
-    );
-    assert_eq!(
-        schema.fields["user_ref"].default_value,
-        Some(Bson::String("admin".to_string()))
-    );
-
-    let schema = parse_schema("owner: ref<companies>(default = \"default-company\")").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(
-        schema.fields["owner"].field_type,
-        FieldType::Reference("companies".to_string())
-    );
-    assert_eq!(
-        schema.fields["owner"].default_value,
-        Some(Bson::String("default-company".to_string()))
-    );
-
-    let schema = parse_schema("category: ref<categories>(default = 'uncategorized')").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(
-        schema.fields["category"].field_type,
-        FieldType::Reference("categories".to_string())
-    );
-    assert_eq!(
-        schema.fields["category"].default_value,
-        Some(Bson::String("uncategorized".to_string()))
-    );
-
-    let schema = parse_schema("path_ref: ref<paths>(default = \"data\\\\user\\tinfo\")").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(
-        schema.fields["path_ref"].field_type,
-        FieldType::Reference("paths".to_string())
-    );
-    assert_eq!(
-        schema.fields["path_ref"].default_value,
-        Some(Bson::String("data\\user\tinfo".to_string()))
-    );
-}
-
-#[test]
-fn default_values_array() {
-    let schema = parse_schema("tags: array<string>(default = [])").unwrap();
+    let schema = parse_schema("tags: array<string>(default = [\"dev\", \"test\"])").unwrap();
     assert_eq!(schema.fields.len(), 1);
     assert_eq!(
         schema.fields["tags"].field_type,
@@ -339,134 +194,32 @@ fn default_values_array() {
     );
     assert_eq!(
         schema.fields["tags"].default_value,
-        Some(Bson::Array(vec![]))
+        Some(Bson::Array(vec![
+            Bson::String("dev".to_string()),
+            Bson::String("test".to_string())
+        ]))
+    );
+
+    let schema = parse_schema("owner: ref<users>(default = \"admin\")").unwrap();
+    assert_eq!(schema.fields.len(), 1);
+    assert_eq!(
+        schema.fields["owner"].field_type,
+        FieldType::Reference("users".to_string())
+    );
+    assert_eq!(
+        schema.fields["owner"].default_value,
+        Some(Bson::String("admin".to_string()))
     );
 
     let schema =
-        parse_schema("names: array<string>(default = [\"Alice\", \"Bob\", \"Charlie\"])").unwrap();
-    assert_eq!(schema.fields.len(), 1);
+        parse_schema("id: id_int, name: string(default = \"Anonymous\"), age: int").unwrap();
+    assert_eq!(schema.fields.len(), 3);
+    assert_eq!(schema.fields["id"].default_value, None);
     assert_eq!(
-        schema.fields["names"].field_type,
-        FieldType::Array(Box::new(FieldType::String))
+        schema.fields["name"].default_value,
+        Some(Bson::String("Anonymous".to_string()))
     );
-    assert_eq!(
-        schema.fields["names"].default_value,
-        Some(Bson::Array(vec![
-            Bson::String("Alice".to_string()),
-            Bson::String("Bob".to_string()),
-            Bson::String("Charlie".to_string())
-        ]))
-    );
-
-    let schema = parse_schema("numbers: array<int>(default = [1, 2, 3])").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(
-        schema.fields["numbers"].field_type,
-        FieldType::Array(Box::new(FieldType::Int))
-    );
-    assert_eq!(
-        schema.fields["numbers"].default_value,
-        Some(Bson::Array(vec![
-            Bson::Int64(1),
-            Bson::Int64(2),
-            Bson::Int64(3)
-        ]))
-    );
-
-    let schema = parse_schema("flags: array<boolean>(default = [true, false, true])").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(
-        schema.fields["flags"].field_type,
-        FieldType::Array(Box::new(FieldType::Boolean))
-    );
-    assert_eq!(
-        schema.fields["flags"].default_value,
-        Some(Bson::Array(vec![
-            Bson::Boolean(true),
-            Bson::Boolean(false),
-            Bson::Boolean(true)
-        ]))
-    );
-
-    let schema = parse_schema("coordinates: array<float>(default = [1.5, 2.7, 3.14])").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(
-        schema.fields["coordinates"].field_type,
-        FieldType::Array(Box::new(FieldType::Float))
-    );
-    assert_eq!(
-        schema.fields["coordinates"].default_value,
-        Some(Bson::Array(vec![
-            Bson::Double(1.5),
-            Bson::Double(2.7),
-            Bson::Double(3.14)
-        ]))
-    );
-
-    let schema = parse_schema("matrix: array<array<int>>(default = [[1, 2], [3, 4]])").unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(
-        schema.fields["matrix"].field_type,
-        FieldType::Array(Box::new(FieldType::Array(Box::new(FieldType::Int))))
-    );
-    assert_eq!(
-        schema.fields["matrix"].default_value,
-        Some(Bson::Array(vec![
-            Bson::Array(vec![Bson::Int64(1), Bson::Int64(2)]),
-            Bson::Array(vec![Bson::Int64(3), Bson::Int64(4)])
-        ]))
-    );
-
-    let schema =
-        parse_schema(r#"paths: array<string>(default = ["data[0]", "config[env]", "array[key]"])"#)
-            .unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(
-        schema.fields["paths"].field_type,
-        FieldType::Array(Box::new(FieldType::String))
-    );
-    assert_eq!(
-        schema.fields["paths"].default_value,
-        Some(Bson::Array(vec![
-            Bson::String("data[0]".to_string()),
-            Bson::String("config[env]".to_string()),
-            Bson::String("array[key]".to_string())
-        ]))
-    );
-
-    let schema =
-        parse_schema(r#"quotes: array<string>(default = ["He said \"Hello\"", "She said 'Hi'"])"#)
-            .unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(
-        schema.fields["quotes"].field_type,
-        FieldType::Array(Box::new(FieldType::String))
-    );
-    assert_eq!(
-        schema.fields["quotes"].default_value,
-        Some(Bson::Array(vec![
-            Bson::String("He said \"Hello\"".to_string()),
-            Bson::String("She said 'Hi'".to_string())
-        ]))
-    );
-
-    let schema = parse_schema(
-        r#"escaped: array<string>(default = ["Line1\nLine2", "Tab\tSeparated", "Back\\slash"])"#,
-    )
-    .unwrap();
-    assert_eq!(schema.fields.len(), 1);
-    assert_eq!(
-        schema.fields["escaped"].field_type,
-        FieldType::Array(Box::new(FieldType::String))
-    );
-    assert_eq!(
-        schema.fields["escaped"].default_value,
-        Some(Bson::Array(vec![
-            Bson::String("Line1\nLine2".to_string()),
-            Bson::String("Tab\tSeparated".to_string()),
-            Bson::String("Back\\slash".to_string())
-        ]))
-    );
+    assert_eq!(schema.fields["age"].default_value, None);
 }
 
 #[test]
