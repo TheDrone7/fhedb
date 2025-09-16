@@ -63,6 +63,152 @@ pub fn identifier(input: &str) -> IResult<&str, &str> {
     take_while1(|c: char| c.is_alphanumeric() || c == '_')(input)
 }
 
+/// Parses an array literal string into individual element strings.
+///
+/// ## Arguments
+///
+/// * `input` - The input string containing the array literal.
+///
+/// ## Returns
+///
+/// Returns an [`IResult`] containing the remaining input and a vector of element strings.
+pub fn parse_array_elements(input: &str) -> IResult<&str, Vec<String>> {
+    let trimmed = input.trim();
+
+    if !trimmed.starts_with('[') {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Char,
+        )));
+    }
+
+    let mut bracket_count = 0;
+    let mut end_pos = None;
+    let mut in_string = false;
+    let mut string_delimiter = '\0';
+
+    for (i, ch) in trimmed.char_indices() {
+        match ch {
+            '"' | '\'' if !in_string => {
+                in_string = true;
+                string_delimiter = ch;
+            }
+            '"' | '\'' if in_string && ch == string_delimiter => {
+                in_string = false;
+                string_delimiter = '\0';
+            }
+            '[' if !in_string => bracket_count += 1,
+            ']' if !in_string => {
+                bracket_count -= 1;
+                if bracket_count == 0 {
+                    end_pos = Some(i);
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let end_pos = end_pos.ok_or_else(|| {
+        nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Char))
+    })?;
+
+    let content = &trimmed[1..end_pos];
+    let remaining = &trimmed[end_pos + 1..];
+
+    let mut elements = Vec::new();
+    if content.trim().is_empty() {
+        return Ok((remaining, elements));
+    }
+
+    let mut current_element = String::new();
+    let mut bracket_depth = 0;
+    let mut in_string = false;
+    let mut string_delimiter = '\0';
+
+    for ch in content.chars() {
+        match ch {
+            '"' | '\'' if !in_string => {
+                in_string = true;
+                string_delimiter = ch;
+                current_element.push(ch);
+            }
+            '"' | '\'' if in_string && ch == string_delimiter => {
+                in_string = false;
+                string_delimiter = '\0';
+                current_element.push(ch);
+            }
+            '[' if !in_string => {
+                bracket_depth += 1;
+                current_element.push(ch);
+            }
+            ']' if !in_string => {
+                bracket_depth -= 1;
+                current_element.push(ch);
+            }
+            ',' if bracket_depth == 0 && !in_string => {
+                if !current_element.trim().is_empty() {
+                    elements.push(current_element.trim().to_string());
+                }
+                current_element.clear();
+            }
+            _ => {
+                current_element.push(ch);
+            }
+        }
+    }
+
+    if !current_element.trim().is_empty() {
+        elements.push(current_element.trim().to_string());
+    }
+
+    Ok((remaining, elements))
+}
+
+/// Parses an array literal into a BSON array value based on the inner field type.
+///
+/// ## Arguments
+///
+/// * `array_str` - The string representation of the array literal.
+/// * `inner_type` - The type that each array element should conform to.
+///
+/// ## Returns
+///
+/// Returns `Ok(Bson::Array)` if all elements can be parsed according to the inner type,
+/// or `Err(ParseError)` if parsing fails for any element.
+pub fn parse_array_bson_value(array_str: &str, inner_type: &FieldType) -> ParseResult<Bson> {
+    match parse_array_elements(array_str) {
+        Ok((remaining, element_strings)) => {
+            if !remaining.trim().is_empty() {
+                return Err(ParseError::SyntaxError {
+                    message: format!("Unexpected input after array: {}", remaining),
+                });
+            }
+
+            let mut bson_elements = Vec::new();
+            for element_str in element_strings {
+                let trimmed = element_str.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+
+                let bson_value = match inner_type {
+                    FieldType::Array(nested_inner_type) => {
+                        parse_array_bson_value(trimmed, nested_inner_type)?
+                    }
+                    _ => parse_bson_value(trimmed.to_string(), inner_type)?,
+                };
+                bson_elements.push(bson_value);
+            }
+
+            Ok(Bson::Array(bson_elements))
+        }
+        Err(e) => Err(ParseError::SyntaxError {
+            message: format!("Failed to parse array: {}", e),
+        }),
+    }
+}
+
 /// Parses a default value string into a BSON value based on the field type.
 ///
 /// ## Arguments
@@ -105,14 +251,19 @@ pub fn parse_bson_value(value_str: String, field_type: &FieldType) -> ParseResul
             }),
         },
         FieldType::String | FieldType::IdString => {
-            let unquoted = if (trimmed.starts_with('"') && trimmed.ends_with('"'))
+            if (trimmed.starts_with('"') && trimmed.ends_with('"'))
                 || (trimmed.starts_with('\'') && trimmed.ends_with('\''))
             {
-                &trimmed[1..trimmed.len() - 1]
+                let unquoted = &trimmed[1..trimmed.len() - 1];
+                Ok(Bson::String(unquoted.to_string()))
             } else {
-                trimmed
-            };
-            Ok(Bson::String(unquoted.to_string()))
+                Err(ParseError::SyntaxError {
+                    message: format!(
+                        "String values must be quoted with single or double quotes: '{}'",
+                        trimmed
+                    ),
+                })
+            }
         }
         FieldType::Nullable(inner_type) => {
             if trimmed.to_lowercase() == "null" {
@@ -121,18 +272,32 @@ pub fn parse_bson_value(value_str: String, field_type: &FieldType) -> ParseResul
                 parse_bson_value(value_str, inner_type)
             }
         }
-        FieldType::Array(_) => Err(ParseError::SyntaxError {
-            message: "Array default values are not supported yet".to_string(),
-        }),
+        FieldType::Array(inner_type) => {
+            if trimmed.starts_with('[') && trimmed.ends_with(']') {
+                parse_array_bson_value(trimmed, inner_type)
+            } else {
+                Err(ParseError::SyntaxError {
+                    message: format!(
+                        "Array values must be enclosed in square brackets: '{}'",
+                        trimmed
+                    ),
+                })
+            }
+        }
         FieldType::Reference(_) => {
-            let unquoted = if (trimmed.starts_with('"') && trimmed.ends_with('"'))
+            if (trimmed.starts_with('"') && trimmed.ends_with('"'))
                 || (trimmed.starts_with('\'') && trimmed.ends_with('\''))
             {
-                &trimmed[1..trimmed.len() - 1]
+                let unquoted = &trimmed[1..trimmed.len() - 1];
+                Ok(Bson::String(unquoted.to_string()))
             } else {
-                trimmed
-            };
-            Ok(Bson::String(unquoted.to_string()))
+                Err(ParseError::SyntaxError {
+                    message: format!(
+                        "Reference values must be quoted with single or double quotes: '{}'",
+                        trimmed
+                    ),
+                })
+            }
         }
     }
 }

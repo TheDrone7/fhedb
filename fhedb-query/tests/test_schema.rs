@@ -206,7 +206,7 @@ fn default_values_boolean() {
 
 #[test]
 fn default_values_string() {
-    let schema = parse_schema("name: string(default = John)").unwrap();
+    let schema = parse_schema("name: string(default = \"John\")").unwrap();
     assert_eq!(schema.fields.len(), 1);
     assert_eq!(schema.fields["name"].field_type, FieldType::String);
     assert_eq!(
@@ -238,7 +238,7 @@ fn default_values_string() {
         Some(Bson::String("".to_string()))
     );
 
-    let schema = parse_schema("null_string: string(default = null)").unwrap();
+    let schema = parse_schema("null_string: string(default = \"null\")").unwrap();
     assert_eq!(schema.fields.len(), 1);
     assert_eq!(schema.fields["null_string"].field_type, FieldType::String);
     assert_eq!(
@@ -276,7 +276,7 @@ fn default_values_null() {
 
 #[test]
 fn default_values_reference() {
-    let schema = parse_schema("user_ref: ref<users>(default = admin)").unwrap();
+    let schema = parse_schema("user_ref: ref<users>(default = \"admin\")").unwrap();
     assert_eq!(schema.fields.len(), 1);
     assert_eq!(
         schema.fields["user_ref"].field_type,
@@ -311,15 +311,117 @@ fn default_values_reference() {
 }
 
 #[test]
+fn default_values_array() {
+    let schema = parse_schema("tags: array<string>(default = [])").unwrap();
+    assert_eq!(schema.fields.len(), 1);
+    assert_eq!(
+        schema.fields["tags"].field_type,
+        FieldType::Array(Box::new(FieldType::String))
+    );
+    assert_eq!(
+        schema.fields["tags"].default_value,
+        Some(Bson::Array(vec![]))
+    );
+
+    let schema =
+        parse_schema("names: array<string>(default = [\"Alice\", \"Bob\", \"Charlie\"])").unwrap();
+    assert_eq!(schema.fields.len(), 1);
+    assert_eq!(
+        schema.fields["names"].field_type,
+        FieldType::Array(Box::new(FieldType::String))
+    );
+    assert_eq!(
+        schema.fields["names"].default_value,
+        Some(Bson::Array(vec![
+            Bson::String("Alice".to_string()),
+            Bson::String("Bob".to_string()),
+            Bson::String("Charlie".to_string())
+        ]))
+    );
+
+    let schema = parse_schema("numbers: array<int>(default = [1, 2, 3])").unwrap();
+    assert_eq!(schema.fields.len(), 1);
+    assert_eq!(
+        schema.fields["numbers"].field_type,
+        FieldType::Array(Box::new(FieldType::Int))
+    );
+    assert_eq!(
+        schema.fields["numbers"].default_value,
+        Some(Bson::Array(vec![
+            Bson::Int64(1),
+            Bson::Int64(2),
+            Bson::Int64(3)
+        ]))
+    );
+
+    let schema = parse_schema("flags: array<boolean>(default = [true, false, true])").unwrap();
+    assert_eq!(schema.fields.len(), 1);
+    assert_eq!(
+        schema.fields["flags"].field_type,
+        FieldType::Array(Box::new(FieldType::Boolean))
+    );
+    assert_eq!(
+        schema.fields["flags"].default_value,
+        Some(Bson::Array(vec![
+            Bson::Boolean(true),
+            Bson::Boolean(false),
+            Bson::Boolean(true)
+        ]))
+    );
+
+    let schema = parse_schema("coordinates: array<float>(default = [1.5, 2.7, 3.14])").unwrap();
+    assert_eq!(schema.fields.len(), 1);
+    assert_eq!(
+        schema.fields["coordinates"].field_type,
+        FieldType::Array(Box::new(FieldType::Float))
+    );
+    assert_eq!(
+        schema.fields["coordinates"].default_value,
+        Some(Bson::Array(vec![
+            Bson::Double(1.5),
+            Bson::Double(2.7),
+            Bson::Double(3.14)
+        ]))
+    );
+
+    let schema = parse_schema("matrix: array<array<int>>(default = [[1, 2], [3, 4]])").unwrap();
+    assert_eq!(schema.fields.len(), 1);
+    assert_eq!(
+        schema.fields["matrix"].field_type,
+        FieldType::Array(Box::new(FieldType::Array(Box::new(FieldType::Int))))
+    );
+    assert_eq!(
+        schema.fields["matrix"].default_value,
+        Some(Bson::Array(vec![
+            Bson::Array(vec![Bson::Int64(1), Bson::Int64(2)]),
+            Bson::Array(vec![Bson::Int64(3), Bson::Int64(4)])
+        ]))
+    );
+
+    let schema =
+        parse_schema(r#"paths: array<string>(default = ["data[0]", "config[env]", "array[key]"])"#)
+            .unwrap();
+    assert_eq!(schema.fields.len(), 1);
+    assert_eq!(
+        schema.fields["paths"].field_type,
+        FieldType::Array(Box::new(FieldType::String))
+    );
+    assert_eq!(
+        schema.fields["paths"].default_value,
+        Some(Bson::Array(vec![
+            Bson::String("data[0]".to_string()),
+            Bson::String("config[env]".to_string()),
+            Bson::String("array[key]".to_string())
+        ]))
+    );
+}
+
+#[test]
 fn default_values_invalid() {
     let res = parse_schema("id: id_int(default = 1)");
     assert!(res.is_err());
     assert!(parse_schema("user_id: id_string(default = abc123)").is_err());
     assert!(parse_schema("uuid: id_string(default = \"uuid-123\")").is_err());
-
-    assert!(parse_schema("tags: array<string>(default = [])").is_err());
-    assert!(parse_schema("numbers: array<int>(default = [1,2,3])").is_err());
-    assert!(parse_schema("matrix: array<array<int>>(default = [[1]])").is_err());
 
     assert!(parse_schema("age: int(default = abc)").is_err());
     assert!(parse_schema("age: int(default = 3.14)").is_err());
@@ -330,6 +432,10 @@ fn default_values_invalid() {
     assert!(parse_schema("age: int(default = null)").is_err());
     assert!(parse_schema("score: float(default = null)").is_err());
     assert!(parse_schema("active: boolean(default = null)").is_err());
+
+    assert!(parse_schema("tags: array<string>(default = [1, 2, 3])").is_err());
+    assert!(parse_schema("numbers: array<int>(default = [\"a\", \"b\"])").is_err());
+    assert!(parse_schema("items: array<string>(default = 1, 2, 3)").is_err());
 }
 
 #[test]
@@ -356,7 +462,7 @@ fn extra_whitespace() {
     assert_eq!(schema.fields["name"].field_type, FieldType::String);
     assert_eq!(schema.fields["age"].field_type, FieldType::Int);
 
-    let schema = parse_schema("name : string ( nullable ) ( default = John )").unwrap();
+    let schema = parse_schema("name : string ( nullable ) ( default = \"John\" )").unwrap();
     assert_eq!(schema.fields.len(), 1);
     assert_eq!(
         schema.fields["name"].field_type,
