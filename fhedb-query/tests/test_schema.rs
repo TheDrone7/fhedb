@@ -245,6 +245,14 @@ fn default_values_string() {
         schema.fields["null_string"].default_value,
         Some(Bson::String("null".to_string()))
     );
+
+    let schema = parse_schema("escaped: string(default = \"Hello\\nWorld\\t!\")").unwrap();
+    assert_eq!(schema.fields.len(), 1);
+    assert_eq!(schema.fields["escaped"].field_type, FieldType::String);
+    assert_eq!(
+        schema.fields["escaped"].default_value,
+        Some(Bson::String("Hello\nWorld\t!".to_string()))
+    );
 }
 
 #[test]
@@ -307,6 +315,17 @@ fn default_values_reference() {
     assert_eq!(
         schema.fields["category"].default_value,
         Some(Bson::String("uncategorized".to_string()))
+    );
+
+    let schema = parse_schema("path_ref: ref<paths>(default = \"data\\\\user\\tinfo\")").unwrap();
+    assert_eq!(schema.fields.len(), 1);
+    assert_eq!(
+        schema.fields["path_ref"].field_type,
+        FieldType::Reference("paths".to_string())
+    );
+    assert_eq!(
+        schema.fields["path_ref"].default_value,
+        Some(Bson::String("data\\user\tinfo".to_string()))
     );
 }
 

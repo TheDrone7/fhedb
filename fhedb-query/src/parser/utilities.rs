@@ -14,6 +14,53 @@ use nom::{IResult, bytes::complete::take_while1};
 /// the parsed value of type `T` or a [`ParseError`].
 pub type ParseResult<T> = Result<T, ParseError>;
 
+/// This function processes escape sequences commonly found in string literals:
+/// - `\n` → newline character
+/// - `\t` → tab character
+/// - `\r` → carriage return
+/// - `\0` → null character
+/// - `\\` → literal backslash
+/// - `\"` → literal double quote
+/// - `\'` → literal single quote
+///
+/// ## Arguments
+///
+/// * `input` - The input string that may contain escape sequences.
+///
+/// ## Returns
+///
+/// Returns a new `String` with escape sequences processed into their literal characters.
+/// Invalid escape sequences (like `\z`) are left as-is.
+pub fn unescape_string(input: &str) -> String {
+    let mut result = String::with_capacity(input.len());
+    let mut chars = input.chars();
+
+    while let Some(ch) = chars.next() {
+        if ch == '\\' {
+            match chars.next() {
+                Some('n') => result.push('\n'),
+                Some('t') => result.push('\t'),
+                Some('r') => result.push('\r'),
+                Some('0') => result.push('\0'),
+                Some('\\') => result.push('\\'),
+                Some('"') => result.push('"'),
+                Some('\'') => result.push('\''),
+                Some(other) => {
+                    result.push('\\');
+                    result.push(other);
+                }
+                None => {
+                    result.push('\\');
+                }
+            }
+        } else {
+            result.push(ch);
+        }
+    }
+
+    result
+}
+
 /// This utility function handles the complete parsing workflow:
 /// 1. Trims the input string
 /// 2. Applies the provided parser
@@ -72,7 +119,7 @@ pub fn identifier(input: &str) -> IResult<&str, &str> {
 /// ## Returns
 ///
 /// Returns an [`IResult`] containing the remaining input and a vector of element strings.
-pub fn parse_array_elements(input: &str) -> IResult<&str, Vec<String>> {
+fn parse_array_elements(input: &str) -> IResult<&str, Vec<String>> {
     let trimmed = input.trim();
 
     if !trimmed.starts_with('[') {
@@ -176,7 +223,7 @@ pub fn parse_array_elements(input: &str) -> IResult<&str, Vec<String>> {
 ///
 /// Returns `Ok(Bson::Array)` if all elements can be parsed according to the inner type,
 /// or `Err(ParseError)` if parsing fails for any element.
-pub fn parse_array_bson_value(array_str: &str, inner_type: &FieldType) -> ParseResult<Bson> {
+fn parse_array_bson_value(array_str: &str, inner_type: &FieldType) -> ParseResult<Bson> {
     match parse_array_elements(array_str) {
         Ok((remaining, element_strings)) => {
             if !remaining.trim().is_empty() {
@@ -255,7 +302,7 @@ pub fn parse_bson_value(value_str: String, field_type: &FieldType) -> ParseResul
                 || (trimmed.starts_with('\'') && trimmed.ends_with('\''))
             {
                 let unquoted = &trimmed[1..trimmed.len() - 1];
-                Ok(Bson::String(unquoted.to_string()))
+                Ok(Bson::String(unescape_string(unquoted)))
             } else {
                 Err(ParseError::SyntaxError {
                     message: format!(
@@ -289,7 +336,7 @@ pub fn parse_bson_value(value_str: String, field_type: &FieldType) -> ParseResul
                 || (trimmed.starts_with('\'') && trimmed.ends_with('\''))
             {
                 let unquoted = &trimmed[1..trimmed.len() - 1];
-                Ok(Bson::String(unquoted.to_string()))
+                Ok(Bson::String(unescape_string(unquoted)))
             } else {
                 Err(ParseError::SyntaxError {
                     message: format!(
