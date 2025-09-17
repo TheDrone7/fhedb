@@ -76,6 +76,23 @@ fn drop_database(input: &str) -> IResult<&str, DatabaseQuery> {
     .parse(input)
 }
 
+/// Parses a LIST DATABASES query.
+///
+/// ## Arguments
+///
+/// * `input` - The input string to parse.
+///
+/// ## Returns
+///
+/// Returns an [`IResult`] containing the remaining input and the parsed [`DatabaseQuery::List`].
+fn list_databases(input: &str) -> IResult<&str, DatabaseQuery> {
+    map(
+        (tag_no_case("list"), multispace1, tag_no_case("databases")),
+        |(_, _, _)| DatabaseQuery::List,
+    )
+    .parse(input)
+}
+
 /// Parses a complete database query from the input string.
 ///
 /// ## Arguments
@@ -94,6 +111,10 @@ fn drop_database(input: &str) -> IResult<&str, DatabaseQuery> {
 /// - There is unexpected input remaining after a valid query
 pub fn parse_database_query(input: &str) -> ParseResult<DatabaseQuery> {
     trim_parse(input, "database query", |input| {
-        preceded(multispace0, alt((create_database, drop_database))).parse(input)
+        preceded(
+            multispace0,
+            alt((create_database, drop_database, list_databases)),
+        )
+        .parse(input)
     })
 }

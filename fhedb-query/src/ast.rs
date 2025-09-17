@@ -33,6 +33,8 @@ pub enum DatabaseQuery {
         /// The name of the database to drop.
         name: String,
     },
+    /// Lists all databases.
+    List,
 }
 
 /// Represents queries that operate within a specific database context.
