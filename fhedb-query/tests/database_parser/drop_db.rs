@@ -65,7 +65,7 @@ fn invalid_missing_name() {
         ParseError::SyntaxError { message } => {
             assert_eq!(
                 message,
-                "Failed to parse database query: Parsing Error: Error { input: \"\", code: MultiSpace }"
+                "Failed to parse database query: Parsing Error: Error { input: \"DROP DATABASE\", code: Tag }"
             );
         }
     }
@@ -94,7 +94,7 @@ fn invalid_no_keyword() {
         ParseError::SyntaxError { message } => {
             assert_eq!(
                 message,
-                "Failed to parse database query: Parsing Error: Error { input: \"test_db\", code: Tag }"
+                "Failed to parse database query: Parsing Error: Error { input: \"DROP test_db\", code: Tag }"
             );
         }
     }
