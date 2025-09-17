@@ -25,6 +25,7 @@ create database <database_name> [drop if exists]
 - Database
     - `create_database.fhedb`: Create a new database, with an optional clause to drop it if it already exists.
     - `drop_database.fhedb`: Drop an existing database.
+    - `list_databases.fhedb`: List all databases.
 
 - Collection
     - `create_collection.fhedb`: Create a new collection within a specified database, with an optional clause to drop it if it already exists.
@@ -38,7 +39,7 @@ create database <database_name> [drop if exists]
     - `update_document.fhedb`: Update an existing document in a specified collection.
     - `delete_document.fhedb`: Delete a document from a specified collection.
     - `get_document.fhedb`: Get a specific document (by ID) from a specified collection.
-    - `list_documents.fhedb`: List all documents in a specified collection.
+    - `list_documents.fhedb`: Get all documents in a specified collection (querying).
 
 > **NOTE**: Difference between querying a single document and listing all documents is merely specifying a value for the ID field.
 > This can later be expanded to full querying support easily.
