@@ -3,6 +3,7 @@
 //! This module defines the core data structures that represent the parsed
 //! form of FHEDB query language statements.
 
+use bson::Bson;
 use fhedb_core::db::schema::{FieldDefinition, Schema};
 use std::collections::HashMap;
 
@@ -96,5 +97,73 @@ pub enum CollectionQuery {
 /// such as inserting, updating, deleting, or querying documents.
 #[derive(Debug, Clone, PartialEq)]
 pub enum DocumentQuery {
-    // TODO: Add document operations
+    /// Insert a new document into a collection.
+    Insert {
+        /// The name of the collection to insert into.
+        collection_name: String,
+        /// The document data as field-value pairs.
+        fields: HashMap<String, Bson>,
+    },
+    /// Update an existing document in a collection.
+    Update {
+        /// The name of the collection to update in.
+        collection_name: String,
+        /// The conditions to identify which document(s) to update.
+        conditions: Vec<FieldCondition>,
+        /// The field updates to apply.
+        updates: HashMap<String, String>,
+    },
+    /// Delete document(s) from a collection.
+    Delete {
+        /// The name of the collection to delete from.
+        collection_name: String,
+        /// The conditions to identify which document(s) to delete.
+        conditions: Vec<FieldCondition>,
+    },
+    /// Get/query document(s) from a collection.
+    Get {
+        /// The name of the collection to query.
+        collection_name: String,
+        /// The conditions to filter documents (empty means get all).
+        conditions: Vec<FieldCondition>,
+        /// The fields to return in the response.
+        field_selector: FieldSelector,
+    },
+}
+
+/// Represents comparison operators for document field conditions.
+#[derive(Debug, Clone, PartialEq)]
+pub enum QueryOperator {
+    /// Equality operator (=) - exact match
+    Equal,
+    /// Inequality operator (!=) - not equal
+    NotEqual,
+    /// Greater than operator (>) - numeric/string comparison
+    GreaterThan,
+    /// Less than operator (<) - numeric/string comparison
+    LessThan,
+    /// Similarity operator (==) - pattern/substring matching, future regex support
+    Similar,
+}
+
+/// Represents a condition on a document field for filtering/querying.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FieldCondition {
+    /// The name of the field to apply the condition to
+    pub field_name: String,
+    /// The comparison operator to use
+    pub operator: QueryOperator,
+    /// The value to compare the field against (BSON type for flexibility)
+    pub value: Bson,
+}
+
+/// Represents which fields to return in a query response.
+#[derive(Debug, Clone, PartialEq)]
+pub enum FieldSelector {
+    /// Return specific named fields only
+    Fields(Vec<String>),
+    /// Return all fields (*) - shallow, no reference resolution
+    AllFields,
+    /// Return all fields (**) - deep, with recursive reference resolution
+    AllFieldsRecursive,
 }
