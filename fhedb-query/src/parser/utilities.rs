@@ -110,6 +110,79 @@ pub fn identifier(input: &str) -> IResult<&str, &str> {
     take_while1(|c: char| c.is_alphanumeric() || c == '_')(input)
 }
 
+/// Parses content between balanced delimiters while properly handling quoted strings.
+///
+/// ## Arguments
+///
+/// * `input` - The input string to parse (should start with content after the opening delimiter).
+/// * `open_char` - The opening delimiter character (e.g., '{' or '[').
+/// * `close_char` - The closing delimiter character (e.g., '}' or ']').
+///
+/// ## Returns
+///
+/// Returns an [`IResult`] containing the remaining input and the content between the delimiters.
+pub fn balanced_delimiters_content(
+    input: &str,
+    open_char: char,
+    close_char: char,
+) -> IResult<&str, &str> {
+    let mut delimiter_count = 0;
+    let mut in_string = false;
+    let mut string_delimiter = '\0';
+    let mut chars = input.char_indices();
+    let mut escape_next = false;
+
+    while let Some((i, ch)) = chars.next() {
+        if escape_next {
+            escape_next = false;
+            continue;
+        }
+
+        match ch {
+            '\\' if in_string => {
+                escape_next = true;
+            }
+            '"' | '\'' if !in_string => {
+                in_string = true;
+                string_delimiter = ch;
+            }
+            ch if in_string && ch == string_delimiter => {
+                in_string = false;
+                string_delimiter = '\0';
+            }
+            ch if ch == open_char && !in_string => {
+                delimiter_count += 1;
+            }
+            ch if ch == close_char && !in_string => {
+                if delimiter_count == 0 {
+                    return Ok((&input[i..], &input[..i]));
+                }
+                delimiter_count -= 1;
+            }
+            _ => {}
+        }
+    }
+
+    Err(nom::Err::Error(nom::error::Error::new(
+        input,
+        nom::error::ErrorKind::Char,
+    )))
+}
+
+/// Parses content between balanced braces while properly handling quoted strings.
+/// Extension of `balanced_delimiters_content` specifically for `{` and `}`.
+///
+/// ## Arguments
+///
+/// * `input` - The input string to parse (should start with content after the opening brace).
+///
+/// ## Returns
+///
+/// Returns an [`IResult`] containing the remaining input and the content between the braces.
+pub fn balanced_braces_content(input: &str) -> IResult<&str, &str> {
+    balanced_delimiters_content(input, '{', '}')
+}
+
 /// Parses an array literal string into individual element strings.
 ///
 /// ## Arguments
@@ -129,43 +202,18 @@ fn parse_array_elements(input: &str) -> IResult<&str, Vec<String>> {
         )));
     }
 
-    let mut bracket_count = 0;
-    let mut end_pos = None;
-    let mut in_string = false;
-    let mut string_delimiter = '\0';
-    let mut chars = trimmed.char_indices();
+    let content_after_bracket = &trimmed[1..];
+    let (remaining_after_content, content) =
+        balanced_delimiters_content(content_after_bracket, '[', ']')?;
 
-    while let Some((i, ch)) = chars.next() {
-        match ch {
-            '"' | '\'' if !in_string => {
-                in_string = true;
-                string_delimiter = ch;
-            }
-            '"' | '\'' if in_string && ch == string_delimiter => {
-                in_string = false;
-                string_delimiter = '\0';
-            }
-            '\\' if in_string => {
-                chars.next();
-            }
-            '[' if !in_string => bracket_count += 1,
-            ']' if !in_string => {
-                bracket_count -= 1;
-                if bracket_count == 0 {
-                    end_pos = Some(i);
-                    break;
-                }
-            }
-            _ => {}
-        }
-    }
-
-    let end_pos = end_pos.ok_or_else(|| {
-        nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Char))
-    })?;
-
-    let content = &trimmed[1..end_pos];
-    let remaining = &trimmed[end_pos + 1..];
+    let remaining = if remaining_after_content.starts_with(']') {
+        &remaining_after_content[1..]
+    } else {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Char,
+        )));
+    };
 
     let mut elements = Vec::new();
     if content.trim().is_empty() {

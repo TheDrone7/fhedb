@@ -153,6 +153,20 @@ fn parse_bson_value_array() {
     );
 
     let result = parse_bson_value(
+        "[\"[item1]\", \"data[0]\", \"array[index]\"]".to_string(),
+        &FieldType::Array(Box::new(FieldType::String)),
+    )
+    .unwrap();
+    assert_eq!(
+        result,
+        Bson::Array(vec![
+            Bson::String("[item1]".to_string()),
+            Bson::String("data[0]".to_string()),
+            Bson::String("array[index]".to_string())
+        ])
+    );
+
+    let result = parse_bson_value(
         "[[1, 2], [3, 4]]".to_string(),
         &FieldType::Array(Box::new(FieldType::Array(Box::new(FieldType::Int)))),
     )

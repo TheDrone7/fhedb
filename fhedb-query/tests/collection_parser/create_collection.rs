@@ -143,6 +143,32 @@ fn complex_schema() {
 }
 
 #[test]
+fn nested_braces_in_strings() {
+    let input = "CREATE COLLECTION test {
+        id: id_int,
+        config: string(default = \"{\\\"key\\\": {\\\"nested\\\": \\\"value\\\"}}\"),
+        template: string(default = \"Hello {name}, welcome to {place}!\")
+    }";
+    let result = parse_collection_query(input).unwrap();
+
+    match result {
+        CollectionQuery::Create {
+            name,
+            drop_if_exists,
+            schema,
+        } => {
+            assert_eq!(name, "test");
+            assert_eq!(drop_if_exists, false);
+            assert_eq!(schema.fields.len(), 3);
+            assert_eq!(schema.fields["id"].field_type, FieldType::IdInt);
+            assert_eq!(schema.fields["config"].field_type, FieldType::String);
+            assert_eq!(schema.fields["template"].field_type, FieldType::String);
+        }
+        _ => panic!("Expected CollectionQuery::Create, got {:?}", result),
+    }
+}
+
+#[test]
 fn empty_schema() {
     let input = "CREATE COLLECTION empty_collection {}";
     let result = parse_collection_query(input).unwrap();

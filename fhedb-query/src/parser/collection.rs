@@ -7,13 +7,13 @@ use crate::{
     error::ParseError,
     parser::{
         schema::{parse_field_modifications, parse_schema},
-        utilities::{ParseResult, identifier, trim_parse},
+        utilities::{ParseResult, balanced_braces_content, identifier, trim_parse},
     },
 };
 use nom::{
     IResult, Parser,
     branch::alt,
-    bytes::complete::{tag_no_case, take_until},
+    bytes::complete::tag_no_case,
     character::complete::{char, multispace0, multispace1},
     combinator::{map, map_res, opt},
     sequence::{delimited, preceded},
@@ -47,7 +47,7 @@ fn create_collection(input: &str) -> IResult<&str, CollectionQuery> {
                 ),
             )),
             multispace0,
-            delimited(char('{'), take_until("}"), char('}')),
+            delimited(char('{'), balanced_braces_content, char('}')),
         ),
         |(_, _, _, _, name, drop_if_exists, _, schema_text)| -> Result<CollectionQuery, ParseError> {
             let schema = parse_schema(schema_text)?;
@@ -104,7 +104,7 @@ fn modify_collection(input: &str) -> IResult<&str, CollectionQuery> {
             multispace1,
             identifier,
             multispace0,
-            delimited(char('{'), take_until("}"), char('}')),
+            delimited(char('{'), balanced_braces_content, char('}')),
         ),
         |(_, _, _, _, name, _, modifications_text)| -> Result<CollectionQuery, ParseError> {
             let modifications = parse_field_modifications(modifications_text)?;
