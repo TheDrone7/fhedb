@@ -102,7 +102,7 @@ pub enum DocumentQuery {
         /// The name of the collection to insert into.
         collection_name: String,
         /// The document data as field-value pairs.
-        fields: HashMap<String, Bson>,
+        fields: HashMap<String, String>,
     },
     /// Update an existing document in a collection.
     Update {
