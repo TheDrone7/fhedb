@@ -16,6 +16,8 @@ pub mod prelude {
     pub use crate::parser::{
         collection::parse_collection_query,
         database::parse_database_query,
+        document::parse_document_query,
         schema::{parse_field_modifications, parse_schema},
+        utilities::{balanced_delimiters_content, parse_bson_value, unescape_string},
     };
 }

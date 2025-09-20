@@ -2,21 +2,22 @@
 //!
 //! This module provides functions to parse and handle document queries.
 
-use std::collections::HashMap;
-
 use crate::{
     ast::*,
     error::ParseError,
-    parser::utilities::{ParseResult, identifier, trim_parse},
+    parser::utilities::{ParseResult, balanced_braces_content, identifier, trim_parse},
 };
 use nom::{
     IResult, Parser,
     branch::alt,
-    bytes::{tag_no_case, take_until},
+    bytes::complete::tag_no_case,
     character::complete::{char, multispace0, multispace1},
     combinator::map_res,
     sequence::{delimited, preceded},
 };
+
+mod helpers;
+use helpers::parse_document_fields;
 
 /// Parses an INSERT DOCUMENT query.
 ///
@@ -31,18 +32,21 @@ fn insert_document(input: &str) -> IResult<&str, DocumentQuery> {
         (
             tag_no_case("insert"),
             multispace1,
-            alt((tag_no_case("doc"), tag_no_case("document"))),
-            multispace1,
+            alt((
+                (tag_no_case("doc"), multispace1),
+                (tag_no_case("document"), multispace1),
+            )),
             tag_no_case("into"),
             multispace1,
             identifier,
             multispace0,
-            delimited(char('{'), take_until("}"), char('}')),
+            delimited(char('{'), balanced_braces_content, char('}')),
         ),
-        |(_, _, _, _, _, _, collection_name, _, _doc)| -> Result<DocumentQuery, ParseError> {
+        |(_, _, _, _, _, collection_name, _, doc_content)| -> Result<DocumentQuery, ParseError> {
+            let fields = parse_document_fields(doc_content)?;
             Ok(DocumentQuery::Insert {
                 collection_name: collection_name.to_string(),
-                fields: HashMap::new(),
+                fields,
             })
         },
     )

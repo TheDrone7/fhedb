@@ -14,6 +14,49 @@ use nom::{IResult, bytes::complete::take_while1};
 /// the parsed value of type `T` or a [`ParseError`].
 pub type ParseResult<T> = Result<T, ParseError>;
 
+/// Parses a quoted string with the given delimiter, handling escape sequences.
+///
+/// ## Arguments
+///
+/// * `input` - The input string to parse (must start with the quote character).
+/// * `quote_char` - The quote character to look for ('\"' or '\'').
+///
+/// ## Returns
+///
+/// Returns an [`IResult`] containing the remaining input and the complete quoted string.
+pub fn parse_quoted_string(input: &str, quote_char: char) -> IResult<&str, &str> {
+    if !input.starts_with(quote_char) {
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Char,
+        )));
+    }
+
+    let mut chars = input[1..].char_indices();
+    let mut escape_next = false;
+
+    while let Some((i, ch)) = chars.next() {
+        if escape_next {
+            escape_next = false;
+            continue;
+        }
+
+        match ch {
+            '\\' => escape_next = true,
+            ch if ch == quote_char => {
+                let end_pos = i + 2; // +1 for the quote, +1 for the index
+                return Ok((&input[end_pos..], &input[..end_pos]));
+            }
+            _ => {}
+        }
+    }
+
+    Err(nom::Err::Error(nom::error::Error::new(
+        input,
+        nom::error::ErrorKind::Char,
+    )))
+}
+
 /// This function processes escape sequences commonly found in string literals:
 /// - `\n` → newline character
 /// - `\t` → tab character
