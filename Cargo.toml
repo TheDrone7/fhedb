@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "fhedb-core",
+    "fhedb-query",
+    "fhedb-server",
+]
+resolver = "3"
