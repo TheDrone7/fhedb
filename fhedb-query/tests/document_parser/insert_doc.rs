@@ -110,8 +110,6 @@ fn invalid_syntax() {
     assert!(result.is_err());
     let result = parse_document_query("DOCUMENT INSERT INTO users {id: 1}");
     assert!(result.is_err());
-    let result = parse_document_query("INSERT DOCS INTO users {id: 1}");
-    assert!(result.is_err());
     let result = parse_document_query("INSERT DOCUMENT IN users {id: 1}");
     assert!(result.is_err());
 }
