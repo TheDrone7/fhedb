@@ -69,7 +69,7 @@ pub enum FieldOperation {
     Assignment((String, String)),
 }
 
-/// Parses a field operations (condition and assignment) item.
+/// Parses a field operation (condition and assignment) item.
 ///
 /// ## Arguments
 ///
@@ -77,7 +77,7 @@ pub enum FieldOperation {
 ///
 /// ## Returns
 ///
-/// Returns `Ok(FieldCondition)` if successfully parsed, or `Err` if not a valid condition.
+/// Returns `Ok(FieldOperation)` if successfully parsed, or `Err` if not a valid operation.
 pub fn parse_document_field_operations(input: &str) -> ParseResult<FieldOperation> {
     trim_parse(input, "field operation", |input| {
         map_res(
@@ -85,7 +85,16 @@ pub fn parse_document_field_operations(input: &str) -> ParseResult<FieldOperatio
                 identifier,
                 delimited(
                     multispace0,
-                    alt((tag("="), tag("=="), tag(":"))),
+                    alt((
+                        tag("=="),
+                        tag("!="),
+                        tag(">="),
+                        tag("<="),
+                        tag("="),
+                        tag(">"),
+                        tag("<"),
+                        tag(":"),
+                    )),
                     multispace0,
                 ),
                 rest,
@@ -94,7 +103,7 @@ pub fn parse_document_field_operations(input: &str) -> ParseResult<FieldOperatio
                 let trimmed_value = value.trim();
                 if trimmed_value.is_empty() {
                     return Err(ParseError::SyntaxError {
-                        message: "Missing value in field condition".to_string(),
+                        message: "Missing value in field operation".to_string(),
                     });
                 }
 
@@ -106,6 +115,31 @@ pub fn parse_document_field_operations(input: &str) -> ParseResult<FieldOperatio
                     "=" => Ok(FieldOperation::Condition(FieldCondition {
                         field_name: field_name.to_string(),
                         operator: QueryOperator::Equal,
+                        value: trimmed_value.to_string(),
+                    })),
+                    "!=" => Ok(FieldOperation::Condition(FieldCondition {
+                        field_name: field_name.to_string(),
+                        operator: QueryOperator::NotEqual,
+                        value: trimmed_value.to_string(),
+                    })),
+                    ">" => Ok(FieldOperation::Condition(FieldCondition {
+                        field_name: field_name.to_string(),
+                        operator: QueryOperator::GreaterThan,
+                        value: trimmed_value.to_string(),
+                    })),
+                    ">=" => Ok(FieldOperation::Condition(FieldCondition {
+                        field_name: field_name.to_string(),
+                        operator: QueryOperator::GreaterThanOrEqual,
+                        value: trimmed_value.to_string(),
+                    })),
+                    "<" => Ok(FieldOperation::Condition(FieldCondition {
+                        field_name: field_name.to_string(),
+                        operator: QueryOperator::LessThan,
+                        value: trimmed_value.to_string(),
+                    })),
+                    "<=" => Ok(FieldOperation::Condition(FieldCondition {
+                        field_name: field_name.to_string(),
+                        operator: QueryOperator::LessThanOrEqual,
                         value: trimmed_value.to_string(),
                     })),
                     "==" => Ok(FieldOperation::Condition(FieldCondition {
@@ -131,7 +165,7 @@ pub fn parse_document_field_operations(input: &str) -> ParseResult<FieldOperatio
 ///
 /// ## Returns
 ///
-/// Returns a [`ParseResult`] containing the parsed conditions and field selectors.
+/// Returns a [`ParseResult`] containing the parsed assignments, conditions and field selectors.
 pub fn parse_doc_content(
     content: &str,
 ) -> ParseResult<(
@@ -161,7 +195,7 @@ pub fn parse_doc_content(
             selectors.push(selector);
         } else {
             return Err(ParseError::SyntaxError {
-                message: format!("Invalid item in GET query: '{}'", item),
+                message: format!("Invalid item in document query: '{}'", item),
             });
         }
     }

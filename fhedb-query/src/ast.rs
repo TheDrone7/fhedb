@@ -139,6 +139,10 @@ pub enum QueryOperator {
     NotEqual,
     /// Greater than operator (>) - numeric/string comparison
     GreaterThan,
+    /// Greater than or equal operator (>=) - numeric/string comparison
+    GreaterThanOrEqual,
+    /// Less than or equal operator (<=) - numeric/string comparison
+    LessThanOrEqual,
     /// Less than operator (<) - numeric/string comparison
     LessThan,
     /// Similarity operator (==) - pattern/substring matching, future regex support
