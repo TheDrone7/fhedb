@@ -17,7 +17,7 @@ use nom::{
 };
 
 mod helpers;
-use helpers::{parse_document_fields, parse_get_content};
+use helpers::parse_doc_content;
 
 /// Parses a GET DOCUMENT query.
 ///
@@ -45,7 +45,12 @@ fn get_document(input: &str) -> IResult<&str, DocumentQuery> {
             delimited(char('{'), balanced_braces_content, char('}')),
         ),
         |(_, _, _, _, _, collection_name, _, doc_content)| -> Result<DocumentQuery, ParseError> {
-            let (conditions, field_selector) = parse_get_content(doc_content)?;
+            let (assignments, conditions, field_selector) = parse_doc_content(doc_content)?;
+            if !assignments.is_empty() {
+                return Err(ParseError::SyntaxError {
+                    message: "Assignments are not allowed in GET DOCUMENT queries".to_string(),
+                });
+            }
             Ok(DocumentQuery::Get {
                 collection_name: collection_name.to_string(),
                 conditions,
@@ -82,10 +87,16 @@ fn insert_document(input: &str) -> IResult<&str, DocumentQuery> {
             delimited(char('{'), balanced_braces_content, char('}')),
         ),
         |(_, _, _, _, _, collection_name, _, doc_content)| -> Result<DocumentQuery, ParseError> {
-            let fields = parse_document_fields(doc_content)?;
+            let (assignments, conditions, selectors) = parse_doc_content(doc_content)?;
+            if !conditions.is_empty() || !selectors.is_empty() {
+                return Err(ParseError::SyntaxError {
+                    message: "Only assignment operations allowed in INSERT DOCUMENT queries"
+                        .to_string(),
+                });
+            }
             Ok(DocumentQuery::Insert {
                 collection_name: collection_name.to_string(),
-                fields,
+                fields: assignments,
             })
         },
     )

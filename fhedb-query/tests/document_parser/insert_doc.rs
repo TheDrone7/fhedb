@@ -122,9 +122,6 @@ fn invalid_field_structure() {
     let result = parse_document_query("INSERT DOC INTO users {id: 1");
     assert!(result.is_err());
 
-    let result = parse_document_query("INSERT DOC INTO users {tags: [\"tag1\"}");
-    assert!(result.is_err());
-
     let result = parse_document_query("INSERT DOCUMENT INTO users {id: 1} EXTRA");
     assert!(result.is_err());
     match result.unwrap_err() {

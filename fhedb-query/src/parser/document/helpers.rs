@@ -3,113 +3,19 @@
 use crate::{
     ast::{FieldCondition, FieldSelector, QueryOperator},
     error::ParseError,
-    parser::utilities::{
-        ParseResult, balanced_delimiters_content, identifier, parse_quoted_string,
-        split_respecting_nesting, trim_parse,
-    },
+    parser::utilities::{ParseResult, identifier, split_respecting_nesting, trim_parse},
 };
 use nom::{
-    IResult, Parser,
+    Parser,
     branch::alt,
-    bytes::complete::{tag, take_until},
-    character::complete::{char, multispace0},
+    bytes::complete::tag,
+    character::complete::multispace0,
     combinator::{map_res, rest},
-    multi::separated_list0,
     sequence::delimited,
 };
 use std::collections::HashMap;
 
-/// Parses a field value.
-///
-/// ## Arguments
-///
-/// * `input` - The input string to parse.
-///
-/// ## Returns
-///
-/// Returns an [`IResult`] containing the remaining input and the parsed value.
-fn parse_field_value(input: &str) -> IResult<&str, &str> {
-    let input = input.trim_start();
-
-    if input.starts_with('[') {
-        let content_after_bracket = &input[1..];
-        let (remaining_after_content, _) =
-            balanced_delimiters_content(content_after_bracket, '[', ']')?;
-
-        if remaining_after_content.starts_with(']') {
-            let remaining = &remaining_after_content[1..];
-            let start_pos = input.len() - remaining.len();
-            Ok((remaining, &input[..start_pos]))
-        } else {
-            Err(nom::Err::Error(nom::error::Error::new(
-                input,
-                nom::error::ErrorKind::Char,
-            )))
-        }
-    } else if input.starts_with('"') {
-        parse_quoted_string(input, '"')
-    } else if input.starts_with('\'') {
-        parse_quoted_string(input, '\'')
-    } else {
-        alt((take_until(","), nom::combinator::rest)).parse(input)
-    }
-}
-
-/// Parses a single field-value pair in the format: field_name: field_value.
-///
-/// ## Arguments
-///
-/// * `input` - The input string to parse.
-///
-/// ## Returns
-///
-/// Returns an [`IResult`] containing the remaining input and a tuple of (field_name, field_value).
-fn parse_field_pair(input: &str) -> IResult<&str, (String, String)> {
-    map_res(
-        (
-            identifier,
-            delimited(multispace0, char(':'), multispace0),
-            parse_field_value,
-        ),
-        |(field_name, _, value)| -> ParseResult<(String, String)> {
-            Ok((field_name.to_string(), value.trim().to_string()))
-        },
-    )
-    .parse(input)
-}
-
-/// Parses document field definitions (the part inside the braces of an insert statement).
-///
-/// ## Arguments
-///
-/// * `content` - The input string to parse.
-///
-/// ## Returns
-///
-/// Returns a [`ParseResult`] containing the parsed map of field names to field values.
-pub fn parse_document_fields(content: &str) -> ParseResult<HashMap<String, String>> {
-    let fields = trim_parse(content, "document fields", |input| {
-        separated_list0(
-            delimited(multispace0, char(','), multispace0),
-            delimited(multispace0, parse_field_pair, multispace0),
-        )
-        .parse(input)
-    })?;
-
-    let mut field_map = HashMap::new();
-    for (field_name, field_value) in fields {
-        if field_map.contains_key(&field_name) {
-            return Err(ParseError::SyntaxError {
-                message: format!("Duplicate field name: '{}'", field_name),
-            });
-        }
-        field_map.insert(field_name, field_value);
-    }
-
-    Ok(field_map)
-}
-
-/// Parses document content into individual items (conditions and field selectors).
+/// Parses document content into individual items (separated by commas).
 ///
 /// ## Arguments
 ///
@@ -155,7 +61,15 @@ pub fn parse_field_selector(input: &str) -> ParseResult<FieldSelector> {
     }
 }
 
-/// Parses a field condition item (field_name = value).
+/// A helper enum to represent either a field condition or an assignment.
+pub enum FieldOperation {
+    /// A field condition (e.g., field = value).
+    Condition(FieldCondition),
+    /// A field assignment (e.g., field: value).
+    Assignment((String, String)),
+}
+
+/// Parses a field operations (condition and assignment) item.
 ///
 /// ## Arguments
 ///
@@ -164,15 +78,19 @@ pub fn parse_field_selector(input: &str) -> ParseResult<FieldSelector> {
 /// ## Returns
 ///
 /// Returns `Ok(FieldCondition)` if successfully parsed, or `Err` if not a valid condition.
-pub fn parse_field_condition(input: &str) -> ParseResult<FieldCondition> {
-    trim_parse(input, "field condition", |input| {
+pub fn parse_document_field_operations(input: &str) -> ParseResult<FieldOperation> {
+    trim_parse(input, "field operation", |input| {
         map_res(
             (
                 identifier,
-                delimited(multispace0, tag("="), multispace0),
+                delimited(
+                    multispace0,
+                    alt((tag("="), tag("=="), tag(":"))),
+                    multispace0,
+                ),
                 rest,
             ),
-            |(field_name, _, value)| -> ParseResult<FieldCondition> {
+            |(field_name, operator, value)| -> ParseResult<FieldOperation> {
                 let trimmed_value = value.trim();
                 if trimmed_value.is_empty() {
                     return Err(ParseError::SyntaxError {
@@ -180,18 +98,32 @@ pub fn parse_field_condition(input: &str) -> ParseResult<FieldCondition> {
                     });
                 }
 
-                Ok(FieldCondition {
-                    field_name: field_name.to_string(),
-                    operator: QueryOperator::Equal,
-                    value: trimmed_value.to_string(),
-                })
+                match operator {
+                    ":" => Ok(FieldOperation::Assignment((
+                        field_name.to_string(),
+                        value.to_string(),
+                    ))),
+                    "=" => Ok(FieldOperation::Condition(FieldCondition {
+                        field_name: field_name.to_string(),
+                        operator: QueryOperator::Equal,
+                        value: trimmed_value.to_string(),
+                    })),
+                    "==" => Ok(FieldOperation::Condition(FieldCondition {
+                        field_name: field_name.to_string(),
+                        operator: QueryOperator::Similar,
+                        value: trimmed_value.to_string(),
+                    })),
+                    _ => Err(ParseError::SyntaxError {
+                        message: format!("Unsupported operator in field condition: '{}'", operator),
+                    }),
+                }
             },
         )
         .parse(input)
     })
 }
 
-/// Parses GET document content into conditions and field selector.
+/// Parses document query content into assignments, conditions and field selector.
 ///
 /// ## Arguments
 ///
@@ -200,15 +132,31 @@ pub fn parse_field_condition(input: &str) -> ParseResult<FieldCondition> {
 /// ## Returns
 ///
 /// Returns a [`ParseResult`] containing the parsed conditions and field selectors.
-pub fn parse_get_content(content: &str) -> ParseResult<(Vec<FieldCondition>, Vec<FieldSelector>)> {
+pub fn parse_doc_content(
+    content: &str,
+) -> ParseResult<(
+    HashMap<String, String>,
+    Vec<FieldCondition>,
+    Vec<FieldSelector>,
+)> {
     let items = parse_document_query_items(content)?;
 
     let mut conditions = Vec::new();
     let mut selectors = Vec::new();
+    let mut assignments = HashMap::new();
 
     for item in items {
-        if let Ok(condition) = parse_field_condition(&item) {
-            conditions.push(condition);
+        if let Ok(operation) = parse_document_field_operations(&item) {
+            if let FieldOperation::Condition(condition) = operation {
+                conditions.push(condition);
+            } else if let FieldOperation::Assignment((field, value)) = operation {
+                if assignments.contains_key(&field) {
+                    return Err(ParseError::SyntaxError {
+                        message: format!("Duplicate assignment for field '{}'", field),
+                    });
+                }
+                assignments.insert(field, value);
+            }
         } else if let Ok(selector) = parse_field_selector(&item) {
             selectors.push(selector);
         } else {
@@ -218,5 +166,5 @@ pub fn parse_get_content(content: &str) -> ParseResult<(Vec<FieldCondition>, Vec
         }
     }
 
-    Ok((conditions, selectors))
+    Ok((assignments, conditions, selectors))
 }
