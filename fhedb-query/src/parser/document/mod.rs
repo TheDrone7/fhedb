@@ -17,7 +17,44 @@ use nom::{
 };
 
 mod helpers;
-use helpers::parse_document_fields;
+use helpers::{parse_document_fields, parse_get_content};
+
+/// Parses a GET DOCUMENT query.
+///
+/// ## Arguments
+/// * `input` - The input string to parse.
+///
+/// ## Returns
+///
+/// Returns an [`IResult`] containing the remaining input and the parsed [`DocumentQuery::Get`].
+fn get_document(input: &str) -> IResult<&str, DocumentQuery> {
+    map_res(
+        (
+            tag_no_case("get"),
+            multispace1,
+            alt((
+                (tag_no_case("doc"), multispace1),
+                (tag_no_case("docs"), multispace1),
+                (tag_no_case("document"), multispace1),
+                (tag_no_case("documents"), multispace1),
+            )),
+            tag_no_case("from"),
+            multispace1,
+            identifier,
+            multispace0,
+            delimited(char('{'), balanced_braces_content, char('}')),
+        ),
+        |(_, _, _, _, _, collection_name, _, doc_content)| -> Result<DocumentQuery, ParseError> {
+            let (conditions, field_selector) = parse_get_content(doc_content)?;
+            Ok(DocumentQuery::Get {
+                collection_name: collection_name.to_string(),
+                conditions,
+                field_selector,
+            })
+        },
+    )
+    .parse(input)
+}
 
 /// Parses an INSERT DOCUMENT query.
 ///
@@ -34,7 +71,9 @@ fn insert_document(input: &str) -> IResult<&str, DocumentQuery> {
             multispace1,
             alt((
                 (tag_no_case("doc"), multispace1),
+                (tag_no_case("docs"), multispace1),
                 (tag_no_case("document"), multispace1),
+                (tag_no_case("documents"), multispace1),
             )),
             tag_no_case("into"),
             multispace1,
@@ -64,6 +103,6 @@ fn insert_document(input: &str) -> IResult<&str, DocumentQuery> {
 /// or a [`ParseError`] on failure.
 pub fn parse_document_query(input: &str) -> ParseResult<DocumentQuery> {
     trim_parse(input, "document query", |input| {
-        preceded(multispace0, insert_document).parse(input)
+        preceded(multispace0, alt((get_document, insert_document))).parse(input)
     })
 }

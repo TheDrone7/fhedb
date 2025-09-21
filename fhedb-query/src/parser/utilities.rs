@@ -226,6 +226,83 @@ pub fn balanced_braces_content(input: &str) -> IResult<&str, &str> {
     balanced_delimiters_content(input, '{', '}')
 }
 
+/// Splits content by delimiter while respecting nested structures and quoted strings.
+///
+/// ## Arguments
+///
+/// * `content` - The input string to split.
+/// * `delimiter` - The character to split on.
+/// * `track_brackets` - Whether to track bracket depth (for arrays).
+///
+/// ## Returns
+///
+/// Returns a vector of trimmed individual items.
+pub fn split_respecting_nesting(
+    content: &str,
+    delimiter: char,
+    track_brackets: bool,
+) -> Vec<String> {
+    let mut items = Vec::new();
+    if content.trim().is_empty() {
+        return items;
+    }
+
+    let mut current_item = String::new();
+    let mut bracket_depth = 0;
+    let mut in_string = false;
+    let mut string_delimiter = '\0';
+    let mut chars = content.chars();
+    let mut escape_next = false;
+
+    while let Some(ch) = chars.next() {
+        if escape_next {
+            escape_next = false;
+            current_item.push(ch);
+            continue;
+        }
+
+        match ch {
+            '\\' if in_string => {
+                escape_next = true;
+                current_item.push(ch);
+            }
+            '"' | '\'' if !in_string => {
+                in_string = true;
+                string_delimiter = ch;
+                current_item.push(ch);
+            }
+            ch if in_string && ch == string_delimiter => {
+                in_string = false;
+                string_delimiter = '\0';
+                current_item.push(ch);
+            }
+            '[' if !in_string && track_brackets => {
+                bracket_depth += 1;
+                current_item.push(ch);
+            }
+            ']' if !in_string && track_brackets => {
+                bracket_depth -= 1;
+                current_item.push(ch);
+            }
+            ch if ch == delimiter && bracket_depth == 0 && !in_string => {
+                if !current_item.trim().is_empty() {
+                    items.push(current_item.trim().to_string());
+                }
+                current_item.clear();
+            }
+            _ => {
+                current_item.push(ch);
+            }
+        }
+    }
+
+    if !current_item.trim().is_empty() {
+        items.push(current_item.trim().to_string());
+    }
+
+    items
+}
+
 /// Parses an array literal string into individual element strings.
 ///
 /// ## Arguments
@@ -258,59 +335,7 @@ fn parse_array_elements(input: &str) -> IResult<&str, Vec<String>> {
         )));
     };
 
-    let mut elements = Vec::new();
-    if content.trim().is_empty() {
-        return Ok((remaining, elements));
-    }
-
-    let mut current_element = String::new();
-    let mut bracket_depth = 0;
-    let mut in_string = false;
-    let mut string_delimiter = '\0';
-    let mut chars = content.chars();
-
-    while let Some(ch) = chars.next() {
-        match ch {
-            '"' | '\'' if !in_string => {
-                in_string = true;
-                string_delimiter = ch;
-                current_element.push(ch);
-            }
-            '"' | '\'' if in_string && ch == string_delimiter => {
-                in_string = false;
-                string_delimiter = '\0';
-                current_element.push(ch);
-            }
-            '\\' if in_string => {
-                current_element.push(ch);
-                if let Some(next_ch) = chars.next() {
-                    current_element.push(next_ch);
-                }
-            }
-            '[' if !in_string => {
-                bracket_depth += 1;
-                current_element.push(ch);
-            }
-            ']' if !in_string => {
-                bracket_depth -= 1;
-                current_element.push(ch);
-            }
-            ',' if bracket_depth == 0 && !in_string => {
-                if !current_element.trim().is_empty() {
-                    elements.push(current_element.trim().to_string());
-                }
-                current_element.clear();
-            }
-            _ => {
-                current_element.push(ch);
-            }
-        }
-    }
-
-    if !current_element.trim().is_empty() {
-        elements.push(current_element.trim().to_string());
-    }
-
+    let elements = split_respecting_nesting(content, ',', true);
     Ok((remaining, elements))
 }
 

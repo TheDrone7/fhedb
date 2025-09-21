@@ -1,17 +1,19 @@
 //! Helper functions for parsing document content.
 
 use crate::{
+    ast::{FieldCondition, FieldSelector, QueryOperator},
     error::ParseError,
     parser::utilities::{
-        ParseResult, balanced_delimiters_content, identifier, parse_quoted_string, trim_parse,
+        ParseResult, balanced_delimiters_content, identifier, parse_quoted_string,
+        split_respecting_nesting, trim_parse,
     },
 };
 use nom::{
     IResult, Parser,
     branch::alt,
-    bytes::complete::take_until,
+    bytes::complete::{tag, take_until},
     character::complete::{char, multispace0},
-    combinator::map_res,
+    combinator::{map_res, rest},
     multi::separated_list0,
     sequence::delimited,
 };
@@ -105,4 +107,116 @@ pub fn parse_document_fields(content: &str) -> ParseResult<HashMap<String, Strin
     }
 
     Ok(field_map)
+}
+
+/// Parses document content into individual items (conditions and field selectors).
+///
+/// ## Arguments
+///
+/// * `content` - The input string to parse.
+///
+/// ## Returns
+///
+/// Returns a [`ParseResult`] containing the parsed list of individual items.
+pub fn parse_document_query_items(content: &str) -> ParseResult<Vec<String>> {
+    Ok(split_respecting_nesting(content, ',', true))
+}
+
+/// Parses a field selector item (field name, *, or **).
+///
+/// ## Arguments
+///
+/// * `input` - The input string to parse.
+///
+/// ## Returns
+///
+/// Returns `Ok(FieldSelector)` for the appropriate selector type
+/// or `Err` if it's not a valid field selector.
+pub fn parse_field_selector(input: &str) -> ParseResult<FieldSelector> {
+    let trimmed = input.trim();
+
+    match trimmed {
+        "*" => Ok(FieldSelector::AllFields),
+        "**" => Ok(FieldSelector::AllFieldsRecursive),
+        _ => match identifier(trimmed) {
+            Ok((remaining, field_name)) => {
+                if remaining.trim().is_empty() {
+                    Ok(FieldSelector::Field(field_name.to_string()))
+                } else {
+                    Err(ParseError::SyntaxError {
+                        message: format!("Invalid field selector: '{}'", trimmed),
+                    })
+                }
+            }
+            Err(_) => Err(ParseError::SyntaxError {
+                message: format!("Invalid field selector: '{}'", trimmed),
+            }),
+        },
+    }
+}
+
+/// Parses a field condition item (field_name = value).
+///
+/// ## Arguments
+///
+/// * `input` - The input string to parse.
+///
+/// ## Returns
+///
+/// Returns `Ok(FieldCondition)` if successfully parsed, or `Err` if not a valid condition.
+pub fn parse_field_condition(input: &str) -> ParseResult<FieldCondition> {
+    trim_parse(input, "field condition", |input| {
+        map_res(
+            (
+                identifier,
+                delimited(multispace0, tag("="), multispace0),
+                rest,
+            ),
+            |(field_name, _, value)| -> ParseResult<FieldCondition> {
+                let trimmed_value = value.trim();
+                if trimmed_value.is_empty() {
+                    return Err(ParseError::SyntaxError {
+                        message: "Missing value in field condition".to_string(),
+                    });
+                }
+
+                Ok(FieldCondition {
+                    field_name: field_name.to_string(),
+                    operator: QueryOperator::Equal,
+                    value: trimmed_value.to_string(),
+                })
+            },
+        )
+        .parse(input)
+    })
+}
+
+/// Parses GET document content into conditions and field selector.
+///
+/// ## Arguments
+///
+/// * `content` - The input string to parse.
+///
+/// ## Returns
+///
+/// Returns a [`ParseResult`] containing the parsed conditions and field selectors.
+pub fn parse_get_content(content: &str) -> ParseResult<(Vec<FieldCondition>, Vec<FieldSelector>)> {
+    let items = parse_document_query_items(content)?;
+
+    let mut conditions = Vec::new();
+    let mut selectors = Vec::new();
+
+    for item in items {
+        if let Ok(condition) = parse_field_condition(&item) {
+            conditions.push(condition);
+        } else if let Ok(selector) = parse_field_selector(&item) {
+            selectors.push(selector);
+        } else {
+            return Err(ParseError::SyntaxError {
+                message: format!("Invalid item in GET query: '{}'", item),
+            });
+        }
+    }
+
+    Ok((conditions, selectors))
 }
