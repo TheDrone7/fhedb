@@ -3,7 +3,6 @@
 //! This module defines the core data structures that represent the parsed
 //! form of FHEDB query language statements.
 
-use bson::Bson;
 use fhedb_core::db::schema::{FieldDefinition, Schema};
 use std::collections::HashMap;
 
@@ -127,7 +126,7 @@ pub enum DocumentQuery {
         /// The conditions to filter documents (empty means get all).
         conditions: Vec<FieldCondition>,
         /// The fields to return in the response.
-        field_selector: FieldSelector,
+        field_selector: Vec<FieldSelector>,
     },
 }
 
@@ -153,15 +152,15 @@ pub struct FieldCondition {
     pub field_name: String,
     /// The comparison operator to use
     pub operator: QueryOperator,
-    /// The value to compare the field against (BSON type for flexibility)
-    pub value: Bson,
+    /// The value to compare the field against
+    pub value: String,
 }
 
 /// Represents which fields to return in a query response.
 #[derive(Debug, Clone, PartialEq)]
 pub enum FieldSelector {
     /// Return specific named fields only
-    Fields(Vec<String>),
+    Field(String),
     /// Return all fields (*) - shallow, no reference resolution
     AllFields,
     /// Return all fields (**) - deep, with recursive reference resolution
