@@ -44,7 +44,7 @@ pub fn parse_quoted_string(input: &str, quote_char: char) -> IResult<&str, &str>
         match ch {
             '\\' => escape_next = true,
             ch if ch == quote_char => {
-                let end_pos = i + 2; // +1 for the quote, +1 for the index
+                let end_pos = i + 2;
                 return Ok((&input[end_pos..], &input[..end_pos]));
             }
             _ => {}
