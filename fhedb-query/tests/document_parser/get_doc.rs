@@ -9,15 +9,15 @@ fn basic() {
         DocumentQuery::Get {
             collection_name,
             conditions,
-            field_selector,
+            selectors,
         } => {
             assert_eq!(collection_name, "users");
             assert_eq!(conditions.len(), 1);
             assert_eq!(conditions[0].field_name, "id");
             assert_eq!(conditions[0].operator, QueryOperator::Equal);
             assert_eq!(conditions[0].value, "1");
-            assert_eq!(field_selector.len(), 1);
-            match &field_selector[0] {
+            assert_eq!(selectors.len(), 1);
+            match &selectors[0] {
                 FieldSelector::Field(name) => assert_eq!(name, "name"),
                 _ => panic!("Expected FieldSelector::Field"),
             }
@@ -34,13 +34,13 @@ fn variations() {
         DocumentQuery::Get {
             collection_name,
             conditions,
-            field_selector,
+            selectors,
         } => {
             assert_eq!(collection_name, "products");
             assert_eq!(conditions[0].field_name, "id");
             assert_eq!(conditions[0].operator, QueryOperator::Equal);
             assert_eq!(conditions[0].value, "\"prod_123\"");
-            assert_eq!(field_selector.len(), 1);
+            assert_eq!(selectors.len(), 1);
         }
         _ => panic!("Expected DocumentQuery::Get"),
     }
@@ -51,13 +51,13 @@ fn variations() {
         DocumentQuery::Get {
             collection_name,
             conditions,
-            field_selector,
+            selectors,
         } => {
             assert_eq!(collection_name, "MyCollection");
             assert_eq!(conditions[0].field_name, "status");
             assert_eq!(conditions[0].operator, QueryOperator::Equal);
             assert_eq!(conditions[0].value, "'active'");
-            assert_eq!(field_selector.len(), 1);
+            assert_eq!(selectors.len(), 1);
         }
         _ => panic!("Expected DocumentQuery::Get"),
     }
@@ -68,12 +68,12 @@ fn variations() {
         DocumentQuery::Get {
             collection_name,
             conditions,
-            field_selector,
+            selectors,
         } => {
             assert_eq!(collection_name, "test_collection");
             assert_eq!(conditions.len(), 0);
-            assert_eq!(field_selector.len(), 1);
-            match &field_selector[0] {
+            assert_eq!(selectors.len(), 1);
+            match &selectors[0] {
                 FieldSelector::AllFields => {}
                 _ => panic!("Expected FieldSelector::AllFields"),
             }
@@ -99,11 +99,11 @@ fn all_operators() {
         DocumentQuery::Get {
             collection_name,
             conditions,
-            field_selector,
+            selectors,
         } => {
             assert_eq!(collection_name, "users");
             assert_eq!(conditions.len(), 7);
-            assert_eq!(field_selector.len(), 0);
+            assert_eq!(selectors.len(), 0);
 
             assert_eq!(conditions[0].field_name, "id");
             assert_eq!(conditions[0].operator, QueryOperator::Equal);
@@ -133,12 +133,12 @@ fn wildcard_selectors() {
         DocumentQuery::Get {
             collection_name,
             conditions,
-            field_selector,
+            selectors,
         } => {
             assert_eq!(collection_name, "users");
             assert_eq!(conditions.len(), 1);
-            assert_eq!(field_selector.len(), 1);
-            match &field_selector[0] {
+            assert_eq!(selectors.len(), 1);
+            match &selectors[0] {
                 FieldSelector::AllFields => {}
                 _ => panic!("Expected FieldSelector::AllFields"),
             }
@@ -153,12 +153,12 @@ fn wildcard_selectors() {
         DocumentQuery::Get {
             collection_name,
             conditions,
-            field_selector,
+            selectors,
         } => {
             assert_eq!(collection_name, "users");
             assert_eq!(conditions.len(), 1);
-            assert_eq!(field_selector.len(), 1);
-            match &field_selector[0] {
+            assert_eq!(selectors.len(), 1);
+            match &selectors[0] {
                 FieldSelector::AllFieldsRecursive => {}
                 _ => panic!("Expected FieldSelector::AllFieldsRecursive"),
             }
@@ -176,13 +176,13 @@ fn simple_nested() {
         DocumentQuery::Get {
             collection_name,
             conditions,
-            field_selector,
+            selectors,
         } => {
             assert_eq!(collection_name, "users");
             assert_eq!(conditions.len(), 1);
-            assert_eq!(field_selector.len(), 1);
+            assert_eq!(selectors.len(), 1);
 
-            match &field_selector[0] {
+            match &selectors[0] {
                 FieldSelector::SubDocument {
                     field_name,
                     content,
@@ -221,13 +221,13 @@ fn nested_with_conditions() {
         DocumentQuery::Get {
             collection_name,
             conditions,
-            field_selector,
+            selectors,
         } => {
             assert_eq!(collection_name, "users");
             assert_eq!(conditions.len(), 1);
-            assert_eq!(field_selector.len(), 2);
+            assert_eq!(selectors.len(), 2);
 
-            match &field_selector[1] {
+            match &selectors[1] {
                 FieldSelector::SubDocument {
                     field_name,
                     content,
@@ -266,13 +266,13 @@ fn deep_nesting() {
         DocumentQuery::Get {
             collection_name,
             conditions,
-            field_selector,
+            selectors,
         } => {
             assert_eq!(collection_name, "users");
             assert_eq!(conditions.len(), 1);
-            assert_eq!(field_selector.len(), 1);
+            assert_eq!(selectors.len(), 1);
 
-            match &field_selector[0] {
+            match &selectors[0] {
                 FieldSelector::SubDocument {
                     field_name,
                     content,
@@ -336,12 +336,12 @@ fn nested_wildcards() {
         DocumentQuery::Get {
             collection_name,
             conditions: _,
-            field_selector,
+            selectors,
         } => {
             assert_eq!(collection_name, "users");
-            assert_eq!(field_selector.len(), 2);
+            assert_eq!(selectors.len(), 2);
 
-            match &field_selector[0] {
+            match &selectors[0] {
                 FieldSelector::SubDocument {
                     field_name,
                     content,
@@ -356,7 +356,7 @@ fn nested_wildcards() {
                 _ => panic!("Expected FieldSelector::SubDocument"),
             }
 
-            match &field_selector[1] {
+            match &selectors[1] {
                 FieldSelector::SubDocument {
                     field_name,
                     content,
@@ -391,11 +391,11 @@ fn mixed_syntax() {
         DocumentQuery::Get {
             collection_name,
             conditions,
-            field_selector,
+            selectors,
         } => {
             assert_eq!(collection_name, "users");
             assert_eq!(conditions.len(), 2);
-            assert_eq!(field_selector.len(), 4);
+            assert_eq!(selectors.len(), 4);
         }
         _ => panic!("Expected DocumentQuery::Get"),
     }
@@ -410,13 +410,13 @@ fn empty_braces() {
         DocumentQuery::Get {
             collection_name,
             conditions,
-            field_selector,
+            selectors,
         } => {
             assert_eq!(collection_name, "users");
             assert_eq!(conditions.len(), 1);
-            assert_eq!(field_selector.len(), 1);
+            assert_eq!(selectors.len(), 1);
 
-            match &field_selector[0] {
+            match &selectors[0] {
                 FieldSelector::SubDocument {
                     field_name,
                     content,
@@ -442,11 +442,11 @@ fn only_conditions() {
         DocumentQuery::Get {
             collection_name,
             conditions,
-            field_selector,
+            selectors,
         } => {
             assert_eq!(collection_name, "users");
             assert_eq!(conditions.len(), 3);
-            assert_eq!(field_selector.len(), 0);
+            assert_eq!(selectors.len(), 0);
         }
         _ => panic!("Expected DocumentQuery::Get"),
     }
@@ -461,11 +461,11 @@ fn only_selectors() {
         DocumentQuery::Get {
             collection_name,
             conditions,
-            field_selector,
+            selectors,
         } => {
             assert_eq!(collection_name, "users");
             assert_eq!(conditions.len(), 0);
-            assert_eq!(field_selector.len(), 3);
+            assert_eq!(selectors.len(), 3);
         }
         _ => panic!("Expected DocumentQuery::Get"),
     }
@@ -485,7 +485,7 @@ fn complex_values() {
         DocumentQuery::Get {
             collection_name,
             conditions,
-            field_selector: _,
+            selectors: _,
         } => {
             assert_eq!(collection_name, "products");
             assert_eq!(conditions.len(), 4);

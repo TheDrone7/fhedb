@@ -111,6 +111,8 @@ pub enum DocumentQuery {
         conditions: Vec<FieldCondition>,
         /// The field updates to apply.
         updates: HashMap<String, String>,
+        /// The additional fields to return in the response.
+        selectors: Vec<FieldSelector>,
     },
     /// Delete document(s) from a collection.
     Delete {
@@ -118,6 +120,8 @@ pub enum DocumentQuery {
         collection_name: String,
         /// The conditions to identify which document(s) to delete.
         conditions: Vec<FieldCondition>,
+        /// The additional fields to return in the response.
+        selectors: Vec<FieldSelector>,
     },
     /// Get/query document(s) from a collection.
     Get {
@@ -126,7 +130,7 @@ pub enum DocumentQuery {
         /// The conditions to filter documents (empty means get all).
         conditions: Vec<FieldCondition>,
         /// The fields to return in the response.
-        field_selector: Vec<FieldSelector>,
+        selectors: Vec<FieldSelector>,
     },
 }
 

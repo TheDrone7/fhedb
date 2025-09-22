@@ -48,14 +48,14 @@ fn get_document(input: &str) -> IResult<&str, DocumentQuery> {
             let ParsedDocContent {
                 assignments,
                 conditions,
-                selectors: field_selector,
+                selectors,
             } = parse_doc_content(doc_content)?;
             if !assignments.is_empty() {
                 return Err(ParseError::SyntaxError {
                     message: "Assignments are not allowed in GET DOCUMENT queries".to_string(),
                 });
             }
-            if conditions.is_empty() && field_selector.is_empty() {
+            if conditions.is_empty() && selectors.is_empty() {
                 return Err(ParseError::SyntaxError {
                     message: "GET queries must specify at least one condition or field selector"
                         .to_string(),
@@ -64,7 +64,7 @@ fn get_document(input: &str) -> IResult<&str, DocumentQuery> {
             Ok(DocumentQuery::Get {
                 collection_name: collection_name.to_string(),
                 conditions,
-                field_selector,
+                selectors,
             })
         },
     )
