@@ -520,6 +520,9 @@ fn invalid_syntax() {
 
     let result = parse_document_query("GET DOCUMENT IN users {id = 1}");
     assert!(result.is_err());
+
+    let result = parse_document_query("GET DOCUMENT FROM users {}");
+    assert!(result.is_err());
 }
 
 #[test]
