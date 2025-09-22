@@ -160,6 +160,18 @@ pub struct FieldCondition {
     pub value: String,
 }
 
+/// Represents the parsed content of a document query,
+/// including assignments, conditions, and field selectors.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParsedDocContent {
+    /// Field assignments (field: value).
+    pub assignments: HashMap<String, String>,
+    /// Field conditions (field operator value).
+    pub conditions: Vec<FieldCondition>,
+    /// Field selectors (which fields to return).
+    pub selectors: Vec<FieldSelector>,
+}
+
 /// Represents which fields to return in a query response.
 #[derive(Debug, Clone, PartialEq)]
 pub enum FieldSelector {
@@ -169,4 +181,12 @@ pub enum FieldSelector {
     AllFields,
     /// Return all fields (**) - deep, with recursive reference resolution
     AllFieldsRecursive,
+    /// Nested sub-document field (with reference)
+    SubDocument {
+        /// The name of the sub-document field
+        field_name: String,
+        /// The parsed content for the sub-document
+        /// (only selectors and conditions allowed here)
+        content: ParsedDocContent,
+    },
 }

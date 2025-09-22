@@ -45,7 +45,11 @@ fn get_document(input: &str) -> IResult<&str, DocumentQuery> {
             delimited(char('{'), balanced_braces_content, char('}')),
         ),
         |(_, _, _, _, _, collection_name, _, doc_content)| -> Result<DocumentQuery, ParseError> {
-            let (assignments, conditions, field_selector) = parse_doc_content(doc_content)?;
+            let ParsedDocContent {
+                assignments,
+                conditions,
+                selectors: field_selector,
+            } = parse_doc_content(doc_content)?;
             if !assignments.is_empty() {
                 return Err(ParseError::SyntaxError {
                     message: "Assignments are not allowed in GET DOCUMENT queries".to_string(),
@@ -87,7 +91,11 @@ fn insert_document(input: &str) -> IResult<&str, DocumentQuery> {
             delimited(char('{'), balanced_braces_content, char('}')),
         ),
         |(_, _, _, _, _, collection_name, _, doc_content)| -> Result<DocumentQuery, ParseError> {
-            let (assignments, conditions, selectors) = parse_doc_content(doc_content)?;
+            let ParsedDocContent {
+                assignments,
+                conditions,
+                selectors,
+            } = parse_doc_content(doc_content)?;
             if !conditions.is_empty() || !selectors.is_empty() {
                 return Err(ParseError::SyntaxError {
                     message: "Only assignment operations allowed in INSERT DOCUMENT queries"

@@ -249,6 +249,7 @@ pub fn split_respecting_nesting(
 
     let mut current_item = String::new();
     let mut bracket_depth = 0;
+    let mut brace_depth = 0;
     let mut in_string = false;
     let mut string_delimiter = '\0';
     let mut chars = content.chars();
@@ -284,7 +285,15 @@ pub fn split_respecting_nesting(
                 bracket_depth -= 1;
                 current_item.push(ch);
             }
-            ch if ch == delimiter && bracket_depth == 0 && !in_string => {
+            '{' if !in_string && track_brackets => {
+                brace_depth += 1;
+                current_item.push(ch);
+            }
+            '}' if !in_string && track_brackets => {
+                brace_depth -= 1;
+                current_item.push(ch);
+            }
+            ch if ch == delimiter && bracket_depth == 0 && brace_depth == 0 && !in_string => {
                 if !current_item.trim().is_empty() {
                     items.push(current_item.trim().to_string());
                 }

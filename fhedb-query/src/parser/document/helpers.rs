@@ -1,15 +1,17 @@
 //! Helper functions for parsing document content.
 
 use crate::{
-    ast::{FieldCondition, FieldSelector, QueryOperator},
+    ast::{FieldCondition, FieldSelector, ParsedDocContent, QueryOperator},
     error::ParseError,
-    parser::utilities::{ParseResult, identifier, split_respecting_nesting, trim_parse},
+    parser::utilities::{
+        ParseResult, balanced_braces_content, identifier, split_respecting_nesting, trim_parse,
+    },
 };
 use nom::{
     Parser,
     branch::alt,
     bytes::complete::tag,
-    character::complete::multispace0,
+    character::complete::{char, multispace0},
     combinator::{map_res, rest},
     sequence::delimited,
 };
@@ -28,7 +30,42 @@ pub fn parse_document_query_items(content: &str) -> ParseResult<Vec<String>> {
     Ok(split_respecting_nesting(content, ',', true))
 }
 
-/// Parses a field selector item (field name, *, or **).
+/// Parses a sub-document selector.
+///
+/// ## Arguments
+///
+/// * `field_name` - The name of the field for the sub-document.
+/// * `input` - The input string to parse.
+///
+/// ## Returns
+///
+/// Returns `Ok(FieldSelector::SubDocument)` if successfully parsed,
+/// or `Err` if not a valid sub-document selector.
+fn parse_sub_document_selector(field_name: &str, input: &str) -> ParseResult<FieldSelector> {
+    trim_parse(input, "sub-document selector", |input| {
+        map_res(
+            delimited(char('{'), balanced_braces_content, char('}')),
+            |brace_content| -> ParseResult<FieldSelector> {
+                let subdoc = parse_doc_content(brace_content)?;
+                if !subdoc.assignments.is_empty() {
+                    return Err(ParseError::SyntaxError {
+                        message: format!(
+                            "Assignments are not allowed in sub-document selectors: '{} {{ {} }}'",
+                            field_name, brace_content
+                        ),
+                    });
+                }
+                Ok(FieldSelector::SubDocument {
+                    field_name: field_name.to_string(),
+                    content: subdoc,
+                })
+            },
+        )
+        .parse(input)
+    })
+}
+
+/// Parses a field selector item (field name, *, **, or a sub-document).
 ///
 /// ## Arguments
 ///
@@ -46,8 +83,11 @@ pub fn parse_field_selector(input: &str) -> ParseResult<FieldSelector> {
         "**" => Ok(FieldSelector::AllFieldsRecursive),
         _ => match identifier(trimmed) {
             Ok((remaining, field_name)) => {
-                if remaining.trim().is_empty() {
+                let remaining = remaining.trim();
+                if remaining.is_empty() {
                     Ok(FieldSelector::Field(field_name.to_string()))
+                } else if remaining.starts_with("{") {
+                    parse_sub_document_selector(field_name, remaining)
                 } else {
                     Err(ParseError::SyntaxError {
                         message: format!("Invalid field selector: '{}'", trimmed),
@@ -110,7 +150,7 @@ pub fn parse_document_field_operations(input: &str) -> ParseResult<FieldOperatio
                 match operator {
                     ":" => Ok(FieldOperation::Assignment((
                         field_name.to_string(),
-                        value.to_string(),
+                        trimmed_value.to_string(),
                     ))),
                     "=" => Ok(FieldOperation::Condition(FieldCondition {
                         field_name: field_name.to_string(),
@@ -165,14 +205,8 @@ pub fn parse_document_field_operations(input: &str) -> ParseResult<FieldOperatio
 ///
 /// ## Returns
 ///
-/// Returns a [`ParseResult`] containing the parsed assignments, conditions and field selectors.
-pub fn parse_doc_content(
-    content: &str,
-) -> ParseResult<(
-    HashMap<String, String>,
-    Vec<FieldCondition>,
-    Vec<FieldSelector>,
-)> {
+/// Returns a [`ParseResult`] containing the parsed document content.
+pub fn parse_doc_content(content: &str) -> ParseResult<ParsedDocContent> {
     let items = parse_document_query_items(content)?;
 
     let mut conditions = Vec::new();
@@ -200,5 +234,9 @@ pub fn parse_doc_content(
         }
     }
 
-    Ok((assignments, conditions, selectors))
+    Ok(ParsedDocContent {
+        assignments,
+        conditions,
+        selectors,
+    })
 }
