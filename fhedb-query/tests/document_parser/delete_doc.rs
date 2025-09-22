@@ -2,11 +2,11 @@ use fhedb_query::prelude::*;
 
 #[test]
 fn basic() {
-    let input = "GET DOCUMENT FROM users {id = 1, name}";
+    let input = "DELETE DOCUMENT FROM users {id = 1}";
     let result = parse_document_query(input).unwrap();
 
     match result {
-        DocumentQuery::Get {
+        DocumentQuery::Delete {
             collection_name,
             conditions,
             selectors,
@@ -16,75 +16,99 @@ fn basic() {
             assert_eq!(conditions[0].field_name, "id");
             assert_eq!(conditions[0].operator, QueryOperator::Equal);
             assert_eq!(conditions[0].value, "1");
-            assert_eq!(selectors.len(), 1);
-            match &selectors[0] {
-                FieldSelector::Field(name) => assert_eq!(name, "name"),
-                _ => panic!("Expected FieldSelector::Field"),
-            }
+            assert_eq!(selectors.len(), 0);
         }
-        _ => panic!("Expected DocumentQuery::Get, got {:?}", result),
+        _ => panic!("Expected DocumentQuery::Delete, got {:?}", result),
+    }
+}
+
+#[test]
+fn with_remove_keyword() {
+    let input = "REMOVE DOC FROM products {id = \"prod_123\"}";
+    let result = parse_document_query(input).unwrap();
+
+    match result {
+        DocumentQuery::Delete {
+            collection_name,
+            conditions,
+            selectors,
+        } => {
+            assert_eq!(collection_name, "products");
+            assert_eq!(conditions.len(), 1);
+            assert_eq!(conditions[0].field_name, "id");
+            assert_eq!(conditions[0].value, "\"prod_123\"");
+            assert_eq!(selectors.len(), 0);
+        }
+        _ => panic!("Expected DocumentQuery::Delete"),
+    }
+}
+
+#[test]
+fn invalid_empty_delete_query() {
+    let input = "DELETE DOCUMENT FROM users {}";
+    let result = parse_document_query(input);
+    assert!(result.is_err());
+
+    match result.unwrap_err() {
+        ParseError::SyntaxError { message } => {
+            assert!(message.contains("Parsing Error"));
+        }
     }
 }
 
 #[test]
 fn variations() {
-    let input = "GET DOC FROM products {id = \"prod_123\", price}";
+    let input = "DELETE DOC FROM products {id = \"prod_123\"}";
     let result = parse_document_query(input).unwrap();
     match result {
-        DocumentQuery::Get {
+        DocumentQuery::Delete {
             collection_name,
             conditions,
             selectors,
         } => {
             assert_eq!(collection_name, "products");
             assert_eq!(conditions[0].field_name, "id");
-            assert_eq!(conditions[0].operator, QueryOperator::Equal);
             assert_eq!(conditions[0].value, "\"prod_123\"");
-            assert_eq!(selectors.len(), 1);
+            assert_eq!(selectors.len(), 0);
         }
-        _ => panic!("Expected DocumentQuery::Get"),
+        _ => panic!("Expected DocumentQuery::Delete"),
     }
 
-    let input = "   GeT    DoCs    fRoM    MyCollection   {status = 'active', name}   ";
+    let input = "   DeLeTe    DoCs    fRoM    MyCollection   {status = 'active'}   ";
     let result = parse_document_query(input).unwrap();
     match result {
-        DocumentQuery::Get {
+        DocumentQuery::Delete {
             collection_name,
             conditions,
             selectors,
         } => {
             assert_eq!(collection_name, "MyCollection");
             assert_eq!(conditions[0].field_name, "status");
-            assert_eq!(conditions[0].operator, QueryOperator::Equal);
             assert_eq!(conditions[0].value, "'active'");
-            assert_eq!(selectors.len(), 1);
+            assert_eq!(selectors.len(), 0);
         }
-        _ => panic!("Expected DocumentQuery::Get"),
+        _ => panic!("Expected DocumentQuery::Delete"),
     }
 
-    let input = "GET DOCUMENTS FROM test_collection {*}";
+    let input = "REMOVE DOCUMENTS FROM test_collection {active = true}";
     let result = parse_document_query(input).unwrap();
     match result {
-        DocumentQuery::Get {
+        DocumentQuery::Delete {
             collection_name,
             conditions,
             selectors,
         } => {
             assert_eq!(collection_name, "test_collection");
-            assert_eq!(conditions.len(), 0);
-            assert_eq!(selectors.len(), 1);
-            match &selectors[0] {
-                FieldSelector::AllFields => {}
-                _ => panic!("Expected FieldSelector::AllFields"),
-            }
+            assert_eq!(conditions.len(), 1);
+            assert_eq!(selectors.len(), 0);
         }
-        _ => panic!("Expected DocumentQuery::Get"),
+        _ => panic!("Expected DocumentQuery::Delete"),
     }
 }
 
 #[test]
 fn all_operators() {
-    let input = "GET DOCUMENT FROM users {
+    let input = "DELETE DOCUMENT FROM users {
         id = 1,
         age > 18,
         salary >= 50000,
@@ -96,7 +120,7 @@ fn all_operators() {
     let result = parse_document_query(input).unwrap();
 
     match result {
-        DocumentQuery::Get {
+        DocumentQuery::Delete {
             collection_name,
             conditions,
             selectors,
@@ -133,17 +157,44 @@ fn all_operators() {
             assert_eq!(conditions[6].operator, QueryOperator::Similar);
             assert_eq!(conditions[6].value, "'developer'");
         }
-        _ => panic!("Expected DocumentQuery::Get"),
+        _ => panic!("Expected DocumentQuery::Delete"),
+    }
+}
+
+#[test]
+fn with_selectors() {
+    let input = "DELETE DOCUMENT FROM users {id = 1, name, email}";
+    let result = parse_document_query(input).unwrap();
+
+    match result {
+        DocumentQuery::Delete {
+            collection_name,
+            conditions,
+            selectors,
+        } => {
+            assert_eq!(collection_name, "users");
+            assert_eq!(conditions.len(), 1);
+            assert_eq!(selectors.len(), 2);
+            match &selectors[0] {
+                FieldSelector::Field(name) => assert_eq!(name, "name"),
+                _ => panic!("Expected FieldSelector::Field"),
+            }
+            match &selectors[1] {
+                FieldSelector::Field(name) => assert_eq!(name, "email"),
+                _ => panic!("Expected FieldSelector::Field"),
+            }
+        }
+        _ => panic!("Expected DocumentQuery::Delete"),
     }
 }
 
 #[test]
 fn wildcard_selectors() {
-    let input = "GET DOCUMENT FROM users {id = 1, *}";
+    let input = "DELETE DOCUMENT FROM users {id = 1, *}";
     let result = parse_document_query(input).unwrap();
 
     match result {
-        DocumentQuery::Get {
+        DocumentQuery::Delete {
             collection_name,
             conditions,
             selectors,
@@ -156,14 +207,14 @@ fn wildcard_selectors() {
                 _ => panic!("Expected FieldSelector::AllFields"),
             }
         }
-        _ => panic!("Expected DocumentQuery::Get"),
+        _ => panic!("Expected DocumentQuery::Delete"),
     }
 
-    let input = "GET DOCUMENT FROM users {id = 1, **}";
+    let input = "DELETE DOCUMENT FROM users {id = 1, **}";
     let result = parse_document_query(input).unwrap();
 
     match result {
-        DocumentQuery::Get {
+        DocumentQuery::Delete {
             collection_name,
             conditions,
             selectors,
@@ -176,17 +227,17 @@ fn wildcard_selectors() {
                 _ => panic!("Expected FieldSelector::AllFieldsRecursive"),
             }
         }
-        _ => panic!("Expected DocumentQuery::Get"),
+        _ => panic!("Expected DocumentQuery::Delete"),
     }
 }
 
 #[test]
 fn simple_nested() {
-    let input = "GET DOCUMENT FROM users {id = 1, address {city, country}}";
+    let input = "DELETE DOCUMENT FROM users {id = 1, address {city, country}}";
     let result = parse_document_query(input).unwrap();
 
     match result {
-        DocumentQuery::Get {
+        DocumentQuery::Delete {
             collection_name,
             conditions,
             selectors,
@@ -217,30 +268,29 @@ fn simple_nested() {
                 _ => panic!("Expected FieldSelector::SubDocument"),
             }
         }
-        _ => panic!("Expected DocumentQuery::Get"),
+        _ => panic!("Expected DocumentQuery::Delete"),
     }
 }
 
 #[test]
 fn nested_with_conditions() {
-    let input = "GET DOCUMENT FROM users {
+    let input = "DELETE DOCUMENT FROM users {
         id = 1,
-        name,
         address {city = 'NYC', country, zipcode != '10001'}
     }";
     let result = parse_document_query(input).unwrap();
 
     match result {
-        DocumentQuery::Get {
+        DocumentQuery::Delete {
             collection_name,
             conditions,
             selectors,
         } => {
             assert_eq!(collection_name, "users");
             assert_eq!(conditions.len(), 1);
-            assert_eq!(selectors.len(), 2);
+            assert_eq!(selectors.len(), 1);
 
-            match &selectors[1] {
+            match &selectors[0] {
                 FieldSelector::SubDocument {
                     field_name,
                     content,
@@ -260,199 +310,17 @@ fn nested_with_conditions() {
                 _ => panic!("Expected FieldSelector::SubDocument"),
             }
         }
-        _ => panic!("Expected DocumentQuery::Get"),
-    }
-}
-
-#[test]
-fn deep_nesting() {
-    let input = "GET DOCUMENT FROM users {
-        id = 1,
-        profile {
-            personal {name, age > 18},
-            address {city, country {code = '+1'}}
-        }
-    }";
-    let result = parse_document_query(input).unwrap();
-
-    match result {
-        DocumentQuery::Get {
-            collection_name,
-            conditions,
-            selectors,
-        } => {
-            assert_eq!(collection_name, "users");
-            assert_eq!(conditions.len(), 1);
-            assert_eq!(selectors.len(), 1);
-
-            match &selectors[0] {
-                FieldSelector::SubDocument {
-                    field_name,
-                    content,
-                } => {
-                    assert_eq!(field_name, "profile");
-                    assert_eq!(content.selectors.len(), 2);
-
-                    match &content.selectors[0] {
-                        FieldSelector::SubDocument {
-                            field_name,
-                            content,
-                        } => {
-                            assert_eq!(field_name, "personal");
-                            assert_eq!(content.conditions.len(), 1);
-                            assert_eq!(content.selectors.len(), 1);
-                        }
-                        _ => panic!("Expected FieldSelector::SubDocument for personal"),
-                    }
-
-                    match &content.selectors[1] {
-                        FieldSelector::SubDocument {
-                            field_name,
-                            content,
-                        } => {
-                            assert_eq!(field_name, "address");
-                            assert_eq!(content.selectors.len(), 2);
-
-                            match &content.selectors[1] {
-                                FieldSelector::SubDocument {
-                                    field_name,
-                                    content,
-                                } => {
-                                    assert_eq!(field_name, "country");
-                                    assert_eq!(content.conditions.len(), 1);
-                                    assert_eq!(content.conditions[0].field_name, "code");
-                                    assert_eq!(content.conditions[0].value, "'+1'");
-                                }
-                                _ => panic!("Expected FieldSelector::SubDocument for country"),
-                            }
-                        }
-                        _ => panic!("Expected FieldSelector::SubDocument for address"),
-                    }
-                }
-                _ => panic!("Expected FieldSelector::SubDocument for profile"),
-            }
-        }
-        _ => panic!("Expected DocumentQuery::Get"),
-    }
-}
-
-#[test]
-fn nested_wildcards() {
-    let input = "GET DOCUMENT FROM users {
-        id = 1,
-        profile {*},
-        settings {**}
-    }";
-    let result = parse_document_query(input).unwrap();
-
-    match result {
-        DocumentQuery::Get {
-            collection_name,
-            conditions: _,
-            selectors,
-        } => {
-            assert_eq!(collection_name, "users");
-            assert_eq!(selectors.len(), 2);
-
-            match &selectors[0] {
-                FieldSelector::SubDocument {
-                    field_name,
-                    content,
-                } => {
-                    assert_eq!(field_name, "profile");
-                    assert_eq!(content.selectors.len(), 1);
-                    match &content.selectors[0] {
-                        FieldSelector::AllFields => {}
-                        _ => panic!("Expected FieldSelector::AllFields"),
-                    }
-                }
-                _ => panic!("Expected FieldSelector::SubDocument"),
-            }
-
-            match &selectors[1] {
-                FieldSelector::SubDocument {
-                    field_name,
-                    content,
-                } => {
-                    assert_eq!(field_name, "settings");
-                    assert_eq!(content.selectors.len(), 1);
-                    match &content.selectors[0] {
-                        FieldSelector::AllFieldsRecursive => {}
-                        _ => panic!("Expected FieldSelector::AllFieldsRecursive"),
-                    }
-                }
-                _ => panic!("Expected FieldSelector::SubDocument"),
-            }
-        }
-        _ => panic!("Expected DocumentQuery::Get"),
-    }
-}
-
-#[test]
-fn mixed_syntax() {
-    let input = "GET DOCUMENT FROM users {
-        id = 1,
-        name,
-        age > 18,
-        address {city = 'NYC'},
-        *,
-        settings {theme, **}
-    }";
-    let result = parse_document_query(input).unwrap();
-
-    match result {
-        DocumentQuery::Get {
-            collection_name,
-            conditions,
-            selectors,
-        } => {
-            assert_eq!(collection_name, "users");
-            assert_eq!(conditions.len(), 2);
-            assert_eq!(selectors.len(), 4);
-        }
-        _ => panic!("Expected DocumentQuery::Get"),
-    }
-}
-
-#[test]
-fn empty_braces() {
-    let input = "GET DOCUMENT FROM users {id = 1, address {}}";
-    let result = parse_document_query(input).unwrap();
-
-    match result {
-        DocumentQuery::Get {
-            collection_name,
-            conditions,
-            selectors,
-        } => {
-            assert_eq!(collection_name, "users");
-            assert_eq!(conditions.len(), 1);
-            assert_eq!(selectors.len(), 1);
-
-            match &selectors[0] {
-                FieldSelector::SubDocument {
-                    field_name,
-                    content,
-                } => {
-                    assert_eq!(field_name, "address");
-                    assert_eq!(content.conditions.len(), 0);
-                    assert_eq!(content.selectors.len(), 0);
-                    assert_eq!(content.assignments.len(), 0);
-                }
-                _ => panic!("Expected FieldSelector::SubDocument"),
-            }
-        }
-        _ => panic!("Expected DocumentQuery::Get"),
+        _ => panic!("Expected DocumentQuery::Delete"),
     }
 }
 
 #[test]
 fn only_conditions() {
-    let input = "GET DOCUMENT FROM users {id = 1, age > 18, status = 'active'}";
+    let input = "DELETE DOCUMENT FROM users {id = 1, age > 18, status = 'active'}";
     let result = parse_document_query(input).unwrap();
 
     match result {
-        DocumentQuery::Get {
+        DocumentQuery::Delete {
             collection_name,
             conditions,
             selectors,
@@ -461,17 +329,17 @@ fn only_conditions() {
             assert_eq!(conditions.len(), 3);
             assert_eq!(selectors.len(), 0);
         }
-        _ => panic!("Expected DocumentQuery::Get"),
+        _ => panic!("Expected DocumentQuery::Delete"),
     }
 }
 
 #[test]
 fn only_selectors() {
-    let input = "GET DOCUMENT FROM users {name, email, age}";
+    let input = "DELETE DOCUMENT FROM users {name, email, age}";
     let result = parse_document_query(input).unwrap();
 
     match result {
-        DocumentQuery::Get {
+        DocumentQuery::Delete {
             collection_name,
             conditions,
             selectors,
@@ -480,13 +348,38 @@ fn only_selectors() {
             assert_eq!(conditions.len(), 0);
             assert_eq!(selectors.len(), 3);
         }
-        _ => panic!("Expected DocumentQuery::Get"),
+        _ => panic!("Expected DocumentQuery::Delete"),
+    }
+}
+
+#[test]
+fn mixed_syntax() {
+    let input = "DELETE DOCUMENT FROM users {
+        id = 1,
+        name,
+        age > 18,
+        address {city = 'NYC'},
+        *
+    }";
+    let result = parse_document_query(input).unwrap();
+
+    match result {
+        DocumentQuery::Delete {
+            collection_name,
+            conditions,
+            selectors,
+        } => {
+            assert_eq!(collection_name, "users");
+            assert_eq!(conditions.len(), 2); // id = 1, age > 18
+            assert_eq!(selectors.len(), 3); // name, address{}, *
+        }
+        _ => panic!("Expected DocumentQuery::Delete"),
     }
 }
 
 #[test]
 fn complex_values() {
-    let input = "GET DOCUMENT FROM products {
+    let input = "DELETE DOCUMENT FROM products {
         tags == '[\"electronics\", \"mobile\"]',
         config = \"{\\\"theme\\\": \\\"dark\\\"}\",
         path != \"C:\\\\Users\\\\Admin\",
@@ -495,7 +388,7 @@ fn complex_values() {
     let result = parse_document_query(input).unwrap();
 
     match result {
-        DocumentQuery::Get {
+        DocumentQuery::Delete {
             collection_name,
             conditions,
             selectors: _,
@@ -507,7 +400,7 @@ fn complex_values() {
             assert_eq!(conditions[2].value, "\"C:\\\\Users\\\\Admin\"");
             assert_eq!(conditions[3].value, "[[1, 2], [3, 4]]");
         }
-        _ => panic!("Expected DocumentQuery::Get"),
+        _ => panic!("Expected DocumentQuery::Delete"),
     }
 }
 
@@ -516,37 +409,34 @@ fn invalid_syntax() {
     let result = parse_document_query("");
     assert!(result.is_err());
 
-    let result = parse_document_query("GET");
+    let result = parse_document_query("DELETE");
     assert!(result.is_err());
 
-    let result = parse_document_query("GET DOCUMENT");
+    let result = parse_document_query("DELETE DOCUMENT");
     assert!(result.is_err());
 
-    let result = parse_document_query("GET DOCUMENT FROM");
+    let result = parse_document_query("DELETE DOCUMENT FROM");
     assert!(result.is_err());
 
-    let result = parse_document_query("GET DOC FROM users");
+    let result = parse_document_query("DELETE DOC FROM users");
     assert!(result.is_err());
 
-    let result = parse_document_query("DOCUMENT GET FROM users {id = 1}");
+    let result = parse_document_query("DOCUMENT DELETE FROM users {id = 1}");
     assert!(result.is_err());
 
-    let result = parse_document_query("GET DOCUMENT IN users {id = 1}");
-    assert!(result.is_err());
-
-    let result = parse_document_query("GET DOCUMENT FROM users {}");
+    let result = parse_document_query("DELETE DOCUMENT IN users {id = 1}");
     assert!(result.is_err());
 }
 
 #[test]
 fn invalid_field_structure() {
-    let result = parse_document_query("GET DOC FROM users {id 1}");
+    let result = parse_document_query("DELETE DOC FROM users {id 1}");
     assert!(result.is_err());
 
-    let result = parse_document_query("GET DOC FROM users {id = 1");
+    let result = parse_document_query("DELETE DOC FROM users {id = 1");
     assert!(result.is_err());
 
-    let result = parse_document_query("GET DOCUMENT FROM users {id = 1} EXTRA");
+    let result = parse_document_query("DELETE DOCUMENT FROM users {id = 1} EXTRA");
     assert!(result.is_err());
     match result.unwrap_err() {
         ParseError::SyntaxError { message } => {
@@ -556,8 +446,21 @@ fn invalid_field_structure() {
 }
 
 #[test]
-fn invalid_assignments_in_get() {
-    let input = "GET DOC FROM users {id = 1, name: 'John'}";
+fn invalid_empty_query() {
+    let input = "DELETE DOCUMENT FROM users {}";
+    let result = parse_document_query(input);
+    assert!(result.is_err());
+
+    match result.unwrap_err() {
+        ParseError::SyntaxError { message } => {
+            assert!(message.contains("Parsing Error"));
+        }
+    }
+}
+
+#[test]
+fn invalid_assignments() {
+    let input = "DELETE DOC FROM users {id = 1, name: 'John'}";
     let result = parse_document_query(input);
     assert!(result.is_err());
 
@@ -570,7 +473,7 @@ fn invalid_assignments_in_get() {
 
 #[test]
 fn invalid_assignments_in_nested() {
-    let input = "GET DOC FROM users {id = 1, address {city: 'NYC'}}";
+    let input = "DELETE DOC FROM users {id = 1, address {city: 'NYC'}}";
     let result = parse_document_query(input);
     assert!(result.is_err());
 
@@ -583,30 +486,30 @@ fn invalid_assignments_in_nested() {
 
 #[test]
 fn invalid_malformed_nested() {
-    let result = parse_document_query("GET DOC FROM users {address {city, country}");
+    let result = parse_document_query("DELETE DOC FROM users {address {city, country}");
     assert!(result.is_err());
 
-    let result = parse_document_query("GET DOC FROM users {address city, country}}");
+    let result = parse_document_query("DELETE DOC FROM users {address city, country}}");
     assert!(result.is_err());
 
-    let result = parse_document_query("GET DOC FROM users {address {{city}}");
+    let result = parse_document_query("DELETE DOC FROM users {address {{city}}");
     assert!(result.is_err());
 }
 
 #[test]
 fn invalid_empty_conditions() {
-    let result = parse_document_query("GET DOC FROM users {id =}");
+    let result = parse_document_query("DELETE DOC FROM users {id =}");
     assert!(result.is_err());
 
-    let result = parse_document_query("GET DOC FROM users {= 1}");
+    let result = parse_document_query("DELETE DOC FROM users {= 1}");
     assert!(result.is_err());
 }
 
 #[test]
 fn invalid_unsupported_operators() {
-    let result = parse_document_query("GET DOC FROM users {id ~ 1}");
+    let result = parse_document_query("DELETE DOC FROM users {id ~ 1}");
     assert!(result.is_err());
 
-    let result = parse_document_query("GET DOC FROM users {id & 1}");
+    let result = parse_document_query("DELETE DOC FROM users {id & 1}");
     assert!(result.is_err());
 }
