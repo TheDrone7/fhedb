@@ -169,6 +169,54 @@ fn delete_document(input: &str) -> IResult<&str, DocumentQuery> {
     .parse(input)
 }
 
+/// Parses an UPDATE DOCUMENT query.
+///
+/// ## Arguments
+/// * `input` - The input string to parse.
+///
+/// ## Returns
+///
+/// Returns an [`IResult`] containing the remaining input and the parsed [`DocumentQuery::Update`].
+fn update_document(input: &str) -> IResult<&str, DocumentQuery> {
+    map_res(
+        (
+            tag_no_case("update"),
+            multispace1,
+            alt((
+                (tag_no_case("doc"), multispace1),
+                (tag_no_case("docs"), multispace1),
+                (tag_no_case("document"), multispace1),
+                (tag_no_case("documents"), multispace1),
+            )),
+            tag_no_case("from"),
+            multispace1,
+            identifier,
+            multispace0,
+            delimited(char('{'), balanced_braces_content, char('}')),
+        ),
+        |(_, _, _, _, _, collection_name, _, doc_content)| -> Result<DocumentQuery, ParseError> {
+            let ParsedDocContent {
+                assignments,
+                conditions,
+                selectors,
+            } = parse_doc_content(doc_content)?;
+            if assignments.is_empty() {
+                return Err(ParseError::SyntaxError {
+                    message: "UPDATE queries must specify at least one field assignment"
+                        .to_string(),
+                });
+            }
+            Ok(DocumentQuery::Update {
+                collection_name: collection_name.to_string(),
+                conditions,
+                updates: assignments,
+                selectors,
+            })
+        },
+    )
+    .parse(input)
+}
+
 /// Parses a complete document query from the input string.
 ///
 /// ## Arguments
@@ -182,7 +230,12 @@ pub fn parse_document_query(input: &str) -> ParseResult<DocumentQuery> {
     trim_parse(input, "document query", |input| {
         preceded(
             multispace0,
-            alt((get_document, delete_document, insert_document)),
+            alt((
+                get_document,
+                delete_document,
+                insert_document,
+                update_document,
+            )),
         )
         .parse(input)
     })

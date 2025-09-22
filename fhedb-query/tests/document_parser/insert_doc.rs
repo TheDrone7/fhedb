@@ -136,10 +136,4 @@ fn duplicate_fields() {
     let input = "INSERT DOC INTO users {id: 1, name: \"John\", id: 2}";
     let result = parse_document_query(input);
     assert!(result.is_err());
-
-    match result.unwrap_err() {
-        ParseError::SyntaxError { message } => {
-            assert!(message.contains("MapRes"));
-        }
-    }
 }

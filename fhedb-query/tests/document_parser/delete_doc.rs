@@ -370,8 +370,8 @@ fn mixed_syntax() {
             selectors,
         } => {
             assert_eq!(collection_name, "users");
-            assert_eq!(conditions.len(), 2); // id = 1, age > 18
-            assert_eq!(selectors.len(), 3); // name, address{}, *
+            assert_eq!(conditions.len(), 2);
+            assert_eq!(selectors.len(), 3);
         }
         _ => panic!("Expected DocumentQuery::Delete"),
     }
