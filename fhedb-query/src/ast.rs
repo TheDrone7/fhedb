@@ -6,15 +6,6 @@
 use fhedb_core::db::schema::{FieldDefinition, Schema};
 use std::collections::HashMap;
 
-/// Represents a query in the FHEDB query language.
-#[derive(Debug, Clone, PartialEq)]
-pub enum Query {
-    /// A database-level operation query such as creating or dropping a database.
-    DatabaseQuery(DatabaseQuery),
-    /// A contextual query that operates within a specific database context.
-    ContextualQuery(ContextualQuery),
-}
-
 /// Represents queries that operate at the database level.
 ///
 /// Database queries are operations that work at the database level,
