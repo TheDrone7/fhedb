@@ -3,36 +3,41 @@
 //! This module provides reusable parsing functions that are used across
 //! different query parsers in the FHEDB query language.
 
-use crate::error::ParseError;
+use crate::error::{ParserError, Span, create_span};
 use bson::Bson;
 use fhedb_core::db::schema::FieldType;
-use nom::{IResult, bytes::complete::take_while1};
+use nom::{
+    IResult,
+    bytes::complete::{take, take_while1},
+};
 
 /// Type alias for parsing results.
 ///
 /// This represents the result of a parsing operation, returning either
-/// the parsed value of type `T` or a [`ParseError`].
-pub type ParseResult<T> = Result<T, ParseError>;
+/// the parsed value of type `T` or a [`ParserError`].
+pub type ParserResult<T> = Result<T, ParserError>;
 
 /// Parses a quoted string with the given delimiter, handling escape sequences.
 ///
 /// ## Arguments
 ///
-/// * `input` - The input string to parse (must start with the quote character).
+/// * `input` - The input [`Span`] to parse (must start with the quote character).
 /// * `quote_char` - The quote character to look for ('\"' or '\'').
 ///
 /// ## Returns
 ///
-/// Returns an [`IResult`] containing the remaining input and the complete quoted string.
-pub fn parse_quoted_string(input: &str, quote_char: char) -> IResult<&str, &str> {
-    if !input.starts_with(quote_char) {
+/// Returns an [`IResult`] containing the remaining input and the complete quoted string as a [`Span`].
+pub fn parse_quoted_string(input: Span, quote_char: char) -> IResult<Span, Span> {
+    let fragment = input.fragment();
+
+    if !fragment.starts_with(quote_char) {
         return Err(nom::Err::Error(nom::error::Error::new(
             input,
             nom::error::ErrorKind::Char,
         )));
     }
 
-    let mut chars = input[1..].char_indices();
+    let mut chars = fragment[1..].char_indices();
     let mut escape_next = false;
 
     while let Some((i, ch)) = chars.next() {
@@ -45,7 +50,7 @@ pub fn parse_quoted_string(input: &str, quote_char: char) -> IResult<&str, &str>
             '\\' => escape_next = true,
             ch if ch == quote_char => {
                 let end_pos = i + 2;
-                return Ok((&input[end_pos..], &input[..end_pos]));
+                return take(end_pos)(input);
             }
             _ => {}
         }
@@ -118,38 +123,50 @@ pub fn unescape_string(input: &str) -> String {
 /// ## Returns
 ///
 /// Returns `Ok(T)` with the parsed result, or `Err(ParseError)` if parsing fails or unexpected content remains.
-pub fn trim_parse<O, F>(input: &str, context: &str, parser: F) -> ParseResult<O>
+pub fn trim_parse<O, F>(input: &str, context: &str, parser: F) -> ParserResult<O>
 where
     F: FnOnce(&str) -> IResult<&str, O>,
 {
     let input = input.trim();
 
-    let (remaining, result) = parser(input).map_err(|e| ParseError::SyntaxError {
+    let (remaining, result) = parser(input).map_err(|e| ParserError::SyntaxError {
         message: format!("Failed to parse {}: {}", context, e),
+        line: 1,
+        column: 1,
+        context_path: vec![context.to_string()],
+        source_line: input.lines().next().unwrap_or("").to_string(),
+        pointer: "^".to_string(),
+        suggestion: None,
     })?;
 
     if !remaining.trim().is_empty() {
-        return Err(ParseError::SyntaxError {
+        return Err(ParserError::SyntaxError {
             message: format!("Unexpected input after {}", context),
+            line: 1,
+            column: input.len() - remaining.len() + 1,
+            context_path: vec![context.to_string()],
+            source_line: input.lines().next().unwrap_or("").to_string(),
+            pointer: " ".repeat(input.len() - remaining.len()) + "^",
+            suggestion: None,
         });
     }
 
     Ok(result)
 }
 
-/// Parses an identifier from the input string.
+/// Parses an identifier from the input [`Span`].
 ///
 /// An identifier is a sequence of alphanumeric characters and underscores.
 /// It must contain at least one character and cannot be empty.
 ///
 /// ## Arguments
 ///
-/// * `input` - The input string to parse an identifier from.
+/// * `input` - The input [`Span`] to parse an identifier from.
 ///
 /// ## Returns
 ///
-/// Returns an [`IResult`] containing the remaining input and the parsed identifier as a string slice.
-pub fn identifier(input: &str) -> IResult<&str, &str> {
+/// Returns an [`IResult`] containing the remaining input and the parsed identifier as a [`Span`].
+pub fn identifier(input: Span) -> IResult<Span, Span> {
     take_while1(|c: char| c.is_alphanumeric() || c == '_')(input)
 }
 
@@ -157,22 +174,23 @@ pub fn identifier(input: &str) -> IResult<&str, &str> {
 ///
 /// ## Arguments
 ///
-/// * `input` - The input string to parse (should start with content after the opening delimiter).
+/// * `input` - The input [`Span`] to parse (should start with content after the opening delimiter).
 /// * `open_char` - The opening delimiter character (e.g., '{' or '[').
 /// * `close_char` - The closing delimiter character (e.g., '}' or ']').
 ///
 /// ## Returns
 ///
-/// Returns an [`IResult`] containing the remaining input and the content between the delimiters.
+/// Returns an [`IResult`] containing the remaining input and the content between the delimiters as a [`Span`].
 pub fn balanced_delimiters_content(
-    input: &str,
+    input: Span,
     open_char: char,
     close_char: char,
-) -> IResult<&str, &str> {
+) -> IResult<Span, Span> {
+    let fragment = input.fragment();
     let mut delimiter_count = 0;
     let mut in_string = false;
     let mut string_delimiter = '\0';
-    let mut chars = input.char_indices();
+    let mut chars = fragment.char_indices();
     let mut escape_next = false;
 
     while let Some((i, ch)) = chars.next() {
@@ -198,7 +216,7 @@ pub fn balanced_delimiters_content(
             }
             ch if ch == close_char && !in_string => {
                 if delimiter_count == 0 {
-                    return Ok((&input[i..], &input[..i]));
+                    return take(i)(input);
                 }
                 delimiter_count -= 1;
             }
@@ -217,12 +235,12 @@ pub fn balanced_delimiters_content(
 ///
 /// ## Arguments
 ///
-/// * `input` - The input string to parse (should start with content after the opening brace).
+/// * `input` - The input [`Span`] to parse (should start with content after the opening brace).
 ///
 /// ## Returns
 ///
-/// Returns an [`IResult`] containing the remaining input and the content between the braces.
-pub fn balanced_braces_content(input: &str) -> IResult<&str, &str> {
+/// Returns an [`IResult`] containing the remaining input and the content between the braces as a [`Span`].
+pub fn balanced_braces_content(input: Span) -> IResult<Span, Span> {
     balanced_delimiters_content(input, '{', '}')
 }
 
@@ -332,20 +350,29 @@ fn parse_array_elements(input: &str) -> IResult<&str, Vec<String>> {
     }
 
     let content_after_bracket = &trimmed[1..];
-    let (remaining_after_content, content) =
-        balanced_delimiters_content(content_after_bracket, '[', ']')?;
+    let span_input = create_span(content_after_bracket);
 
-    let remaining = if remaining_after_content.starts_with(']') {
-        &remaining_after_content[1..]
-    } else {
-        return Err(nom::Err::Error(nom::error::Error::new(
-            input,
-            nom::error::ErrorKind::Char,
-        )));
-    };
+    match balanced_delimiters_content(span_input, '[', ']') {
+        Ok((remaining_span, content_span)) => {
+            let remaining_after_content = remaining_span.fragment();
+            let content = content_span.fragment();
 
-    let elements = split_respecting_nesting(content, ',', true);
-    Ok((remaining, elements))
+            let remaining = if remaining_after_content.starts_with(']') {
+                &remaining_after_content[1..]
+            } else {
+                return Err(nom::Err::Error(nom::error::Error::new(
+                    input,
+                    nom::error::ErrorKind::Char,
+                )));
+            };
+
+            let elements = split_respecting_nesting(content, ',', true);
+            Ok((remaining, elements))
+        }
+        Err(nom::Err::Error(e)) => Err(nom::Err::Error(nom::error::Error::new(input, e.code))),
+        Err(nom::Err::Failure(e)) => Err(nom::Err::Failure(nom::error::Error::new(input, e.code))),
+        Err(nom::Err::Incomplete(n)) => Err(nom::Err::Incomplete(n)),
+    }
 }
 
 /// Parses an array literal into a BSON array value based on the inner field type.
@@ -359,12 +386,18 @@ fn parse_array_elements(input: &str) -> IResult<&str, Vec<String>> {
 ///
 /// Returns `Ok(Bson::Array)` if all elements can be parsed according to the inner type,
 /// or `Err(ParseError)` if parsing fails for any element.
-fn parse_array_bson_value(array_str: &str, inner_type: &FieldType) -> ParseResult<Bson> {
+fn parse_array_bson_value(array_str: &str, inner_type: &FieldType) -> ParserResult<Bson> {
     match parse_array_elements(array_str) {
         Ok((remaining, element_strings)) => {
             if !remaining.trim().is_empty() {
-                return Err(ParseError::SyntaxError {
+                return Err(ParserError::SyntaxError {
                     message: format!("Unexpected input after array: {}", remaining),
+                    line: 1,
+                    column: array_str.len() - remaining.len() + 1,
+                    context_path: vec!["array".to_string()],
+                    source_line: array_str.to_string(),
+                    pointer: " ".repeat(array_str.len() - remaining.len()) + "^",
+                    suggestion: None,
                 });
             }
 
@@ -386,8 +419,14 @@ fn parse_array_bson_value(array_str: &str, inner_type: &FieldType) -> ParseResul
 
             Ok(Bson::Array(bson_elements))
         }
-        Err(e) => Err(ParseError::SyntaxError {
+        Err(e) => Err(ParserError::SyntaxError {
             message: format!("Failed to parse array: {}", e),
+            line: 1,
+            column: 1,
+            context_path: vec!["array".to_string()],
+            source_line: array_str.to_string(),
+            pointer: "^".to_string(),
+            suggestion: None,
         }),
     }
 }
@@ -403,7 +442,7 @@ fn parse_array_bson_value(array_str: &str, inner_type: &FieldType) -> ParseResul
 ///
 /// Returns `Ok(Bson)` if the value can be parsed according to the field type,
 /// or `Err(ParseError)` with an error message if parsing fails.
-pub fn parse_bson_value(value_str: String, field_type: &FieldType) -> ParseResult<Bson> {
+pub fn parse_bson_value(value_str: String, field_type: &FieldType) -> ParserResult<Bson> {
     let trimmed = value_str.trim();
 
     match field_type {
@@ -411,26 +450,44 @@ pub fn parse_bson_value(value_str: String, field_type: &FieldType) -> ParseResul
             trimmed
                 .parse::<i64>()
                 .map(Bson::Int64)
-                .map_err(|_| ParseError::SyntaxError {
+                .map_err(|_| ParserError::SyntaxError {
                     message: format!("Cannot parse '{}' as integer", trimmed),
+                    line: 1,
+                    column: 1,
+                    context_path: vec!["bson_value".to_string(), "int".to_string()],
+                    source_line: trimmed.to_string(),
+                    pointer: "^".to_string(),
+                    suggestion: Some("Expected an integer value".to_string()),
                 })
         }
         FieldType::Float => {
             trimmed
                 .parse::<f64>()
                 .map(Bson::Double)
-                .map_err(|_| ParseError::SyntaxError {
+                .map_err(|_| ParserError::SyntaxError {
                     message: format!("Cannot parse '{}' as float", trimmed),
+                    line: 1,
+                    column: 1,
+                    context_path: vec!["bson_value".to_string(), "float".to_string()],
+                    source_line: trimmed.to_string(),
+                    pointer: "^".to_string(),
+                    suggestion: Some("Expected a floating-point number".to_string()),
                 })
         }
         FieldType::Boolean => match trimmed.to_lowercase().as_str() {
             "true" => Ok(Bson::Boolean(true)),
             "false" => Ok(Bson::Boolean(false)),
-            _ => Err(ParseError::SyntaxError {
+            _ => Err(ParserError::SyntaxError {
                 message: format!(
                     "Cannot parse '{}' as boolean (expected 'true' or 'false')",
                     trimmed
                 ),
+                line: 1,
+                column: 1,
+                context_path: vec!["bson_value".to_string(), "boolean".to_string()],
+                source_line: trimmed.to_string(),
+                pointer: "^".to_string(),
+                suggestion: Some("Expected 'true' or 'false'".to_string()),
             }),
         },
         FieldType::String | FieldType::IdString => {
@@ -440,10 +497,18 @@ pub fn parse_bson_value(value_str: String, field_type: &FieldType) -> ParseResul
                 let unquoted = &trimmed[1..trimmed.len() - 1];
                 Ok(Bson::String(unescape_string(unquoted)))
             } else {
-                Err(ParseError::SyntaxError {
+                Err(ParserError::SyntaxError {
                     message: format!(
                         "String values must be quoted with single or double quotes: '{}'",
                         trimmed
+                    ),
+                    line: 1,
+                    column: 1,
+                    context_path: vec!["bson_value".to_string(), "string".to_string()],
+                    source_line: trimmed.to_string(),
+                    pointer: "^".to_string(),
+                    suggestion: Some(
+                        "String values must be quoted with single or double quotes".to_string(),
                     ),
                 })
             }
@@ -459,10 +524,18 @@ pub fn parse_bson_value(value_str: String, field_type: &FieldType) -> ParseResul
             if trimmed.starts_with('[') && trimmed.ends_with(']') {
                 parse_array_bson_value(trimmed, inner_type)
             } else {
-                Err(ParseError::SyntaxError {
+                Err(ParserError::SyntaxError {
                     message: format!(
                         "Array values must be enclosed in square brackets: '{}'",
                         trimmed
+                    ),
+                    line: 1,
+                    column: 1,
+                    context_path: vec!["bson_value".to_string(), "array".to_string()],
+                    source_line: trimmed.to_string(),
+                    pointer: "^".to_string(),
+                    suggestion: Some(
+                        "Array values must be enclosed in square brackets [...]".to_string(),
                     ),
                 })
             }
@@ -474,10 +547,18 @@ pub fn parse_bson_value(value_str: String, field_type: &FieldType) -> ParseResul
                 let unquoted = &trimmed[1..trimmed.len() - 1];
                 Ok(Bson::String(unescape_string(unquoted)))
             } else {
-                Err(ParseError::SyntaxError {
+                Err(ParserError::SyntaxError {
                     message: format!(
                         "Reference values must be quoted with single or double quotes: '{}'",
                         trimmed
+                    ),
+                    line: 1,
+                    column: 1,
+                    context_path: vec!["bson_value".to_string(), "reference".to_string()],
+                    source_line: trimmed.to_string(),
+                    pointer: "^".to_string(),
+                    suggestion: Some(
+                        "Reference values must be quoted with single or double quotes".to_string(),
                     ),
                 })
             }
