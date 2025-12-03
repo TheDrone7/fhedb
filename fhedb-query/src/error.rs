@@ -272,6 +272,31 @@ fn generate_suggestion(context_path: &[String], message: &str) -> Option<String>
     let last_context = context_path.last()?.as_str();
 
     match last_context {
+        "create database" => {
+            if message.contains("end of input") || message.contains("Expected identifier") {
+                Some("Syntax: CREATE DATABASE <database_name> [DROP IF EXISTS]".to_string())
+            } else if message.contains("Expected keyword") || message.contains("DATABASE") {
+                Some("Expected: CREATE DATABASE <database_name>".to_string())
+            } else {
+                Some("Valid syntax: CREATE DATABASE <database_name> [DROP IF EXISTS]".to_string())
+            }
+        }
+        "drop database" => {
+            if message.contains("end of input") || message.contains("Expected identifier") {
+                Some("Syntax: DROP DATABASE <database_name>".to_string())
+            } else if message.contains("Expected keyword") || message.contains("DATABASE") {
+                Some("Expected: DROP DATABASE <database_name>".to_string())
+            } else {
+                Some("Valid syntax: DROP DATABASE <database_name>".to_string())
+            }
+        }
+        "list databases" => {
+            if message.contains("Expected keyword") || message.contains("DATABASES") {
+                Some("Expected: LIST DATABASES".to_string())
+            } else {
+                Some("Valid syntax: LIST DATABASES".to_string())
+            }
+        }
         "field_type" => Some(
             "Valid field types: id_int, id_string, int, float, string, boolean, array, nullable, reference"
                 .to_string(),

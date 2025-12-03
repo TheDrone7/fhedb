@@ -62,6 +62,8 @@ pub fn parse_quoted_string(input: Span, quote_char: char) -> IResult<Span, Span>
     )))
 }
 
+/// Unescapes a string by processing common escape sequences.
+///
 /// This function processes escape sequences commonly found in string literals:
 /// - `\n` → newline character
 /// - `\t` → tab character
@@ -71,6 +73,8 @@ pub fn parse_quoted_string(input: Span, quote_char: char) -> IResult<Span, Span>
 /// - `\"` → literal double quote
 /// - `\'` → literal single quote
 ///
+/// Invalid escape sequences (like `\z`) are left as-is.
+///
 /// ## Arguments
 ///
 /// * `input` - The input string that may contain escape sequences.
@@ -78,7 +82,6 @@ pub fn parse_quoted_string(input: Span, quote_char: char) -> IResult<Span, Span>
 /// ## Returns
 ///
 /// Returns a new `String` with escape sequences processed into their literal characters.
-/// Invalid escape sequences (like `\z`) are left as-is.
 pub fn unescape_string(input: &str) -> String {
     let mut result = String::with_capacity(input.len());
     let mut chars = input.chars();
@@ -109,6 +112,8 @@ pub fn unescape_string(input: &str) -> String {
     result
 }
 
+/// Parses input with trimming and validates no trailing content remains.
+///
 /// This utility function handles the complete parsing workflow:
 /// 1. Trims the input string
 /// 2. Applies the provided parser
@@ -117,41 +122,119 @@ pub fn unescape_string(input: &str) -> String {
 /// ## Arguments
 ///
 /// * `input` - The input string to parse.
-/// * `context` - A description of what is being parsed (for error messages).
+/// * `context_path` - A vector of context strings describing the parsing hierarchy.
 /// * `parser` - The nom parser function to apply to the trimmed input.
 ///
 /// ## Returns
 ///
-/// Returns `Ok(T)` with the parsed result, or `Err(ParseError)` if parsing fails or unexpected content remains.
-pub fn trim_parse<O, F>(input: &str, context: &str, parser: F) -> ParserResult<O>
+/// Returns `Ok(T)` with the parsed result, or `Err(ParserError)` if parsing fails or unexpected content remains.
+pub fn trim_parse<O, F>(input: &str, context_path: Vec<String>, parser: F) -> ParserResult<O>
 where
-    F: FnOnce(&str) -> IResult<&str, O>,
+    F: FnOnce(Span) -> IResult<Span, O>,
 {
-    let input = input.trim();
+    let trimmed = input.trim();
+    let span = create_span(trimmed);
 
-    let (remaining, result) = parser(input).map_err(|e| ParserError::SyntaxError {
-        message: format!("Failed to parse {}: {}", context, e),
-        line: 1,
-        column: 1,
-        context_path: vec![context.to_string()],
-        source_line: input.lines().next().unwrap_or("").to_string(),
-        pointer: "^".to_string(),
-        suggestion: None,
-    })?;
-
-    if !remaining.trim().is_empty() {
-        return Err(ParserError::SyntaxError {
-            message: format!("Unexpected input after {}", context),
-            line: 1,
-            column: input.len() - remaining.len() + 1,
-            context_path: vec![context.to_string()],
-            source_line: input.lines().next().unwrap_or("").to_string(),
-            pointer: " ".repeat(input.len() - remaining.len()) + "^",
-            suggestion: None,
-        });
+    match parser(span) {
+        Ok((remaining, result)) => {
+            if !remaining.fragment().trim().is_empty() {
+                let context_desc = if context_path.len() == 1 {
+                    context_path[0].clone()
+                } else {
+                    context_path.last().unwrap().clone()
+                };
+                return Err(ParserError::SyntaxError {
+                    message: format!("Unexpected input after {}", context_desc),
+                    line: remaining.location_line(),
+                    column: remaining.get_utf8_column(),
+                    context_path: context_path.clone(),
+                    source_line: trimmed
+                        .lines()
+                        .nth((remaining.location_line() - 1) as usize)
+                        .unwrap_or("")
+                        .to_string(),
+                    pointer: " ".repeat(remaining.get_utf8_column().saturating_sub(1)) + "^",
+                    suggestion: None,
+                });
+            }
+            Ok(result)
+        }
+        Err(e) => Err(crate::error::convert_error(trimmed, context_path, e)),
     }
+}
 
-    Ok(result)
+/// Parses a query with subcommands and handles context determination.
+///
+/// This helper is designed for top-level query parsers (database, collection, document)
+/// that have multiple subcommands and need hierarchical context based on which subcommand
+/// was attempted.
+///
+/// ## Arguments
+///
+/// * `input` - The input string to parse.
+/// * `base_context` - The base context string (e.g., "database query").
+/// * `parser` - The parser that tries the subcommand alternatives.
+/// * `determine_context_from_result` - Function that returns context based on successful parse result.
+/// * `determine_context_from_error` - Function that returns context based on error and input.
+///
+/// ## Returns
+///
+/// Returns `Ok(T)` with the parsed result, or `Err(ParserError)` if parsing fails or unexpected content remains.
+pub fn parse_subcommand<O, F, FC, FE>(
+    input: &str,
+    base_context: &str,
+    parser: F,
+    determine_context_from_result: FC,
+    determine_context_from_error: FE,
+) -> ParserResult<O>
+where
+    F: FnOnce(Span) -> IResult<Span, O>,
+    FC: FnOnce(&O) -> &str,
+    FE: FnOnce(&str, &nom::Err<nom::error::Error<Span>>) -> Vec<String>,
+{
+    let trimmed_input = input.trim();
+    let span = create_span(trimmed_input);
+
+    match parser(span) {
+        Ok((remaining, result)) => {
+            let trimmed_remaining = remaining.fragment().trim();
+            if !trimmed_remaining.is_empty() {
+                let remaining_after_whitespace =
+                    match nom::character::complete::multispace0::<Span, nom::error::Error<Span>>(
+                        remaining,
+                    ) {
+                        Ok((after_ws, _)) => after_ws,
+                        Err(_) => remaining,
+                    };
+
+                let line = remaining_after_whitespace.location_line();
+                let column = remaining_after_whitespace.get_utf8_column();
+                let source_line = trimmed_input
+                    .lines()
+                    .nth((line - 1) as usize)
+                    .unwrap_or("")
+                    .to_string();
+
+                let subcommand_context = determine_context_from_result(&result);
+                let context_path = vec![base_context.to_string(), subcommand_context.to_string()];
+
+                return Err(ParserError::SyntaxError {
+                    message: format!("Unexpected input after {}", subcommand_context),
+                    line,
+                    column,
+                    context_path,
+                    source_line,
+                    pointer: format!("{}^", " ".repeat(column.saturating_sub(1))),
+                    suggestion: None,
+                });
+            }
+            Ok(result)
+        }
+        Err(e) => {
+            let context_path = determine_context_from_error(trimmed_input, &e);
+            Err(crate::error::convert_error(trimmed_input, context_path, e))
+        }
+    }
 }
 
 /// Parses an identifier from the input [`Span`].
@@ -230,8 +313,9 @@ pub fn balanced_delimiters_content(
     )))
 }
 
-/// Parses content between balanced braces while properly handling quoted strings.
-/// Extension of `balanced_delimiters_content` specifically for `{` and `}`.
+/// Parses content between balanced braces.
+///
+/// This is a specialized version of `balanced_delimiters_content` for brace delimiters.
 ///
 /// ## Arguments
 ///

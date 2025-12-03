@@ -4,8 +4,8 @@
 
 use crate::{
     ast::*,
-    error::{ParserError, Span, convert_error, create_span},
-    parser::utilities::{ParserResult, identifier},
+    error::Span,
+    parser::utilities::{ParserResult, identifier, parse_subcommand},
 };
 use nom::{
     IResult, Parser,
@@ -29,9 +29,9 @@ fn create_database(input: Span) -> IResult<Span, DatabaseQuery> {
     map(
         (
             tag_no_case("create"),
-            multispace1,
-            tag_no_case("database"),
             cut((
+                multispace1,
+                tag_no_case("database"),
                 multispace1,
                 identifier,
                 opt(preceded(
@@ -46,7 +46,7 @@ fn create_database(input: Span) -> IResult<Span, DatabaseQuery> {
                 )),
             )),
         ),
-        |(_, _, _, (_, name, drop_if_exists))| DatabaseQuery::Create {
+        |(_, (_, _, _, name, drop_if_exists))| DatabaseQuery::Create {
             name: name.fragment().to_string(),
             drop_if_exists: drop_if_exists.is_some(),
         },
@@ -67,11 +67,14 @@ fn drop_database(input: Span) -> IResult<Span, DatabaseQuery> {
     map(
         (
             tag_no_case("drop"),
-            multispace1,
-            tag_no_case("database"),
-            cut((multispace1, identifier)),
+            cut((
+                multispace1,
+                tag_no_case("database"),
+                multispace1,
+                identifier,
+            )),
         ),
-        |(_, _, _, (_, name))| DatabaseQuery::Drop {
+        |(_, (_, _, _, name))| DatabaseQuery::Drop {
             name: name.fragment().to_string(),
         },
     )
@@ -89,8 +92,11 @@ fn drop_database(input: Span) -> IResult<Span, DatabaseQuery> {
 /// Returns an [`IResult`] containing the remaining input and the parsed [`DatabaseQuery::List`].
 fn list_databases(input: Span) -> IResult<Span, DatabaseQuery> {
     map(
-        (tag_no_case("list"), multispace1, tag_no_case("databases")),
-        |(_, _, _)| DatabaseQuery::List,
+        (
+            tag_no_case("list"),
+            cut((multispace1, tag_no_case("databases"))),
+        ),
+        |(_, _)| DatabaseQuery::List,
     )
     .parse(input)
 }
@@ -111,48 +117,56 @@ fn list_databases(input: Span) -> IResult<Span, DatabaseQuery> {
 /// - The input doesn't match any known database query pattern
 /// - There is unexpected input remaining after a valid query
 pub fn parse_database_query(input: &str) -> ParserResult<DatabaseQuery> {
-    let trimmed_input = input.trim();
-    let span = create_span(trimmed_input);
-
-    match preceded(
-        multispace0,
-        alt((create_database, drop_database, list_databases)),
+    parse_subcommand(
+        input,
+        "database query",
+        |span| {
+            preceded(
+                multispace0,
+                alt((create_database, drop_database, list_databases)),
+            )
+            .parse(span)
+        },
+        |query| match query {
+            DatabaseQuery::Create { .. } => "create database",
+            DatabaseQuery::Drop { .. } => "drop database",
+            DatabaseQuery::List => "list databases",
+        },
+        determine_context_from_error,
     )
-    .parse(span)
-    {
-        Ok((remaining, result)) => {
-            let trimmed_remaining = remaining.fragment().trim();
-            if !trimmed_remaining.is_empty() {
-                let remaining_after_whitespace =
-                    match multispace0::<Span, nom::error::Error<Span>>(remaining) {
-                        Ok((after_ws, _)) => after_ws,
-                        Err(_) => remaining,
-                    };
+}
 
-                let line = remaining_after_whitespace.location_line();
-                let column = remaining_after_whitespace.get_utf8_column();
-                let source_line = trimmed_input
-                    .lines()
-                    .nth((line - 1) as usize)
-                    .unwrap_or("")
-                    .to_string();
+/// Determines the parsing context based on the input and error information.
+///
+/// ## Arguments
+///
+/// * `input` - The input string being parsed.
+/// * `error` - The nom error that occurred during parsing.
+///
+/// ## Returns
+///
+/// Returns a vector of context strings representing the parsing hierarchy.
+fn determine_context_from_error(
+    input: &str,
+    error: &nom::Err<nom::error::Error<Span>>,
+) -> Vec<String> {
+    let input_upper = input.trim().to_uppercase();
+    let mut context = vec!["database query".to_string()];
 
-                return Err(ParserError::SyntaxError {
-                    message: "Unexpected input after database query".to_string(),
-                    line,
-                    column,
-                    context_path: vec!["query".to_string(), "database".to_string()],
-                    source_line,
-                    pointer: format!("{}^", " ".repeat(column.saturating_sub(1))),
-                    suggestion: None,
-                });
-            }
-            Ok(result)
-        }
-        Err(e) => Err(convert_error(
-            trimmed_input,
-            vec!["query".to_string(), "database".to_string()],
-            e,
-        )),
+    let error_column = match error {
+        nom::Err::Error(e) | nom::Err::Failure(e) => e.input.get_utf8_column(),
+        nom::Err::Incomplete(_) => 1,
+    };
+
+    let is_failure = matches!(error, nom::Err::Failure(_));
+
+    if input_upper.starts_with("CREATE") && (error_column > 6 || is_failure) {
+        context.push("create database".to_string());
+    } else if input_upper.starts_with("DROP") && (error_column > 4 || is_failure) {
+        context.push("drop database".to_string());
+    } else if input_upper.starts_with("LIST") && (error_column > 4 || is_failure) {
+        context.push("list databases".to_string());
     }
+
+    context
 }
