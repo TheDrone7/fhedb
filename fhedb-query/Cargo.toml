@@ -8,3 +8,4 @@ nom = "8.0.0"
 thiserror = "2.0.16"
 fhedb-core = { path = "../fhedb-core" }
 bson = "3.0.0"
+nom_locate = "5.0.0"
