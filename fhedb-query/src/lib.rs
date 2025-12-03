@@ -12,7 +12,7 @@ pub mod parser;
 /// Re-exports commonly used types for easy access.
 pub mod prelude {
     pub use crate::ast::*;
-    pub use crate::error::{ParseError, ParserError};
+    pub use crate::error::ParserError;
     pub use crate::parser::{
         collection::parse_collection_query,
         database::parse_database_query,

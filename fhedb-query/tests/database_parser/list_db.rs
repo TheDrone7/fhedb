@@ -39,12 +39,19 @@ fn invalid_missing_databases() {
     let result = parse_database_query(input);
     assert!(result.is_err());
 
-    match result.unwrap_err() {
-        ParseError::SyntaxError { message } => {
-            assert_eq!(
-                message,
-                "Failed to parse database query: Parsing Error: Error { input: \"\", code: MultiSpace }"
-            );
+    let err = result.unwrap_err();
+    match err {
+        ParserError::SyntaxError {
+            message,
+            line,
+            column,
+            context_path,
+            ..
+        } => {
+            assert!(message.contains("Expected keyword") || message.contains("end of input"));
+            assert_eq!(line, 1);
+            assert_eq!(column, 5);
+            assert_eq!(context_path, vec!["query", "database"]);
         }
     }
 }
@@ -55,9 +62,19 @@ fn invalid_extra_input() {
     let result = parse_database_query(input);
     assert!(result.is_err());
 
-    match result.unwrap_err() {
-        ParseError::SyntaxError { message } => {
+    let err = result.unwrap_err();
+    match err {
+        ParserError::SyntaxError {
+            message,
+            line,
+            column,
+            context_path,
+            ..
+        } => {
             assert_eq!(message, "Unexpected input after database query");
+            assert_eq!(line, 1);
+            assert_eq!(column, 16);
+            assert_eq!(context_path, vec!["query", "database"]);
         }
     }
 }
@@ -68,12 +85,19 @@ fn invalid_wrong_order() {
     let result = parse_database_query(input);
     assert!(result.is_err());
 
-    match result.unwrap_err() {
-        ParseError::SyntaxError { message } => {
-            assert_eq!(
-                message,
-                "Failed to parse database query: Parsing Error: Error { input: \"DATABASES LIST\", code: Tag }"
-            );
+    let err = result.unwrap_err();
+    match err {
+        ParserError::SyntaxError {
+            message,
+            line,
+            column,
+            context_path,
+            ..
+        } => {
+            assert!(message.contains("Expected keyword") || message.contains("found 'DATABASES"));
+            assert_eq!(line, 1);
+            assert_eq!(column, 1);
+            assert_eq!(context_path, vec!["query", "database"]);
         }
     }
 }
