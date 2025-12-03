@@ -251,22 +251,27 @@ impl ParserError {
 
     /// Internal implementation for formatting errors using ariadne.
     fn format_impl(&self, source: &str, filename: &str, colored: bool) -> String {
-        let expected_str = if self.expected.is_empty() {
-            "something".to_string()
-        } else if self.expected.len() == 1 {
-            Self::format_expected(&self.expected[0])
-        } else {
-            let formatted: Vec<String> = self
-                .expected
-                .iter()
-                .map(|e| Self::format_expected(e))
-                .collect();
-            let last = formatted.last().unwrap();
-            let rest = &formatted[..formatted.len() - 1];
-            format!("{}, or {}", rest.join(", "), last)
-        };
+        let is_unknown_query = self.message == "Unknown Query";
 
-        let label_msg = format!("Expected {}", expected_str);
+        let label_msg = if is_unknown_query {
+            "No matching query found".to_string()
+        } else {
+            let expected_str = if self.expected.is_empty() {
+                "something".to_string()
+            } else if self.expected.len() == 1 {
+                Self::format_expected(&self.expected[0])
+            } else {
+                let formatted: Vec<String> = self
+                    .expected
+                    .iter()
+                    .map(|e| Self::format_expected(e))
+                    .collect();
+                let last = formatted.last().unwrap();
+                let rest = &formatted[..formatted.len() - 1];
+                format!("{}, or {}", rest.join(", "), last)
+            };
+            format!("Expected {}", expected_str)
+        };
 
         let mut report_builder =
             Report::build(ReportKind::Error, (filename, self.span.into_range()))
