@@ -1,7 +1,7 @@
 //! Parsers for different types of FHEDB queries.
 
-// /// The database module - contains parsers for database operation queries.
-// pub mod database;
+/// The database module - contains parsers for database operation queries.
+pub mod database;
 
 // /// The document module - contains parsers for document operation queries.
 // pub mod document;
