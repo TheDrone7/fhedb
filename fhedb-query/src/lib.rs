@@ -15,5 +15,6 @@ pub mod parser;
 pub mod prelude {
     pub use crate::ast::*;
     pub use crate::error::ParserError;
+    pub use crate::parser::contextual::parse_contextual_query;
     pub use crate::parser::database::parse_database_query;
 }
