@@ -7,65 +7,10 @@ use fhedb_core::db::schema::{FieldDefinition, FieldType, Schema, validate_bson_t
 
 use crate::ast::{CollectionQuery, FieldModification};
 use crate::lexer::{Span, Token};
-use crate::utilities::bson_value_parser_internal;
 
-fn field_modifier_parser<'tokens, 'src: 'tokens, I>()
--> impl Parser<'tokens, I, (bool, Option<bson::Bson>), extra::Err<Rich<'tokens, Token, Span>>> + Clone
-where
-    I: ValueInput<'tokens, Token = Token, Span = Span>,
-{
-    let nullable = just(Token::Nullable).to(true).labelled("nullable");
-
-    let default = just(Token::Default)
-        .ignore_then(just(Token::Equals))
-        .ignore_then(bson_value_parser_internal().labelled("default value"))
-        .labelled("default");
-
-    just(Token::OpenParen)
-        .ignore_then(
-            nullable
-                .then(just(Token::Comma).ignore_then(default.clone()).or_not())
-                .map(|(_, default)| (true, default))
-                .or(default.map(|d| (false, Some(d)))),
-        )
-        .then_ignore(just(Token::CloseParen))
-        .labelled("field constraint")
-        .as_context()
-}
-
-fn field_type_parser<'tokens, 'src: 'tokens, I>()
--> impl Parser<'tokens, I, FieldType, extra::Err<Rich<'tokens, Token, Span>>> + Clone
-where
-    I: ValueInput<'tokens, Token = Token, Span = Span>,
-{
-    recursive(|field_type| {
-        let simple_type = select! {
-            Token::TypeInt => FieldType::Int,
-            Token::TypeFloat => FieldType::Float,
-            Token::TypeBoolean => FieldType::Boolean,
-            Token::TypeString => FieldType::String,
-        }
-        .labelled("field type");
-
-        let ref_type = just(Token::TypeRef)
-            .ignore_then(just(Token::OpenAngle))
-            .ignore_then(select! { Token::Ident(name) => name }.labelled("collection name"))
-            .then_ignore(just(Token::CloseAngle))
-            .map(FieldType::Reference)
-            .labelled("reference type");
-
-        let array_type = just(Token::TypeArray)
-            .ignore_then(just(Token::OpenAngle))
-            .ignore_then(field_type.clone())
-            .then_ignore(just(Token::CloseAngle))
-            .map(|inner| FieldType::Array(Box::new(inner)))
-            .labelled("array type");
-
-        choice((array_type, ref_type, simple_type))
-    })
-    .labelled("field type")
-    .as_context()
-}
+use super::common::{
+    drop_if_exists_parser, field_modifier_parser, field_type_parser, identifier_parser,
+};
 
 fn field_definition_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, (String, FieldDefinition), extra::Err<Rich<'tokens, Token, Span>>> + Clone
@@ -85,8 +30,7 @@ where
 
     let type_and_modifier = choice((id_type, regular_type)).labelled("field type");
 
-    select! { Token::Ident(name) => name }
-        .labelled("field name")
+    identifier_parser("field name")
         .then_ignore(just(Token::Colon))
         .then(type_and_modifier)
         .labelled("field type")
@@ -141,13 +85,8 @@ where
 {
     just(Token::Create)
         .ignore_then(just(Token::Collection))
-        .ignore_then(select! { Token::Ident(name) => name }.labelled("collection name"))
-        .then(
-            just(Token::Drop)
-                .ignore_then(just(Token::If))
-                .ignore_then(just(Token::Exists))
-                .or_not(),
-        )
+        .ignore_then(identifier_parser("collection name"))
+        .then(drop_if_exists_parser())
         .then(schema_parser())
         .map(|((name, drop_if_exists), schema)| CollectionQuery::Create {
             name,
@@ -165,7 +104,7 @@ where
 {
     just(Token::Drop)
         .ignore_then(just(Token::Collection))
-        .ignore_then(select! { Token::Ident(name) => name }.labelled("collection name"))
+        .ignore_then(identifier_parser("collection name"))
         .map(|name| CollectionQuery::Drop { name })
         .labelled("drop collection")
         .as_context()
@@ -191,7 +130,7 @@ where
     just(Token::Get)
         .ignore_then(just(Token::Schema))
         .ignore_then(just(Token::From))
-        .ignore_then(select! { Token::Ident(name) => name }.labelled("collection name"))
+        .ignore_then(identifier_parser("collection name"))
         .map(|name| CollectionQuery::GetSchema { name })
         .labelled("get collection schema")
         .as_context()
@@ -234,8 +173,7 @@ where
         Ok(FieldModification::Set(field_def))
     });
 
-    select! { Token::Ident(name) => name }
-        .labelled("field name")
+    identifier_parser("field name")
         .then_ignore(just(Token::Colon))
         .then(choice((drop_modification, set_modification)))
         .labelled("field modification")
@@ -280,7 +218,7 @@ where
 {
     choice((just(Token::Modify), just(Token::Alter)))
         .ignore_then(just(Token::Collection))
-        .ignore_then(select! { Token::Ident(name) => name }.labelled("collection name"))
+        .ignore_then(identifier_parser("collection name"))
         .then(modification_schema_parser())
         .map(|(name, modifications)| CollectionQuery::Modify {
             name,

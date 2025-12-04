@@ -8,7 +8,7 @@ use crate::ast::DatabaseQuery;
 use crate::error::ParserError;
 use crate::lexer::{Span, Token};
 
-use super::common::lex_input;
+use super::common::{drop_if_exists_parser, identifier_parser, lex_input};
 
 /// Creates a parser for database-level queries.
 ///
@@ -20,13 +20,8 @@ where
 {
     let create_db = just(Token::Create)
         .ignore_then(just(Token::Database))
-        .ignore_then(select! { Token::Ident(name) => name }.labelled("database name"))
-        .then(
-            just(Token::Drop)
-                .ignore_then(just(Token::If))
-                .ignore_then(just(Token::Exists))
-                .or_not(),
-        )
+        .ignore_then(identifier_parser("database name"))
+        .then(drop_if_exists_parser())
         .map(|(name, drop_if_exists)| DatabaseQuery::Create {
             name,
             drop_if_exists: drop_if_exists.is_some(),
@@ -36,7 +31,7 @@ where
 
     let drop_db = just(Token::Drop)
         .ignore_then(just(Token::Database))
-        .ignore_then(select! { Token::Ident(name) => name }.labelled("database name"))
+        .ignore_then(identifier_parser("database name"))
         .map(|name| DatabaseQuery::Drop { name })
         .labelled("drop database")
         .as_context();
