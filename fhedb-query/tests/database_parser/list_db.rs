@@ -1,44 +1,48 @@
-use fhedb_query::prelude::parse_database_query;
+use fhedb_query::prelude::{DatabaseQuery, parse_database_query};
 
 #[test]
 fn basic() {
-    let result = parse_database_query("LIST DATABASES");
+    let input = "LIST DATABASES";
+    let result = parse_database_query(input);
     assert!(result.is_ok());
 
     let Ok(query) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(query, fhedb_query::ast::DatabaseQuery::List);
+    assert!(matches!(query, DatabaseQuery::List));
 }
 
 #[test]
 fn case_insensitive() {
-    let result = parse_database_query("LiSt DaTaBaSeS");
+    let input = "LiSt DaTaBaSeS";
+    let result = parse_database_query(input);
     assert!(result.is_ok());
 
     let Ok(query) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(query, fhedb_query::ast::DatabaseQuery::List);
+    assert!(matches!(query, DatabaseQuery::List));
 }
 
 #[test]
 fn with_extra_whitespace() {
-    let result = parse_database_query("   LIST    DATABASES   ");
+    let input = "   LIST    DATABASES   ";
+    let result = parse_database_query(input);
     assert!(result.is_ok());
 
     let Ok(query) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(query, fhedb_query::ast::DatabaseQuery::List);
+    assert!(matches!(query, DatabaseQuery::List));
 }
 
 #[test]
 fn invalid_missing_databases() {
-    let result = parse_database_query("LIST");
+    let input = "LIST";
+    let result = parse_database_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -61,7 +65,8 @@ fn invalid_missing_databases() {
 
 #[test]
 fn invalid_extra_input() {
-    let result = parse_database_query("LIST DATABASES EXTRA_STUFF");
+    let input = "LIST DATABASES EXTRA_STUFF";
+    let result = parse_database_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -77,7 +82,8 @@ fn invalid_extra_input() {
 
 #[test]
 fn invalid_wrong_order() {
-    let result = parse_database_query("DATABASES LIST");
+    let input = "DATABASES LIST";
+    let result = parse_database_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {

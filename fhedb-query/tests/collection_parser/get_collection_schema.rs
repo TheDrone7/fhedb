@@ -1,65 +1,66 @@
-use fhedb_query::prelude::parse_contextual_query;
+use fhedb_query::prelude::{CollectionQuery, ContextualQuery, parse_contextual_query};
 
 #[test]
 fn basic() {
-    let result = parse_contextual_query("GET SCHEMA FROM users");
+    let input = "GET SCHEMA FROM users";
+    let result = parse_contextual_query(input);
     assert!(result.is_ok());
 
-    let Ok(query) = result else {
+    let Ok(ContextualQuery::Collection(query)) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::ContextualQuery::Collection(
-            fhedb_query::ast::CollectionQuery::GetSchema {
-                name: "users".to_string(),
-            }
-        )
-    );
+    assert!(matches!(query, CollectionQuery::GetSchema { .. }));
+
+    let CollectionQuery::GetSchema { name } = query else {
+        panic!("Expected GetSchema variant");
+    };
+
+    assert_eq!(name, "users");
 }
 
 #[test]
 fn case_insensitive() {
-    let result = parse_contextual_query("GeT sChEmA fRoM MyCollection");
+    let input = "GeT sChEmA fRoM MyCollection";
+    let result = parse_contextual_query(input);
     assert!(result.is_ok());
 
-    let Ok(query) = result else {
+    let Ok(ContextualQuery::Collection(query)) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::ContextualQuery::Collection(
-            fhedb_query::ast::CollectionQuery::GetSchema {
-                name: "MyCollection".to_string(),
-            }
-        )
-    );
+    assert!(matches!(query, CollectionQuery::GetSchema { .. }));
+
+    let CollectionQuery::GetSchema { name } = query else {
+        panic!("Expected GetSchema variant");
+    };
+
+    assert_eq!(name, "MyCollection");
 }
 
 #[test]
 fn with_extra_whitespace() {
-    let result = parse_contextual_query("   GET    SCHEMA    FROM    test_collection   ");
+    let input = "   GET    SCHEMA    FROM    test_collection   ";
+    let result = parse_contextual_query(input);
     assert!(result.is_ok());
 
-    let Ok(query) = result else {
+    let Ok(ContextualQuery::Collection(query)) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::ContextualQuery::Collection(
-            fhedb_query::ast::CollectionQuery::GetSchema {
-                name: "test_collection".to_string(),
-            }
-        )
-    );
+    assert!(matches!(query, CollectionQuery::GetSchema { .. }));
+
+    let CollectionQuery::GetSchema { name } = query else {
+        panic!("Expected GetSchema variant");
+    };
+
+    assert_eq!(name, "test_collection");
 }
 
 #[test]
 fn invalid_empty() {
-    let result = parse_contextual_query("");
+    let input = "";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -76,7 +77,8 @@ fn invalid_empty() {
 
 #[test]
 fn invalid_missing_schema() {
-    let result = parse_contextual_query("GET");
+    let input = "GET";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -99,7 +101,8 @@ fn invalid_missing_schema() {
 
 #[test]
 fn invalid_missing_from() {
-    let result = parse_contextual_query("GET SCHEMA");
+    let input = "GET SCHEMA";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -121,7 +124,8 @@ fn invalid_missing_from() {
 
 #[test]
 fn invalid_missing_collection_name() {
-    let result = parse_contextual_query("GET SCHEMA FROM");
+    let input = "GET SCHEMA FROM";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -143,7 +147,8 @@ fn invalid_missing_collection_name() {
 
 #[test]
 fn invalid_extra_input() {
-    let result = parse_contextual_query("GET SCHEMA FROM users EXTRA_STUFF");
+    let input = "GET SCHEMA FROM users EXTRA_STUFF";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -160,7 +165,8 @@ fn invalid_extra_input() {
 
 #[test]
 fn invalid_wrong_keyword() {
-    let result = parse_contextual_query("GET SCHEMAS FROM users");
+    let input = "GET SCHEMAS FROM users";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -182,7 +188,8 @@ fn invalid_wrong_keyword() {
 
 #[test]
 fn invalid_wrong_order() {
-    let result = parse_contextual_query("SCHEMA GET FROM users");
+    let input = "SCHEMA GET FROM users";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {

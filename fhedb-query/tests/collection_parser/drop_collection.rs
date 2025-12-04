@@ -1,59 +1,66 @@
-use fhedb_query::prelude::parse_contextual_query;
+use fhedb_query::prelude::{CollectionQuery, ContextualQuery, parse_contextual_query};
 
 #[test]
 fn basic() {
-    let result = parse_contextual_query("DROP COLLECTION test_collection");
+    let input = "DROP COLLECTION test_collection";
+    let result = parse_contextual_query(input);
     assert!(result.is_ok());
 
-    let Ok(query) = result else {
+    let Ok(ContextualQuery::Collection(query)) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::ContextualQuery::Collection(fhedb_query::ast::CollectionQuery::Drop {
-            name: "test_collection".to_string(),
-        })
-    );
+    assert!(matches!(query, CollectionQuery::Drop { .. }));
+
+    let CollectionQuery::Drop { name } = query else {
+        panic!("Expected Drop variant");
+    };
+
+    assert_eq!(name, "test_collection");
 }
 
 #[test]
 fn case_insensitive() {
-    let result = parse_contextual_query("DrOp CoLlEcTiOn MyCollection");
+    let input = "DrOp CoLlEcTiOn MyCollection";
+    let result = parse_contextual_query(input);
     assert!(result.is_ok());
 
-    let Ok(query) = result else {
+    let Ok(ContextualQuery::Collection(query)) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::ContextualQuery::Collection(fhedb_query::ast::CollectionQuery::Drop {
-            name: "MyCollection".to_string(),
-        })
-    );
+    assert!(matches!(query, CollectionQuery::Drop { .. }));
+
+    let CollectionQuery::Drop { name } = query else {
+        panic!("Expected Drop variant");
+    };
+
+    assert_eq!(name, "MyCollection");
 }
 
 #[test]
 fn with_extra_whitespace() {
-    let result = parse_contextual_query("   DROP    COLLECTION    test_collection   ");
+    let input = "   DROP    COLLECTION    test_collection   ";
+    let result = parse_contextual_query(input);
     assert!(result.is_ok());
 
-    let Ok(query) = result else {
+    let Ok(ContextualQuery::Collection(query)) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::ContextualQuery::Collection(fhedb_query::ast::CollectionQuery::Drop {
-            name: "test_collection".to_string(),
-        })
-    );
+    assert!(matches!(query, CollectionQuery::Drop { .. }));
+
+    let CollectionQuery::Drop { name } = query else {
+        panic!("Expected Drop variant");
+    };
+
+    assert_eq!(name, "test_collection");
 }
 
 #[test]
 fn invalid_empty() {
-    let result = parse_contextual_query("");
+    let input = "";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -70,7 +77,8 @@ fn invalid_empty() {
 
 #[test]
 fn invalid_missing_name() {
-    let result = parse_contextual_query("DROP COLLECTION");
+    let input = "DROP COLLECTION";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -93,7 +101,8 @@ fn invalid_missing_name() {
 
 #[test]
 fn invalid_extra_input() {
-    let result = parse_contextual_query("DROP COLLECTION test_collection EXTRA_STUFF");
+    let input = "DROP COLLECTION test_collection EXTRA_STUFF";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -110,7 +119,8 @@ fn invalid_extra_input() {
 
 #[test]
 fn invalid_no_keyword() {
-    let result = parse_contextual_query("DROP test_collection");
+    let input = "DROP test_collection";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -132,7 +142,8 @@ fn invalid_no_keyword() {
 
 #[test]
 fn invalid_wrong_order() {
-    let result = parse_contextual_query("COLLECTION DROP test_collection");
+    let input = "COLLECTION DROP test_collection";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {

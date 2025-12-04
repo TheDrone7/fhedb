@@ -1,59 +1,66 @@
-use fhedb_query::prelude::parse_database_query;
+use fhedb_query::prelude::{DatabaseQuery, parse_database_query};
 
 #[test]
 fn basic() {
-    let result = parse_database_query("DROP DATABASE test_db");
+    let input = "DROP DATABASE test_db";
+    let result = parse_database_query(input);
     assert!(result.is_ok());
 
     let Ok(query) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::DatabaseQuery::Drop {
-            name: "test_db".to_string(),
-        }
-    );
+    assert!(matches!(query, DatabaseQuery::Drop { .. }));
+
+    let DatabaseQuery::Drop { name } = query else {
+        panic!("Expected Drop variant");
+    };
+
+    assert_eq!(name, "test_db");
 }
 
 #[test]
 fn case_insensitive() {
-    let result = parse_database_query("DrOp DaTaBaSe MyDatabase");
+    let input = "DrOp DaTaBaSe MyDatabase";
+    let result = parse_database_query(input);
     assert!(result.is_ok());
 
     let Ok(query) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::DatabaseQuery::Drop {
-            name: "MyDatabase".to_string(),
-        }
-    );
+    assert!(matches!(query, DatabaseQuery::Drop { .. }));
+
+    let DatabaseQuery::Drop { name } = query else {
+        panic!("Expected Drop variant");
+    };
+
+    assert_eq!(name, "MyDatabase");
 }
 
 #[test]
 fn with_extra_whitespace() {
-    let result = parse_database_query("   DROP    DATABASE    test_db   ");
+    let input = "   DROP    DATABASE    test_db   ";
+    let result = parse_database_query(input);
     assert!(result.is_ok());
 
     let Ok(query) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::DatabaseQuery::Drop {
-            name: "test_db".to_string(),
-        }
-    );
+    assert!(matches!(query, DatabaseQuery::Drop { .. }));
+
+    let DatabaseQuery::Drop { name } = query else {
+        panic!("Expected Drop variant");
+    };
+
+    assert_eq!(name, "test_db");
 }
 
 #[test]
 fn invalid_empty() {
-    let result = parse_database_query("");
+    let input = "";
+    let result = parse_database_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -70,7 +77,8 @@ fn invalid_empty() {
 
 #[test]
 fn invalid_missing_name() {
-    let result = parse_database_query("DROP DATABASE");
+    let input = "DROP DATABASE";
+    let result = parse_database_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -93,7 +101,8 @@ fn invalid_missing_name() {
 
 #[test]
 fn invalid_extra_input() {
-    let result = parse_database_query("DROP DATABASE test_db EXTRA_STUFF");
+    let input = "DROP DATABASE test_db EXTRA_STUFF";
+    let result = parse_database_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -109,7 +118,8 @@ fn invalid_extra_input() {
 
 #[test]
 fn invalid_no_keyword() {
-    let result = parse_database_query("DROP test_db");
+    let input = "DROP test_db";
+    let result = parse_database_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -132,7 +142,8 @@ fn invalid_no_keyword() {
 
 #[test]
 fn invalid_wrong_order() {
-    let result = parse_database_query("DATABASE DROP test_db");
+    let input = "DATABASE DROP test_db";
+    let result = parse_database_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {

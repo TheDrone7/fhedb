@@ -1,53 +1,48 @@
-use fhedb_query::prelude::parse_contextual_query;
+use fhedb_query::prelude::{CollectionQuery, ContextualQuery, parse_contextual_query};
 
 #[test]
 fn basic() {
-    let result = parse_contextual_query("LIST COLLECTIONS");
+    let input = "LIST COLLECTIONS";
+    let result = parse_contextual_query(input);
     assert!(result.is_ok());
 
-    let Ok(query) = result else {
+    let Ok(ContextualQuery::Collection(query)) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::ContextualQuery::Collection(fhedb_query::ast::CollectionQuery::List)
-    );
+    assert!(matches!(query, CollectionQuery::List));
 }
 
 #[test]
 fn case_insensitive() {
-    let result = parse_contextual_query("LiSt CoLlEcTiOnS");
+    let input = "LiSt CoLlEcTiOnS";
+    let result = parse_contextual_query(input);
     assert!(result.is_ok());
 
-    let Ok(query) = result else {
+    let Ok(ContextualQuery::Collection(query)) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::ContextualQuery::Collection(fhedb_query::ast::CollectionQuery::List)
-    );
+    assert!(matches!(query, CollectionQuery::List));
 }
 
 #[test]
 fn with_extra_whitespace() {
-    let result = parse_contextual_query("   LIST    COLLECTIONS   ");
+    let input = "   LIST    COLLECTIONS   ";
+    let result = parse_contextual_query(input);
     assert!(result.is_ok());
 
-    let Ok(query) = result else {
+    let Ok(ContextualQuery::Collection(query)) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::ContextualQuery::Collection(fhedb_query::ast::CollectionQuery::List)
-    );
+    assert!(matches!(query, CollectionQuery::List));
 }
 
 #[test]
 fn invalid_empty() {
-    let result = parse_contextual_query("");
+    let input = "";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -64,7 +59,8 @@ fn invalid_empty() {
 
 #[test]
 fn invalid_missing_collections() {
-    let result = parse_contextual_query("LIST");
+    let input = "LIST";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -87,7 +83,8 @@ fn invalid_missing_collections() {
 
 #[test]
 fn invalid_extra_input() {
-    let result = parse_contextual_query("LIST COLLECTIONS EXTRA_STUFF");
+    let input = "LIST COLLECTIONS EXTRA_STUFF";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -104,7 +101,8 @@ fn invalid_extra_input() {
 
 #[test]
 fn invalid_wrong_keyword() {
-    let result = parse_contextual_query("LIST COLLECTION");
+    let input = "LIST COLLECTION";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -126,7 +124,8 @@ fn invalid_wrong_keyword() {
 
 #[test]
 fn invalid_wrong_order() {
-    let result = parse_contextual_query("COLLECTIONS LIST");
+    let input = "COLLECTIONS LIST";
+    let result = parse_contextual_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {

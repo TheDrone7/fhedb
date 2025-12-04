@@ -1,95 +1,126 @@
-use fhedb_query::prelude::parse_database_query;
+use fhedb_query::prelude::{DatabaseQuery, parse_database_query};
 
 #[test]
 fn basic() {
-    let result = parse_database_query("CREATE DATABASE test_db");
+    let input = "CREATE DATABASE test_db";
+    let result = parse_database_query(input);
     assert!(result.is_ok());
 
     let Ok(query) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::DatabaseQuery::Create {
-            name: "test_db".to_string(),
-            drop_if_exists: false,
-        }
-    );
+    assert!(matches!(query, DatabaseQuery::Create { .. }));
+
+    let DatabaseQuery::Create {
+        name,
+        drop_if_exists,
+    } = query
+    else {
+        panic!("Expected Create variant");
+    };
+
+    assert_eq!(name, "test_db");
+    assert!(!drop_if_exists);
 }
 
 #[test]
 fn case_insensitive() {
-    let result = parse_database_query("CrEaTe DaTaBaSe MyDatabase");
+    let input = "CrEaTe DaTaBaSe MyDatabase";
+    let result = parse_database_query(input);
     assert!(result.is_ok());
 
     let Ok(query) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::DatabaseQuery::Create {
-            name: "MyDatabase".to_string(),
-            drop_if_exists: false,
-        }
-    );
+    assert!(matches!(query, DatabaseQuery::Create { .. }));
+
+    let DatabaseQuery::Create {
+        name,
+        drop_if_exists,
+    } = query
+    else {
+        panic!("Expected Create variant");
+    };
+
+    assert_eq!(name, "MyDatabase");
+    assert!(!drop_if_exists);
 }
 
 #[test]
 fn with_drop_if_exists() {
-    let result = parse_database_query("CREATE DATABASE test_db DROP IF EXISTS");
+    let input = "CREATE DATABASE test_db DROP IF EXISTS";
+    let result = parse_database_query(input);
     assert!(result.is_ok());
 
     let Ok(query) = result else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::DatabaseQuery::Create {
-            name: "test_db".to_string(),
-            drop_if_exists: true,
-        }
-    );
+    assert!(matches!(query, DatabaseQuery::Create { .. }));
+
+    let DatabaseQuery::Create {
+        name,
+        drop_if_exists,
+    } = query
+    else {
+        panic!("Expected Create variant");
+    };
+
+    assert_eq!(name, "test_db");
+    assert!(drop_if_exists);
 }
 
 #[test]
 fn with_extra_whitespace() {
-    let result = parse_database_query("   CREATE    DATABASE    test_db   ");
-    assert!(result.is_ok());
+    let input1 = "   CREATE    DATABASE    test_db   ";
+    let result1 = parse_database_query(input1);
+    assert!(result1.is_ok());
 
-    let Ok(query) = result else {
+    let Ok(query1) = result1 else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::DatabaseQuery::Create {
-            name: "test_db".to_string(),
-            drop_if_exists: false,
-        }
-    );
+    assert!(matches!(query1, DatabaseQuery::Create { .. }));
 
-    let result = parse_database_query("   CREATE    DATABASE    test_db    DROP   IF   EXISTS   ");
-    assert!(result.is_ok());
+    let DatabaseQuery::Create {
+        name: name1,
+        drop_if_exists: drop_if_exists1,
+    } = query1
+    else {
+        panic!("Expected Create variant");
+    };
 
-    let Ok(query) = result else {
+    assert_eq!(name1, "test_db");
+    assert!(!drop_if_exists1);
+
+    let input2 = "   CREATE    DATABASE    test_db    DROP   IF   EXISTS   ";
+    let result2 = parse_database_query(input2);
+    assert!(result2.is_ok());
+
+    let Ok(query2) = result2 else {
         panic!("Expected Ok result");
     };
 
-    assert_eq!(
-        query,
-        fhedb_query::ast::DatabaseQuery::Create {
-            name: "test_db".to_string(),
-            drop_if_exists: true,
-        }
-    );
+    assert!(matches!(query2, DatabaseQuery::Create { .. }));
+
+    let DatabaseQuery::Create {
+        name: name2,
+        drop_if_exists: drop_if_exists2,
+    } = query2
+    else {
+        panic!("Expected Create variant");
+    };
+
+    assert_eq!(name2, "test_db");
+    assert!(drop_if_exists2);
 }
 
 #[test]
 fn invalid_empty() {
-    let result = parse_database_query("");
+    let input = "";
+    let result = parse_database_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -106,7 +137,8 @@ fn invalid_empty() {
 
 #[test]
 fn invalid_missing_name() {
-    let result = parse_database_query("CREATE DATABASE");
+    let input = "CREATE DATABASE";
+    let result = parse_database_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -129,7 +161,8 @@ fn invalid_missing_name() {
 
 #[test]
 fn invalid_extra_input() {
-    let result = parse_database_query("CREATE DATABASE test_db EXTRA_STUFF");
+    let input = "CREATE DATABASE test_db EXTRA_STUFF";
+    let result = parse_database_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -152,7 +185,8 @@ fn invalid_extra_input() {
 
 #[test]
 fn invalid_no_keyword() {
-    let result = parse_database_query("CREATE test_db");
+    let input = "CREATE test_db";
+    let result = parse_database_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
@@ -175,7 +209,8 @@ fn invalid_no_keyword() {
 
 #[test]
 fn invalid_wrong_order() {
-    let result = parse_database_query("DATABASE CREATE test_db");
+    let input = "DATABASE CREATE test_db";
+    let result = parse_database_query(input);
     assert!(result.is_err());
 
     let Err(errors) = result else {
