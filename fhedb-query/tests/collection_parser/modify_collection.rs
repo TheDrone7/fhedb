@@ -15,8 +15,7 @@ fn with_extra_whitespace() {
 }
 
 #[test]
-fn invalid_empty() {
-}
+fn invalid_empty() {}
 
 #[test]
 fn invalid_missing_name() {
@@ -37,4 +36,3 @@ fn invalid_no_keyword() {
 fn invalid_wrong_order() {
     "COLLECTION MODIFY test_collection {field: int}";
 }
-

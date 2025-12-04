@@ -30,6 +30,12 @@ pub enum Token {
     If,
     /// The EXISTS keyword.
     Exists,
+    /// The SCHEMA keyword.
+    Schema,
+    /// The FROM keyword.
+    From,
+    /// The GET keyword.
+    Get,
     /// An identifier (database name, collection name, etc.).
     Ident(String),
     /// An open brace.
@@ -74,6 +80,9 @@ impl std::fmt::Display for Token {
             Token::Collections => write!(f, "COLLECTIONS"),
             Token::If => write!(f, "IF"),
             Token::Exists => write!(f, "EXISTS"),
+            Token::Schema => write!(f, "SCHEMA"),
+            Token::From => write!(f, "FROM"),
+            Token::Get => write!(f, "GET"),
             Token::Ident(s) => write!(f, "{}", s),
             Token::OpenBrace => write!(f, "{{"),
             Token::CloseBrace => write!(f, "}}"),
@@ -134,20 +143,21 @@ pub fn lexer<'src>()
         keyword_ci("collection").to(Token::Collection),
         keyword_ci("if").to(Token::If),
         keyword_ci("exists").to(Token::Exists),
+        keyword_ci("schema").to(Token::Schema),
+        keyword_ci("from").to(Token::From),
+        keyword_ci("get").to(Token::Get),
     ));
 
     let ident = text::ident()
         .map(|s: &str| Token::Ident(s.to_string()))
         .labelled("identifier");
 
-    let escape_seq = just('\\')
-        .then(any())
-        .map(|(slash, c): (char, char)| {
-            let mut s = String::with_capacity(2);
-            s.push(slash);
-            s.push(c);
-            s
-        });
+    let escape_seq = just('\\').then(any()).map(|(slash, c): (char, char)| {
+        let mut s = String::with_capacity(2);
+        s.push(slash);
+        s.push(c);
+        s
+    });
     let string_char = none_of("\"\\").map(|c: char| c.to_string()).or(escape_seq);
 
     let string_lit = just('"')
@@ -156,15 +166,15 @@ pub fn lexer<'src>()
         .map(|parts| Token::StringLit(unescape(&parts.join(""))))
         .labelled("string");
 
-    let single_escape_seq = just('\\')
-        .then(any())
-        .map(|(slash, c): (char, char)| {
-            let mut s = String::with_capacity(2);
-            s.push(slash);
-            s.push(c);
-            s
-        });
-    let single_string_char = none_of("'\\").map(|c: char| c.to_string()).or(single_escape_seq);
+    let single_escape_seq = just('\\').then(any()).map(|(slash, c): (char, char)| {
+        let mut s = String::with_capacity(2);
+        s.push(slash);
+        s.push(c);
+        s
+    });
+    let single_string_char = none_of("'\\")
+        .map(|c: char| c.to_string())
+        .or(single_escape_seq);
 
     let single_string_lit = just('\'')
         .ignore_then(single_string_char.repeated().collect::<Vec<_>>())
@@ -202,7 +212,15 @@ pub fn lexer<'src>()
         just(']').to(Token::CloseBracket),
     ));
 
-    let token = choice((kw, float_lit, int_lit, string_lit, single_string_lit, symbol, ident));
+    let token = choice((
+        kw,
+        float_lit,
+        int_lit,
+        string_lit,
+        single_string_lit,
+        symbol,
+        ident,
+    ));
 
     token
         .map_with(|tok, e| (tok, e.span()))

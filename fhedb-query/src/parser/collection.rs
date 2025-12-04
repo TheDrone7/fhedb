@@ -3,7 +3,7 @@
 //! This module provides parsing functionality for collection-level FHEDB queries.
 
 use chumsky::{extra, input::ValueInput, prelude::*};
-use fhedb_core::db::schema::{validate_bson_type, FieldDefinition, FieldType, Schema};
+use fhedb_core::db::schema::{FieldDefinition, FieldType, Schema, validate_bson_type};
 
 use crate::ast::CollectionQuery;
 use crate::lexer::{Span, Token};
@@ -154,12 +154,56 @@ where
         .as_context()
 }
 
+fn drop_collection_parser<'tokens, 'src: 'tokens, I>()
+-> impl Parser<'tokens, I, CollectionQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
+where
+    I: ValueInput<'tokens, Token = Token, Span = Span>,
+{
+    just(Token::Drop)
+        .ignore_then(just(Token::Collection))
+        .ignore_then(select! { Token::Ident(name) => name }.labelled("collection name"))
+        .map(|name| CollectionQuery::Drop { name })
+        .labelled("drop collection")
+        .as_context()
+}
+
+fn list_collections_parser<'tokens, 'src: 'tokens, I>()
+-> impl Parser<'tokens, I, CollectionQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
+where
+    I: ValueInput<'tokens, Token = Token, Span = Span>,
+{
+    just(Token::List)
+        .ignore_then(just(Token::Collections))
+        .to(CollectionQuery::List)
+        .labelled("list collections")
+        .as_context()
+}
+
+fn get_schema_parser<'tokens, 'src: 'tokens, I>()
+-> impl Parser<'tokens, I, CollectionQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
+where
+    I: ValueInput<'tokens, Token = Token, Span = Span>,
+{
+    just(Token::Get)
+        .ignore_then(just(Token::Schema))
+        .ignore_then(just(Token::From))
+        .ignore_then(select! { Token::Ident(name) => name }.labelled("collection name"))
+        .map(|name| CollectionQuery::GetSchema { name })
+        .labelled("get collection schema")
+        .as_context()
+}
+
 pub(crate) fn collection_query_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, CollectionQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
     I: ValueInput<'tokens, Token = Token, Span = Span>,
 {
-    choice((create_collection_parser(),))
-        .labelled("collection query")
-        .as_context()
+    choice((
+        create_collection_parser(),
+        drop_collection_parser(),
+        list_collections_parser(),
+        get_schema_parser(),
+    ))
+    .labelled("collection query")
+    .as_context()
 }
