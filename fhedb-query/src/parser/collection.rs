@@ -5,7 +5,7 @@
 use chumsky::{extra, input::ValueInput, prelude::*};
 use fhedb_core::db::schema::{FieldDefinition, FieldType, Schema, validate_bson_type};
 
-use crate::ast::CollectionQuery;
+use crate::ast::{CollectionQuery, FieldModification};
 use crate::lexer::{Span, Token};
 use crate::utilities::bson_value_parser_internal;
 
@@ -193,6 +193,81 @@ where
         .as_context()
 }
 
+fn field_modification_parser<'tokens, 'src: 'tokens, I>()
+-> impl Parser<'tokens, I, (String, FieldModification), extra::Err<Rich<'tokens, Token, Span>>> + Clone
+where
+    I: ValueInput<'tokens, Token = Token, Span = Span>,
+{
+    let drop_modification = just(Token::Drop)
+        .to(FieldModification::Drop)
+        .labelled("drop");
+
+    let id_type = select! {
+        Token::Ident(s) if s.eq_ignore_ascii_case("id_string") => FieldType::IdString,
+        Token::Ident(s) if s.eq_ignore_ascii_case("id_int") => FieldType::IdInt,
+    }
+    .labelled("id type")
+    .map(|ft| (ft, None));
+
+    let regular_type = field_type_parser()
+        .then(field_modifier_parser().or_not())
+        .map(|(ft, modifier)| (ft, modifier));
+
+    let type_and_modifier = choice((id_type, regular_type)).labelled("field type");
+
+    let set_modification = type_and_modifier.try_map(|(field_type, modifier), span| {
+        let (nullable, default) = modifier.unwrap_or((false, None));
+        let base_type = if nullable {
+            FieldType::Nullable(Box::new(field_type))
+        } else {
+            field_type
+        };
+        if let Some(ref default_value) = default {
+            validate_bson_type(default_value, &base_type)
+                .map_err(|e| Rich::custom(span, format!("invalid default value: {}", e)))?;
+        }
+        let field_def = FieldDefinition::with_optional_default(base_type, default);
+        Ok(FieldModification::Set(field_def))
+    });
+
+    select! { Token::Ident(name) => name }
+        .labelled("field name")
+        .then_ignore(just(Token::Colon))
+        .then(choice((drop_modification, set_modification)))
+        .labelled("field modification")
+        .as_context()
+}
+
+fn modification_schema_parser<'tokens, 'src: 'tokens, I>()
+-> impl Parser<'tokens, I, std::collections::HashMap<String, FieldModification>, extra::Err<Rich<'tokens, Token, Span>>>
+       + Clone
+where
+    I: ValueInput<'tokens, Token = Token, Span = Span>,
+{
+    field_modification_parser()
+        .separated_by(just(Token::Comma))
+        .allow_trailing()
+        .collect::<Vec<_>>()
+        .delimited_by(just(Token::OpenBrace), just(Token::CloseBrace))
+        .map(|fields| fields.into_iter().collect())
+        .labelled("modification schema")
+        .as_context()
+}
+
+fn modify_collection_parser<'tokens, 'src: 'tokens, I>()
+-> impl Parser<'tokens, I, CollectionQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
+where
+    I: ValueInput<'tokens, Token = Token, Span = Span>,
+{
+    choice((just(Token::Modify), just(Token::Alter)))
+        .ignore_then(just(Token::Collection))
+        .ignore_then(select! { Token::Ident(name) => name }.labelled("collection name"))
+        .then(modification_schema_parser())
+        .map(|(name, modifications)| CollectionQuery::Modify { name, modifications })
+        .labelled("modify collection")
+        .as_context()
+}
+
 pub(crate) fn collection_query_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, CollectionQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -203,6 +278,7 @@ where
         drop_collection_parser(),
         list_collections_parser(),
         get_schema_parser(),
+        modify_collection_parser(),
     ))
     .labelled("collection query")
     .as_context()

@@ -36,6 +36,10 @@ pub enum Token {
     From,
     /// The GET keyword.
     Get,
+    /// The MODIFY keyword.
+    Modify,
+    /// The ALTER keyword.
+    Alter,
     /// An identifier (database name, collection name, etc.).
     Ident(String),
     /// An open brace.
@@ -83,6 +87,8 @@ impl std::fmt::Display for Token {
             Token::Schema => write!(f, "SCHEMA"),
             Token::From => write!(f, "FROM"),
             Token::Get => write!(f, "GET"),
+            Token::Modify => write!(f, "MODIFY"),
+            Token::Alter => write!(f, "ALTER"),
             Token::Ident(s) => write!(f, "{}", s),
             Token::OpenBrace => write!(f, "{{"),
             Token::CloseBrace => write!(f, "}}"),
@@ -146,6 +152,8 @@ pub fn lexer<'src>()
         keyword_ci("schema").to(Token::Schema),
         keyword_ci("from").to(Token::From),
         keyword_ci("get").to(Token::Get),
+        keyword_ci("modify").to(Token::Modify),
+        keyword_ci("alter").to(Token::Alter),
     ));
 
     let ident = text::ident()
