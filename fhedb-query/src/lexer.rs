@@ -20,12 +20,40 @@ pub enum Token {
     Database,
     /// The DATABASES keyword.
     Databases,
+    /// The COLLECTION keyword.
+    Collection,
+    /// The COLLECTIONS keyword.
+    Collections,
     /// The IF keyword.
     If,
     /// The EXISTS keyword.
     Exists,
     /// An identifier (database name, collection name, etc.).
     Ident(String),
+    /// An open brace.
+    OpenBrace,
+    /// A close brace.
+    CloseBrace,
+    /// A colon.
+    Colon,
+    /// A comma.
+    Comma,
+    /// An open parenthesis.
+    OpenParen,
+    /// A close parenthesis.
+    CloseParen,
+    /// An equals sign.
+    Equals,
+    /// An open angle bracket.
+    OpenAngle,
+    /// A close angle bracket.
+    CloseAngle,
+    /// A string literal.
+    StringLit(String),
+    /// An integer literal.
+    IntLit(i64),
+    /// A float literal (stored as string for Eq/Hash).
+    FloatLit(String),
 }
 
 impl std::fmt::Display for Token {
@@ -36,9 +64,23 @@ impl std::fmt::Display for Token {
             Token::List => write!(f, "LIST"),
             Token::Database => write!(f, "DATABASE"),
             Token::Databases => write!(f, "DATABASES"),
+            Token::Collection => write!(f, "COLLECTION"),
+            Token::Collections => write!(f, "COLLECTIONS"),
             Token::If => write!(f, "IF"),
             Token::Exists => write!(f, "EXISTS"),
             Token::Ident(s) => write!(f, "{}", s),
+            Token::OpenBrace => write!(f, "{{"),
+            Token::CloseBrace => write!(f, "}}"),
+            Token::Colon => write!(f, ":"),
+            Token::Comma => write!(f, ","),
+            Token::OpenParen => write!(f, "("),
+            Token::CloseParen => write!(f, ")"),
+            Token::Equals => write!(f, "="),
+            Token::OpenAngle => write!(f, "<"),
+            Token::CloseAngle => write!(f, ">"),
+            Token::StringLit(s) => write!(f, "\"{}\"", s),
+            Token::IntLit(n) => write!(f, "{}", n),
+            Token::FloatLit(n) => write!(f, "{}", n),
         }
     }
 }
@@ -80,6 +122,8 @@ pub fn lexer<'src>()
         keyword_ci("list").to(Token::List),
         keyword_ci("databases").to(Token::Databases),
         keyword_ci("database").to(Token::Database),
+        keyword_ci("collections").to(Token::Collections),
+        keyword_ci("collection").to(Token::Collection),
         keyword_ci("if").to(Token::If),
         keyword_ci("exists").to(Token::Exists),
     ));
@@ -88,7 +132,43 @@ pub fn lexer<'src>()
         .map(|s: &str| Token::Ident(s.to_string()))
         .labelled("identifier");
 
-    let token = kw.or(ident);
+    let string_char = none_of("\"\\")
+        .or(just('\\').ignore_then(any()))
+        .labelled("string character");
+
+    let string_lit = just('"')
+        .ignore_then(string_char.repeated().collect::<String>())
+        .then_ignore(just('"'))
+        .map(Token::StringLit)
+        .labelled("string");
+
+    let float_lit = text::int(10)
+        .then(just('.'))
+        .then(text::digits(10))
+        .to_slice()
+        .map(|s: &str| Token::FloatLit(s.to_string()))
+        .labelled("float");
+
+    let int_lit = just('-')
+        .or_not()
+        .then(text::int(10))
+        .to_slice()
+        .map(|s: &str| Token::IntLit(s.parse().unwrap()))
+        .labelled("integer");
+
+    let symbol = choice((
+        just('{').to(Token::OpenBrace),
+        just('}').to(Token::CloseBrace),
+        just(':').to(Token::Colon),
+        just(',').to(Token::Comma),
+        just('(').to(Token::OpenParen),
+        just(')').to(Token::CloseParen),
+        just('=').to(Token::Equals),
+        just('<').to(Token::OpenAngle),
+        just('>').to(Token::CloseAngle),
+    ));
+
+    let token = choice((kw, float_lit, int_lit, string_lit, symbol, ident));
 
     token
         .map_with(|tok, e| (tok, e.span()))

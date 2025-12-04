@@ -6,7 +6,9 @@ use chumsky::{extra, input::ValueInput, prelude::*};
 
 use crate::ast::DatabaseQuery;
 use crate::error::ParserError;
-use crate::lexer::{Span, Token, lexer};
+use crate::lexer::{Span, Token};
+
+use super::common::lex_input;
 
 /// Creates a parser for database-level queries.
 ///
@@ -62,16 +64,7 @@ where
 /// Returns [`Ok`]([`DatabaseQuery`]) if parsing succeeds,
 /// or [`Err`]([`Vec<ParserError>`]) containing all parsing errors if it fails.
 pub fn parse_database_query(input: &str) -> Result<DatabaseQuery, Vec<ParserError>> {
-    let (tokens, lex_errs) = lexer().parse(input).into_output_errors();
-
-    if !lex_errs.is_empty() {
-        return Err(lex_errs
-            .iter()
-            .map(|e| ParserError::from_lexer_rich(e, input))
-            .collect());
-    }
-
-    let tokens = tokens.unwrap();
+    let tokens = lex_input(input)?;
     let len = input.len();
     let eoi = Span::new((), len..len);
 

@@ -22,6 +22,33 @@ fn title_case(s: &str) -> String {
         .join(" ")
 }
 
+/// Query-level context labels that represent actual query types.
+const QUERY_CONTEXTS: &[&str] = &[
+    "create collection",
+    "drop collection",
+    "modify collection",
+    "list collections",
+    "get collection schema",
+    "create database",
+    "drop database",
+    "list databases",
+    "insert document",
+    "update document",
+    "delete document",
+    "get document",
+];
+
+/// Structural context labels that represent parts of a query, not query types.
+const STRUCTURAL_CONTEXTS: &[&str] = &[
+    "schema",
+    "field type",
+    "field constraint",
+    "field definition",
+    "collection query",
+    "database query",
+    "document query",
+];
+
 /// Represents a parsing error with detailed context for user-friendly error messages.
 ///
 /// This struct captures all relevant information about a parsing failure,
@@ -108,12 +135,36 @@ impl ParserError {
             })
             .collect();
 
+        let expects_end_of_input = expected.iter().any(|e| e == "end of input");
+
         let message = match err.reason() {
             RichReason::ExpectedFound { .. } => {
-                if let Some(innermost_context) = context.first() {
-                    format!("Invalid {} Query", title_case(innermost_context))
+                if expects_end_of_input && expected.len() == 1 {
+                    "Unexpected input after query".to_string()
                 } else {
-                    "Unknown Query".to_string()
+                    let query_context = context
+                        .iter()
+                        .find(|c| QUERY_CONTEXTS.contains(&c.as_str()));
+                    let structural_context = context
+                        .first()
+                        .filter(|c| STRUCTURAL_CONTEXTS.contains(&c.as_str()));
+
+                    match (query_context, structural_context) {
+                        (Some(query), Some(structural)) => {
+                            format!(
+                                "Invalid {} in {} query",
+                                title_case(structural),
+                                title_case(query)
+                            )
+                        }
+                        (Some(query), None) => {
+                            format!("Invalid {} query", title_case(query))
+                        }
+                        (None, Some(structural)) => {
+                            format!("Invalid {}", title_case(structural))
+                        }
+                        (None, None) => "Unknown query".to_string(),
+                    }
                 }
             }
             RichReason::Custom(msg) => msg.to_string(),
@@ -236,10 +287,22 @@ impl ParserError {
 
     /// Formats an expected token/pattern for display in error messages.
     ///
-    /// Distinguishes between keywords (all uppercase) and identifiers (lowercase start).
+    /// Distinguishes between keywords (all uppercase), identifiers (lowercase start),
+    /// and structural labels that represent complex query parts.
     fn format_expected(e: &str) -> String {
+        const STRUCTURAL_LABELS: &[&str] = &[
+            "schema",
+            "field definition",
+            "array type",
+            "reference type",
+            "field type",
+            "id type",
+        ];
+
         if e == "end of input" {
             "end of input".to_string()
+        } else if STRUCTURAL_LABELS.contains(&e) {
+            format!("<{}>", e)
         } else if e.chars().all(|c| c.is_uppercase() || c == '_') {
             format!("keyword '{}'", e)
         } else if e.chars().next().map(|c| c.is_lowercase()).unwrap_or(false) {
@@ -251,7 +314,7 @@ impl ParserError {
 
     /// Internal implementation for formatting errors using ariadne.
     fn format_impl(&self, source: &str, filename: &str, colored: bool) -> String {
-        let is_unknown_query = self.message == "Unknown Query";
+        let is_unknown_query = self.message == "Unknown query";
 
         let label_msg = if is_unknown_query {
             "No matching query found".to_string()
