@@ -450,7 +450,7 @@ fn field_definition_to_bson(field_def: FieldDefinition) -> Bson {
 /// ## Returns
 ///
 /// Returns [Ok(())](Result::Ok) if the value matches the expected type. Returns [`Err`]\([`String`]) with a description of the mismatch otherwise.
-fn validate_bson_type(value: &Bson, field_type: &FieldType) -> Result<(), String> {
+pub fn validate_bson_type(value: &Bson, field_type: &FieldType) -> Result<(), String> {
     match field_type {
         FieldType::Int => match value {
             Bson::Int32(_) | Bson::Int64(_) => Ok(()),

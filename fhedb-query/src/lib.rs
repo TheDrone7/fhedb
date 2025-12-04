@@ -19,5 +19,5 @@ pub mod prelude {
     pub use crate::error::ParserError;
     pub use crate::parser::contextual::parse_contextual_query;
     pub use crate::parser::database::parse_database_query;
-    pub use crate::utilities::unescape;
+    pub use crate::utilities::{parse_bson_value, unescape};
 }

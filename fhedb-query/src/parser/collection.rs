@@ -4,7 +4,7 @@
 
 use bson::Bson;
 use chumsky::{extra, input::ValueInput, prelude::*};
-use fhedb_core::db::schema::{FieldDefinition, FieldType, Schema};
+use fhedb_core::db::schema::{FieldDefinition, FieldType, Schema, validate_bson_type};
 
 use crate::ast::CollectionQuery;
 use crate::lexer::{Span, Token};
@@ -109,15 +109,19 @@ where
         .then(type_and_modifier)
         .labelled("field type")
         .as_context()
-        .map(|(name, (field_type, modifier))| {
+        .try_map(|(name, (field_type, modifier)), span| {
             let (nullable, default) = modifier.unwrap_or((false, None));
-            let final_type = if nullable {
+            let base_type = if nullable {
                 FieldType::Nullable(Box::new(field_type))
             } else {
                 field_type
             };
-            let field_def = FieldDefinition::with_optional_default(final_type, default);
-            (name, field_def)
+            if let Some(ref default_value) = default {
+                validate_bson_type(default_value, &base_type)
+                    .map_err(|e| Rich::custom(span, format!("invalid default value: {}", e)))?;
+            }
+            let field_def = FieldDefinition::with_optional_default(base_type, default);
+            Ok((name, field_def))
         })
 }
 

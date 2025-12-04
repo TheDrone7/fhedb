@@ -4,6 +4,8 @@
 
 use chumsky::{extra, prelude::*};
 
+use crate::utilities::unescape;
+
 /// Represents a token in the FHEDB query language.
 ///
 /// Tokens are the smallest meaningful units produced by the lexer.
@@ -48,6 +50,10 @@ pub enum Token {
     OpenAngle,
     /// A close angle bracket.
     CloseAngle,
+    /// An open bracket.
+    OpenBracket,
+    /// A close bracket.
+    CloseBracket,
     /// A string literal.
     StringLit(String),
     /// An integer literal.
@@ -78,6 +84,8 @@ impl std::fmt::Display for Token {
             Token::Equals => write!(f, "="),
             Token::OpenAngle => write!(f, "<"),
             Token::CloseAngle => write!(f, ">"),
+            Token::OpenBracket => write!(f, "["),
+            Token::CloseBracket => write!(f, "]"),
             Token::StringLit(s) => write!(f, "\"{}\"", s),
             Token::IntLit(n) => write!(f, "{}", n),
             Token::FloatLit(n) => write!(f, "{}", n),
@@ -132,17 +140,41 @@ pub fn lexer<'src>()
         .map(|s: &str| Token::Ident(s.to_string()))
         .labelled("identifier");
 
-    let string_char = none_of("\"\\")
-        .or(just('\\').ignore_then(any()))
-        .labelled("string character");
+    let escape_seq = just('\\')
+        .then(any())
+        .map(|(slash, c): (char, char)| {
+            let mut s = String::with_capacity(2);
+            s.push(slash);
+            s.push(c);
+            s
+        });
+    let string_char = none_of("\"\\").map(|c: char| c.to_string()).or(escape_seq);
 
     let string_lit = just('"')
-        .ignore_then(string_char.repeated().collect::<String>())
+        .ignore_then(string_char.repeated().collect::<Vec<_>>())
         .then_ignore(just('"'))
-        .map(Token::StringLit)
+        .map(|parts| Token::StringLit(unescape(&parts.join(""))))
         .labelled("string");
 
-    let float_lit = text::int(10)
+    let single_escape_seq = just('\\')
+        .then(any())
+        .map(|(slash, c): (char, char)| {
+            let mut s = String::with_capacity(2);
+            s.push(slash);
+            s.push(c);
+            s
+        });
+    let single_string_char = none_of("'\\").map(|c: char| c.to_string()).or(single_escape_seq);
+
+    let single_string_lit = just('\'')
+        .ignore_then(single_string_char.repeated().collect::<Vec<_>>())
+        .then_ignore(just('\''))
+        .map(|parts| Token::StringLit(unescape(&parts.join(""))))
+        .labelled("string");
+
+    let float_lit = just('-')
+        .or_not()
+        .then(text::int(10))
         .then(just('.'))
         .then(text::digits(10))
         .to_slice()
@@ -166,9 +198,11 @@ pub fn lexer<'src>()
         just('=').to(Token::Equals),
         just('<').to(Token::OpenAngle),
         just('>').to(Token::CloseAngle),
+        just('[').to(Token::OpenBracket),
+        just(']').to(Token::CloseBracket),
     ));
 
-    let token = choice((kw, float_lit, int_lit, string_lit, symbol, ident));
+    let token = choice((kw, float_lit, int_lit, string_lit, single_string_lit, symbol, ident));
 
     token
         .map_with(|tok, e| (tok, e.span()))
