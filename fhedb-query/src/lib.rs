@@ -10,6 +10,8 @@ pub mod error;
 pub mod lexer;
 /// The parser module - contains the query parser implementations.
 pub mod parser;
+/// The utilities module - contains utility functions.
+pub mod utilities;
 
 /// Re-exports commonly used types for easy access.
 pub mod prelude {
@@ -17,4 +19,5 @@ pub mod prelude {
     pub use crate::error::ParserError;
     pub use crate::parser::contextual::parse_contextual_query;
     pub use crate::parser::database::parse_database_query;
+    pub use crate::utilities::unescape;
 }
