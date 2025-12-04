@@ -2,31 +2,15 @@
 //!
 //! This module provides parsing functionality for collection-level FHEDB queries.
 
-use bson::Bson;
 use chumsky::{extra, input::ValueInput, prelude::*};
-use fhedb_core::db::schema::{FieldDefinition, FieldType, Schema, validate_bson_type};
+use fhedb_core::db::schema::{validate_bson_type, FieldDefinition, FieldType, Schema};
 
 use crate::ast::CollectionQuery;
 use crate::lexer::{Span, Token};
-
-fn default_value_parser<'tokens, 'src: 'tokens, I>()
--> impl Parser<'tokens, I, Bson, extra::Err<Rich<'tokens, Token, Span>>> + Clone
-where
-    I: ValueInput<'tokens, Token = Token, Span = Span>,
-{
-    select! {
-        Token::StringLit(s) => Bson::String(s),
-        Token::IntLit(n) => Bson::Int64(n),
-        Token::FloatLit(s) => Bson::Double(s.parse().unwrap()),
-        Token::Ident(s) if s.eq_ignore_ascii_case("true") => Bson::Boolean(true),
-        Token::Ident(s) if s.eq_ignore_ascii_case("false") => Bson::Boolean(false),
-        Token::Ident(s) if s.eq_ignore_ascii_case("null") => Bson::Null,
-    }
-    .labelled("default value")
-}
+use crate::utilities::bson_value_parser_internal;
 
 fn field_modifier_parser<'tokens, 'src: 'tokens, I>()
--> impl Parser<'tokens, I, (bool, Option<Bson>), extra::Err<Rich<'tokens, Token, Span>>> + Clone
+-> impl Parser<'tokens, I, (bool, Option<bson::Bson>), extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
     I: ValueInput<'tokens, Token = Token, Span = Span>,
 {
@@ -36,7 +20,7 @@ where
 
     let default = select! { Token::Ident(s) if s.eq_ignore_ascii_case("default") => () }
         .ignore_then(just(Token::Equals))
-        .ignore_then(default_value_parser())
+        .ignore_then(bson_value_parser_internal().labelled("default value"))
         .labelled("default");
 
     just(Token::OpenParen)

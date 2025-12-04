@@ -49,7 +49,7 @@ pub fn unescape(input: &str) -> String {
     result
 }
 
-fn bson_value_parser<'tokens, I>()
+pub(crate) fn bson_value_parser_internal<'tokens, I>()
 -> impl Parser<'tokens, I, Bson, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
     I: ValueInput<'tokens, Token = Token, Span = Span>,
@@ -87,7 +87,7 @@ pub fn parse_bson_value(input: &str, expected_type: &FieldType) -> Result<Bson, 
     let eoi = Span::new((), input.len()..input.len());
     let token_stream = tokens.as_slice().map(eoi, |(tok, span)| (tok, span));
 
-    let value = bson_value_parser()
+    let value = bson_value_parser_internal()
         .then_ignore(end())
         .parse(token_stream)
         .into_result()
