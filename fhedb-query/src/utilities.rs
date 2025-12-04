@@ -59,9 +59,9 @@ where
             Token::StringLit(s) => Bson::String(s),
             Token::IntLit(n) => Bson::Int64(n),
             Token::FloatLit(s) => Bson::Double(s.parse().unwrap()),
-            Token::Ident(s) if s.eq_ignore_ascii_case("true") => Bson::Boolean(true),
-            Token::Ident(s) if s.eq_ignore_ascii_case("false") => Bson::Boolean(false),
-            Token::Ident(s) if s.eq_ignore_ascii_case("null") => Bson::Null,
+            Token::True => Bson::Boolean(true),
+            Token::False => Bson::Boolean(false),
+            Token::Null => Bson::Null,
         };
 
         let array = just(Token::OpenBracket)

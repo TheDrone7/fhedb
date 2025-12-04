@@ -142,3 +142,20 @@ fn invalid_constraints() {
 fn field_modifications() {
     assert!(parse_schema("name: string, age: drop").is_err());
 }
+
+#[test]
+fn trailing_commas() {
+    assert!(parse_schema("name: string,").is_ok());
+    assert!(parse_schema("name: string, age: int,").is_ok());
+    assert!(parse_schema("id: id_int, name: string, age: int,").is_ok());
+    assert!(parse_schema("items: array<string>,").is_ok());
+    assert!(parse_schema("user_ref: ref<users>(nullable),").is_ok());
+}
+
+#[test]
+fn duplicate_field_names() {
+    assert!(parse_schema("name: string, name: string").is_err());
+    assert!(parse_schema("name: string, age: int, name: int").is_err());
+    assert!(parse_schema("id: id_int, id: id_string").is_err());
+    assert!(parse_schema("field: string, other: int, field: boolean").is_err());
+}

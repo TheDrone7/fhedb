@@ -40,6 +40,32 @@ pub enum Token {
     Modify,
     /// The ALTER keyword.
     Alter,
+    /// The INT field type keyword.
+    TypeInt,
+    /// The FLOAT field type keyword.
+    TypeFloat,
+    /// The STRING field type keyword.
+    TypeString,
+    /// The BOOLEAN field type keyword.
+    TypeBoolean,
+    /// The ARRAY field type keyword.
+    TypeArray,
+    /// The REF field type keyword.
+    TypeRef,
+    /// The ID_INT field type keyword.
+    TypeIdInt,
+    /// The ID_STRING field type keyword.
+    TypeIdString,
+    /// The NULLABLE constraint keyword.
+    Nullable,
+    /// The DEFAULT constraint keyword.
+    Default,
+    /// The TRUE boolean literal.
+    True,
+    /// The FALSE boolean literal.
+    False,
+    /// The NULL literal.
+    Null,
     /// An identifier (database name, collection name, etc.).
     Ident(String),
     /// An open brace.
@@ -89,6 +115,19 @@ impl std::fmt::Display for Token {
             Token::Get => write!(f, "GET"),
             Token::Modify => write!(f, "MODIFY"),
             Token::Alter => write!(f, "ALTER"),
+            Token::TypeInt => write!(f, "INT"),
+            Token::TypeFloat => write!(f, "FLOAT"),
+            Token::TypeString => write!(f, "STRING"),
+            Token::TypeBoolean => write!(f, "BOOLEAN"),
+            Token::TypeArray => write!(f, "ARRAY"),
+            Token::TypeRef => write!(f, "REF"),
+            Token::TypeIdInt => write!(f, "ID_INT"),
+            Token::TypeIdString => write!(f, "ID_STRING"),
+            Token::Nullable => write!(f, "NULLABLE"),
+            Token::Default => write!(f, "DEFAULT"),
+            Token::True => write!(f, "TRUE"),
+            Token::False => write!(f, "FALSE"),
+            Token::Null => write!(f, "NULL"),
             Token::Ident(s) => write!(f, "{}", s),
             Token::OpenBrace => write!(f, "{{"),
             Token::CloseBrace => write!(f, "}}"),
@@ -139,7 +178,7 @@ fn keyword_ci<'src>(
 /// Returns a parser that transforms a string input into a vector of spanned tokens.
 pub fn lexer<'src>()
 -> impl Parser<'src, &'src str, Vec<Spanned<Token>>, extra::Err<Rich<'src, char, Span>>> {
-    let kw = choice((
+    let query_kw = choice((
         keyword_ci("create").to(Token::Create),
         keyword_ci("drop").to(Token::Drop),
         keyword_ci("list").to(Token::List),
@@ -155,6 +194,30 @@ pub fn lexer<'src>()
         keyword_ci("modify").to(Token::Modify),
         keyword_ci("alter").to(Token::Alter),
     ));
+
+    let type_kw = choice((
+        keyword_ci("id_string").to(Token::TypeIdString),
+        keyword_ci("id_int").to(Token::TypeIdInt),
+        keyword_ci("boolean").to(Token::TypeBoolean),
+        keyword_ci("string").to(Token::TypeString),
+        keyword_ci("float").to(Token::TypeFloat),
+        keyword_ci("array").to(Token::TypeArray),
+        keyword_ci("int").to(Token::TypeInt),
+        keyword_ci("ref").to(Token::TypeRef),
+    ));
+
+    let constraint_kw = choice((
+        keyword_ci("nullable").to(Token::Nullable),
+        keyword_ci("default").to(Token::Default),
+    ));
+
+    let literal_kw = choice((
+        keyword_ci("true").to(Token::True),
+        keyword_ci("false").to(Token::False),
+        keyword_ci("null").to(Token::Null),
+    ));
+
+    let kw = choice((query_kw, type_kw, constraint_kw, literal_kw));
 
     let ident = text::ident()
         .map(|s: &str| Token::Ident(s.to_string()))

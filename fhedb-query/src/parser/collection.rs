@@ -14,11 +14,9 @@ fn field_modifier_parser<'tokens, 'src: 'tokens, I>()
 where
     I: ValueInput<'tokens, Token = Token, Span = Span>,
 {
-    let nullable = select! { Token::Ident(s) if s.eq_ignore_ascii_case("nullable") => () }
-        .to(true)
-        .labelled("nullable");
+    let nullable = just(Token::Nullable).to(true).labelled("nullable");
 
-    let default = select! { Token::Ident(s) if s.eq_ignore_ascii_case("default") => () }
+    let default = just(Token::Default)
         .ignore_then(just(Token::Equals))
         .ignore_then(bson_value_parser_internal().labelled("default value"))
         .labelled("default");
@@ -42,21 +40,21 @@ where
 {
     recursive(|field_type| {
         let simple_type = select! {
-            Token::Ident(s) if s.eq_ignore_ascii_case("int") => FieldType::Int,
-            Token::Ident(s) if s.eq_ignore_ascii_case("float") => FieldType::Float,
-            Token::Ident(s) if s.eq_ignore_ascii_case("boolean") => FieldType::Boolean,
-            Token::Ident(s) if s.eq_ignore_ascii_case("string") => FieldType::String,
+            Token::TypeInt => FieldType::Int,
+            Token::TypeFloat => FieldType::Float,
+            Token::TypeBoolean => FieldType::Boolean,
+            Token::TypeString => FieldType::String,
         }
         .labelled("field type");
 
-        let ref_type = select! { Token::Ident(s) if s.eq_ignore_ascii_case("ref") => () }
+        let ref_type = just(Token::TypeRef)
             .ignore_then(just(Token::OpenAngle))
             .ignore_then(select! { Token::Ident(name) => name }.labelled("collection name"))
             .then_ignore(just(Token::CloseAngle))
             .map(FieldType::Reference)
             .labelled("reference type");
 
-        let array_type = select! { Token::Ident(s) if s.eq_ignore_ascii_case("array") => () }
+        let array_type = just(Token::TypeArray)
             .ignore_then(just(Token::OpenAngle))
             .ignore_then(field_type.clone())
             .then_ignore(just(Token::CloseAngle))
@@ -75,8 +73,8 @@ where
     I: ValueInput<'tokens, Token = Token, Span = Span>,
 {
     let id_type = select! {
-        Token::Ident(s) if s.eq_ignore_ascii_case("id_string") => FieldType::IdString,
-        Token::Ident(s) if s.eq_ignore_ascii_case("id_int") => FieldType::IdInt,
+        Token::TypeIdString => FieldType::IdString,
+        Token::TypeIdInt => FieldType::IdInt,
     }
     .labelled("id type")
     .map(|ft| (ft, None));
@@ -119,12 +117,18 @@ where
         .allow_trailing()
         .collect::<Vec<_>>()
         .delimited_by(just(Token::OpenBrace), just(Token::CloseBrace))
-        .map(|fields| {
+        .try_map(|fields, span| {
             let mut schema = Schema::new();
             for (name, def) in fields {
+                if schema.fields.contains_key(&name) {
+                    return Err(Rich::custom(
+                        span,
+                        format!("duplicate field name: {}", name),
+                    ));
+                }
                 schema.fields.insert(name, def);
             }
-            schema
+            Ok(schema)
         })
         .labelled("schema")
         .as_context()
@@ -203,8 +207,8 @@ where
         .labelled("drop");
 
     let id_type = select! {
-        Token::Ident(s) if s.eq_ignore_ascii_case("id_string") => FieldType::IdString,
-        Token::Ident(s) if s.eq_ignore_ascii_case("id_int") => FieldType::IdInt,
+        Token::TypeIdString => FieldType::IdString,
+        Token::TypeIdInt => FieldType::IdInt,
     }
     .labelled("id type")
     .map(|ft| (ft, None));
@@ -238,9 +242,12 @@ where
         .as_context()
 }
 
-fn modification_schema_parser<'tokens, 'src: 'tokens, I>()
--> impl Parser<'tokens, I, std::collections::HashMap<String, FieldModification>, extra::Err<Rich<'tokens, Token, Span>>>
-       + Clone
+fn modification_schema_parser<'tokens, 'src: 'tokens, I>() -> impl Parser<
+    'tokens,
+    I,
+    std::collections::HashMap<String, FieldModification>,
+    extra::Err<Rich<'tokens, Token, Span>>,
+> + Clone
 where
     I: ValueInput<'tokens, Token = Token, Span = Span>,
 {
@@ -249,7 +256,19 @@ where
         .allow_trailing()
         .collect::<Vec<_>>()
         .delimited_by(just(Token::OpenBrace), just(Token::CloseBrace))
-        .map(|fields| fields.into_iter().collect())
+        .try_map(|fields, span| {
+            let mut modifications = std::collections::HashMap::new();
+            for (name, modification) in fields {
+                if modifications.contains_key(&name) {
+                    return Err(Rich::custom(
+                        span,
+                        format!("duplicate field name: {}", name),
+                    ));
+                }
+                modifications.insert(name, modification);
+            }
+            Ok(modifications)
+        })
         .labelled("modification schema")
         .as_context()
 }
@@ -263,7 +282,10 @@ where
         .ignore_then(just(Token::Collection))
         .ignore_then(select! { Token::Ident(name) => name }.labelled("collection name"))
         .then(modification_schema_parser())
-        .map(|(name, modifications)| CollectionQuery::Modify { name, modifications })
+        .map(|(name, modifications)| CollectionQuery::Modify {
+            name,
+            modifications,
+        })
         .labelled("modify collection")
         .as_context()
 }

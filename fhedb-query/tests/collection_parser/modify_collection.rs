@@ -219,3 +219,393 @@ fn invalid_wrong_order() {
         assert!(error.message.to_lowercase().contains("unknown query"));
     }
 }
+
+#[test]
+fn all_field_types() {
+    let input = "MODIFY COLLECTION test {a: int, b: float, c: string, d: boolean}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_ok());
+
+    let Ok(ContextualQuery::Collection(query)) = result else {
+        panic!("Expected Ok result");
+    };
+
+    assert!(matches!(query, CollectionQuery::Modify { .. }));
+
+    let CollectionQuery::Modify { modifications, .. } = query else {
+        panic!("Expected Modify variant");
+    };
+
+    assert_eq!(modifications.len(), 4);
+    assert_eq!(
+        modifications.get("a"),
+        Some(&FieldModification::Set(FieldDefinition::new(
+            FieldType::Int
+        )))
+    );
+    assert_eq!(
+        modifications.get("b"),
+        Some(&FieldModification::Set(FieldDefinition::new(
+            FieldType::Float
+        )))
+    );
+    assert_eq!(
+        modifications.get("c"),
+        Some(&FieldModification::Set(FieldDefinition::new(
+            FieldType::String
+        )))
+    );
+    assert_eq!(
+        modifications.get("d"),
+        Some(&FieldModification::Set(FieldDefinition::new(
+            FieldType::Boolean
+        )))
+    );
+}
+
+#[test]
+fn id_types() {
+    let input = "MODIFY COLLECTION test {a: id_int, b: id_string}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_ok());
+
+    let Ok(ContextualQuery::Collection(query)) = result else {
+        panic!("Expected Ok result");
+    };
+
+    assert!(matches!(query, CollectionQuery::Modify { .. }));
+
+    let CollectionQuery::Modify { modifications, .. } = query else {
+        panic!("Expected Modify variant");
+    };
+
+    assert_eq!(
+        modifications.get("a"),
+        Some(&FieldModification::Set(FieldDefinition::new(
+            FieldType::IdInt
+        )))
+    );
+    assert_eq!(
+        modifications.get("b"),
+        Some(&FieldModification::Set(FieldDefinition::new(
+            FieldType::IdString
+        )))
+    );
+}
+
+#[test]
+fn array_types() {
+    let input = "MODIFY COLLECTION test {tags: array<string>, numbers: array<int>}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_ok());
+
+    let Ok(ContextualQuery::Collection(query)) = result else {
+        panic!("Expected Ok result");
+    };
+
+    assert!(matches!(query, CollectionQuery::Modify { .. }));
+
+    let CollectionQuery::Modify { modifications, .. } = query else {
+        panic!("Expected Modify variant");
+    };
+
+    assert_eq!(
+        modifications.get("tags"),
+        Some(&FieldModification::Set(FieldDefinition::new(
+            FieldType::Array(Box::new(FieldType::String))
+        )))
+    );
+    assert_eq!(
+        modifications.get("numbers"),
+        Some(&FieldModification::Set(FieldDefinition::new(
+            FieldType::Array(Box::new(FieldType::Int))
+        )))
+    );
+}
+
+#[test]
+fn nested_array_types() {
+    let input = "MODIFY COLLECTION test {matrix: array<array<int>>}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_ok());
+
+    let Ok(ContextualQuery::Collection(query)) = result else {
+        panic!("Expected Ok result");
+    };
+
+    assert!(matches!(query, CollectionQuery::Modify { .. }));
+
+    let CollectionQuery::Modify { modifications, .. } = query else {
+        panic!("Expected Modify variant");
+    };
+
+    assert_eq!(
+        modifications.get("matrix"),
+        Some(&FieldModification::Set(FieldDefinition::new(
+            FieldType::Array(Box::new(FieldType::Array(Box::new(FieldType::Int))))
+        )))
+    );
+}
+
+#[test]
+fn reference_types() {
+    let input = "MODIFY COLLECTION test {user_ref: ref<users>, company_ref: ref<companies>}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_ok());
+
+    let Ok(ContextualQuery::Collection(query)) = result else {
+        panic!("Expected Ok result");
+    };
+
+    assert!(matches!(query, CollectionQuery::Modify { .. }));
+
+    let CollectionQuery::Modify { modifications, .. } = query else {
+        panic!("Expected Modify variant");
+    };
+
+    assert_eq!(
+        modifications.get("user_ref"),
+        Some(&FieldModification::Set(FieldDefinition::new(
+            FieldType::Reference("users".to_string())
+        )))
+    );
+    assert_eq!(
+        modifications.get("company_ref"),
+        Some(&FieldModification::Set(FieldDefinition::new(
+            FieldType::Reference("companies".to_string())
+        )))
+    );
+}
+
+#[test]
+fn nullable_modifier() {
+    let input = "MODIFY COLLECTION test {name: string(nullable), age: int(nullable)}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_ok());
+
+    let Ok(ContextualQuery::Collection(query)) = result else {
+        panic!("Expected Ok result");
+    };
+
+    assert!(matches!(query, CollectionQuery::Modify { .. }));
+
+    let CollectionQuery::Modify { modifications, .. } = query else {
+        panic!("Expected Modify variant");
+    };
+
+    assert_eq!(
+        modifications.get("name"),
+        Some(&FieldModification::Set(FieldDefinition::new(
+            FieldType::Nullable(Box::new(FieldType::String))
+        )))
+    );
+    assert_eq!(
+        modifications.get("age"),
+        Some(&FieldModification::Set(FieldDefinition::new(
+            FieldType::Nullable(Box::new(FieldType::Int))
+        )))
+    );
+}
+
+#[test]
+fn nullable_with_complex_types() {
+    let input =
+        "MODIFY COLLECTION test {items: array<string>(nullable), owner: ref<users>(nullable)}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_ok());
+
+    let Ok(ContextualQuery::Collection(query)) = result else {
+        panic!("Expected Ok result");
+    };
+
+    assert!(matches!(query, CollectionQuery::Modify { .. }));
+
+    let CollectionQuery::Modify { modifications, .. } = query else {
+        panic!("Expected Modify variant");
+    };
+
+    assert_eq!(
+        modifications.get("items"),
+        Some(&FieldModification::Set(FieldDefinition::new(
+            FieldType::Nullable(Box::new(FieldType::Array(Box::new(FieldType::String))))
+        )))
+    );
+    assert_eq!(
+        modifications.get("owner"),
+        Some(&FieldModification::Set(FieldDefinition::new(
+            FieldType::Nullable(Box::new(FieldType::Reference("users".to_string())))
+        )))
+    );
+}
+
+#[test]
+fn default_modifier() {
+    let input =
+        "MODIFY COLLECTION test {name: string(default = \"Unknown\"), count: int(default = 0)}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_ok());
+
+    let Ok(ContextualQuery::Collection(query)) = result else {
+        panic!("Expected Ok result");
+    };
+
+    assert!(matches!(query, CollectionQuery::Modify { .. }));
+
+    let CollectionQuery::Modify { modifications, .. } = query else {
+        panic!("Expected Modify variant");
+    };
+
+    assert_eq!(
+        modifications.get("name"),
+        Some(&FieldModification::Set(FieldDefinition::with_default(
+            FieldType::String,
+            bson::Bson::String("Unknown".to_string())
+        )))
+    );
+    assert_eq!(
+        modifications.get("count"),
+        Some(&FieldModification::Set(FieldDefinition::with_default(
+            FieldType::Int,
+            bson::Bson::Int64(0)
+        )))
+    );
+}
+
+#[test]
+fn default_modifier_other_types() {
+    let input =
+        "MODIFY COLLECTION test {active: boolean(default = true), score: float(default = 0.0)}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_ok());
+
+    let Ok(ContextualQuery::Collection(query)) = result else {
+        panic!("Expected Ok result");
+    };
+
+    assert!(matches!(query, CollectionQuery::Modify { .. }));
+
+    let CollectionQuery::Modify { modifications, .. } = query else {
+        panic!("Expected Modify variant");
+    };
+
+    assert_eq!(
+        modifications.get("active"),
+        Some(&FieldModification::Set(FieldDefinition::with_default(
+            FieldType::Boolean,
+            bson::Bson::Boolean(true)
+        )))
+    );
+    assert_eq!(
+        modifications.get("score"),
+        Some(&FieldModification::Set(FieldDefinition::with_default(
+            FieldType::Float,
+            bson::Bson::Double(0.0)
+        )))
+    );
+}
+
+#[test]
+fn nullable_and_default_combined() {
+    let input = "MODIFY COLLECTION test {name: string(nullable, default = null)}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_ok());
+
+    let Ok(ContextualQuery::Collection(query)) = result else {
+        panic!("Expected Ok result");
+    };
+
+    assert!(matches!(query, CollectionQuery::Modify { .. }));
+
+    let CollectionQuery::Modify { modifications, .. } = query else {
+        panic!("Expected Modify variant");
+    };
+
+    assert_eq!(
+        modifications.get("name"),
+        Some(&FieldModification::Set(FieldDefinition::with_default(
+            FieldType::Nullable(Box::new(FieldType::String)),
+            bson::Bson::Null
+        )))
+    );
+}
+
+#[test]
+fn nullable_with_non_null_default() {
+    let input = "MODIFY COLLECTION test {count: int(nullable, default = 42)}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_ok());
+
+    let Ok(ContextualQuery::Collection(query)) = result else {
+        panic!("Expected Ok result");
+    };
+
+    assert!(matches!(query, CollectionQuery::Modify { .. }));
+
+    let CollectionQuery::Modify { modifications, .. } = query else {
+        panic!("Expected Modify variant");
+    };
+
+    assert_eq!(
+        modifications.get("count"),
+        Some(&FieldModification::Set(FieldDefinition::with_default(
+            FieldType::Nullable(Box::new(FieldType::Int)),
+            bson::Bson::Int64(42)
+        )))
+    );
+}
+
+#[test]
+fn empty_modification_schema() {
+    let input = "MODIFY COLLECTION test {}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_ok());
+
+    let Ok(ContextualQuery::Collection(query)) = result else {
+        panic!("Expected Ok result");
+    };
+
+    assert!(matches!(query, CollectionQuery::Modify { .. }));
+
+    let CollectionQuery::Modify { modifications, .. } = query else {
+        panic!("Expected Modify variant");
+    };
+
+    assert_eq!(modifications.len(), 0);
+}
+
+#[test]
+fn trailing_commas() {
+    let input = "MODIFY COLLECTION test {name: string,}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_ok());
+
+    let input = "MODIFY COLLECTION test {name: string, age: int,}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_ok());
+
+    let input = "MODIFY COLLECTION test {field: drop,}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn duplicate_field_names() {
+    let input = "MODIFY COLLECTION test {name: string, name: int}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_err());
+
+    let input = "MODIFY COLLECTION test {field: drop, field: string}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_err());
+
+    let input = "MODIFY COLLECTION test {a: int, b: string, a: drop}";
+    let result = parse_contextual_query(input);
+    assert!(result.is_err());
+}
+
+#[test]
+fn invalid_missing_modification_schema() {
+    let input = "MODIFY COLLECTION test";
+    let result = parse_contextual_query(input);
+    assert!(result.is_err());
+}
