@@ -1,7 +1,6 @@
 //! # Contextual Query Parser
 //!
-//! This module provides parsing functionality for contextual FHEDB queries
-//! (collections and documents).
+//! This module provides parsing functionality for contextual FHEDB queries.
 
 use chumsky::{extra, input::ValueInput, prelude::*};
 
@@ -11,13 +10,23 @@ use crate::lexer::{Span, Token};
 
 use super::collection::collection_query_parser;
 use super::common::lex_input;
+use super::document::document_query_parser;
 
+/// Creates a parser for contextual queries.
+///
+/// ## Returns
+///
+/// Returns a parser that matches contextual queries and returns a [`ContextualQuery`].
 fn contextual_query_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, ContextualQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
     I: ValueInput<'tokens, Token = Token, Span = Span>,
 {
-    choice((collection_query_parser().map(ContextualQuery::Collection),)).then_ignore(end())
+    choice((
+        collection_query_parser().map(ContextualQuery::Collection),
+        document_query_parser().map(ContextualQuery::Document),
+    ))
+    .then_ignore(end())
 }
 
 /// Parses a contextual query string into a [`ContextualQuery`] AST node.
@@ -28,8 +37,8 @@ where
 ///
 /// ## Returns
 ///
-/// Returns [`Ok`]([`ContextualQuery`]) if parsing succeeds,
-/// or [`Err`]([`Vec<ParserError>`]) containing all parsing errors if it fails.
+/// Returns [`Ok`]\([`ContextualQuery`]) if parsing succeeds,
+/// or [`Err`]\([`Vec<ParserError>`]) containing all parsing errors if it fails.
 pub fn parse_contextual_query(input: &str) -> Result<ContextualQuery, Vec<ParserError>> {
     let tokens = lex_input(input)?;
     let len = input.len();

@@ -26,6 +26,14 @@ pub enum Token {
     Collection,
     /// The COLLECTIONS keyword.
     Collections,
+    /// The DOC keyword.
+    Doc,
+    /// The DOCUMENT keyword.
+    Document,
+    /// The DOCS keyword.
+    Docs,
+    /// The DOCUMENTS keyword.
+    Documents,
     /// The IF keyword.
     If,
     /// The EXISTS keyword.
@@ -40,6 +48,18 @@ pub enum Token {
     Modify,
     /// The ALTER keyword.
     Alter,
+    /// The INSERT keyword.
+    Insert,
+    /// The UPDATE keyword.
+    Update,
+    /// The DELETE keyword.
+    Delete,
+    /// The REMOVE keyword (alias for DELETE).
+    Remove,
+    /// The INTO keyword.
+    Into,
+    /// The IN keyword.
+    In,
     /// The INT field type keyword.
     TypeInt,
     /// The FLOAT field type keyword.
@@ -82,10 +102,22 @@ pub enum Token {
     CloseParen,
     /// An equals sign.
     Equals,
+    /// A double equals sign (==) for similarity comparison.
+    DoubleEquals,
+    /// A not equals sign (!=).
+    NotEquals,
     /// An open angle bracket.
     OpenAngle,
     /// A close angle bracket.
     CloseAngle,
+    /// Less than or equal (<=).
+    LessThanOrEqual,
+    /// Greater than or equal (>=).
+    GreaterThanOrEqual,
+    /// A single asterisk (*) for field selection.
+    Star,
+    /// A double asterisk (**) for recursive field selection.
+    DoubleStar,
     /// An open bracket.
     OpenBracket,
     /// A close bracket.
@@ -108,6 +140,10 @@ impl std::fmt::Display for Token {
             Token::Databases => write!(f, "DATABASES"),
             Token::Collection => write!(f, "COLLECTION"),
             Token::Collections => write!(f, "COLLECTIONS"),
+            Token::Doc => write!(f, "DOC"),
+            Token::Document => write!(f, "DOCUMENT"),
+            Token::Docs => write!(f, "DOCS"),
+            Token::Documents => write!(f, "DOCUMENTS"),
             Token::If => write!(f, "IF"),
             Token::Exists => write!(f, "EXISTS"),
             Token::Schema => write!(f, "SCHEMA"),
@@ -115,6 +151,12 @@ impl std::fmt::Display for Token {
             Token::Get => write!(f, "GET"),
             Token::Modify => write!(f, "MODIFY"),
             Token::Alter => write!(f, "ALTER"),
+            Token::Insert => write!(f, "INSERT"),
+            Token::Update => write!(f, "UPDATE"),
+            Token::Delete => write!(f, "DELETE"),
+            Token::Remove => write!(f, "REMOVE"),
+            Token::Into => write!(f, "INTO"),
+            Token::In => write!(f, "IN"),
             Token::TypeInt => write!(f, "INT"),
             Token::TypeFloat => write!(f, "FLOAT"),
             Token::TypeString => write!(f, "STRING"),
@@ -136,8 +178,14 @@ impl std::fmt::Display for Token {
             Token::OpenParen => write!(f, "("),
             Token::CloseParen => write!(f, ")"),
             Token::Equals => write!(f, "="),
+            Token::DoubleEquals => write!(f, "=="),
+            Token::NotEquals => write!(f, "!="),
             Token::OpenAngle => write!(f, "<"),
             Token::CloseAngle => write!(f, ">"),
+            Token::LessThanOrEqual => write!(f, "<="),
+            Token::GreaterThanOrEqual => write!(f, ">="),
+            Token::Star => write!(f, "*"),
+            Token::DoubleStar => write!(f, "**"),
             Token::OpenBracket => write!(f, "["),
             Token::CloseBracket => write!(f, "]"),
             Token::StringLit(s) => write!(f, "\"{}\"", s),
@@ -186,6 +234,10 @@ pub fn lexer<'src>()
         keyword_ci("database").to(Token::Database),
         keyword_ci("collections").to(Token::Collections),
         keyword_ci("collection").to(Token::Collection),
+        keyword_ci("doc").to(Token::Doc),
+        keyword_ci("document").to(Token::Document),
+        keyword_ci("docs").to(Token::Docs),
+        keyword_ci("documents").to(Token::Documents),
         keyword_ci("if").to(Token::If),
         keyword_ci("exists").to(Token::Exists),
         keyword_ci("schema").to(Token::Schema),
@@ -193,6 +245,12 @@ pub fn lexer<'src>()
         keyword_ci("get").to(Token::Get),
         keyword_ci("modify").to(Token::Modify),
         keyword_ci("alter").to(Token::Alter),
+        keyword_ci("insert").to(Token::Insert),
+        keyword_ci("update").to(Token::Update),
+        keyword_ci("delete").to(Token::Delete),
+        keyword_ci("remove").to(Token::Remove),
+        keyword_ci("into").to(Token::Into),
+        keyword_ci("in").to(Token::In),
     ));
 
     let type_kw = choice((
@@ -276,6 +334,12 @@ pub fn lexer<'src>()
         just(',').to(Token::Comma),
         just('(').to(Token::OpenParen),
         just(')').to(Token::CloseParen),
+        just("**").to(Token::DoubleStar),
+        just('*').to(Token::Star),
+        just("==").to(Token::DoubleEquals),
+        just("!=").to(Token::NotEquals),
+        just("<=").to(Token::LessThanOrEqual),
+        just(">=").to(Token::GreaterThanOrEqual),
         just('=').to(Token::Equals),
         just('<').to(Token::OpenAngle),
         just('>').to(Token::CloseAngle),

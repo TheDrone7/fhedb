@@ -1,13 +1,18 @@
-//! Parsers for different types of FHEDB queries.
+//! # Query Parsers
+//!
+//! This module provides parsers for different types of FHEDB queries.
 
 /// Common utilities for parsers.
 pub(crate) mod common;
 
-/// The database module - contains parsers for database operation queries.
+/// Parsers for database-level queries.
 pub mod database;
 
-/// The collection module - contains parsers for collection operation queries.
+/// Parsers for collection-level queries.
 pub(crate) mod collection;
 
-/// The contextual module - contains parsers for contextual queries (collections, documents).
+/// Parsers for document-level queries.
+pub(crate) mod document;
+
+/// Parsers for contextual queries.
 pub mod contextual;
