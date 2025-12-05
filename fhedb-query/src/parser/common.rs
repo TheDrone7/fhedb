@@ -1,4 +1,6 @@
-//! Common utilities for FHEDB query parsers.
+//! # Common Parser Utilities
+//!
+//! This module provides common utilities for FHEDB query parsers.
 
 use bson::Bson;
 use chumsky::{extra, input::ValueInput, prelude::*};
@@ -15,8 +17,8 @@ use crate::lexer::{Span, Token, lexer};
 ///
 /// ## Returns
 ///
-/// Returns [`Ok`] with the tokens if lexing succeeds,
-/// or [`Err`] with parsing errors if it fails.
+/// Returns [`Ok`]\([`Vec<(Token, Span)>`]) if lexing succeeds,
+/// or [`Err`]\([`Vec<ParserError>`]) if it fails.
 pub(crate) fn lex_input(input: &str) -> Result<Vec<(Token, Span)>, Vec<ParserError>> {
     let (tokens, lex_errs) = lexer().parse(input).into_output_errors();
 
@@ -30,7 +32,7 @@ pub(crate) fn lex_input(input: &str) -> Result<Vec<(Token, Span)>, Vec<ParserErr
     Ok(tokens.unwrap())
 }
 
-/// Creates a parser that matches an identifier token with a custom label.
+/// Creates a parser that matches an identifier token.
 ///
 /// ## Arguments
 ///
@@ -53,7 +55,7 @@ where
 /// ## Returns
 ///
 /// Returns a parser that matches the optional `DROP IF EXISTS` clause,
-/// returning `Some(())` if present or `None` if absent.
+/// returning [`Some(())`] if present or [`None`] if absent.
 pub(crate) fn drop_if_exists_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, Option<()>, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -68,11 +70,9 @@ where
 
 /// Creates a parser for BSON values.
 ///
-/// Parses string literals, integers, floats, booleans, null, and arrays.
-///
 /// ## Returns
 ///
-/// Returns a parser that matches BSON values.
+/// Returns a parser that matches BSON values and returns a [`Bson`].
 pub(crate) fn bson_value_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, Bson, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -102,14 +102,11 @@ where
     })
 }
 
-/// Creates a parser for field type modifiers (nullable, default).
-///
-/// Parses constraint syntax like `(nullable)`, `(default = value)`,
-/// or `(nullable, default = value)`.
+/// Creates a parser for field type modifiers.
 ///
 /// ## Returns
 ///
-/// Returns a parser that matches field modifiers, returning a tuple of
+/// Returns a parser that matches field modifiers and returns a tuple of
 /// (is_nullable, optional_default_value).
 pub(crate) fn field_modifier_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, (bool, Option<Bson>), extra::Err<Rich<'tokens, Token, Span>>> + Clone
@@ -137,12 +134,9 @@ where
 
 /// Creates a parser for field types.
 ///
-/// Parses basic types (int, float, string, boolean), array types,
-/// and reference types.
-///
 /// ## Returns
 ///
-/// Returns a parser that matches field types.
+/// Returns a parser that matches field types and returns a [`FieldType`].
 pub(crate) fn field_type_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, FieldType, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where

@@ -12,7 +12,9 @@ use super::common::{drop_if_exists_parser, identifier_parser, lex_input};
 
 /// Creates a parser for database-level queries.
 ///
-/// Parses CREATE DATABASE, DROP DATABASE, and LIST DATABASES queries.
+/// ## Returns
+///
+/// Returns a parser that matches database queries and returns a [`DatabaseQuery`].
 fn database_query_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, DatabaseQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -56,8 +58,8 @@ where
 ///
 /// ## Returns
 ///
-/// Returns [`Ok`]([`DatabaseQuery`]) if parsing succeeds,
-/// or [`Err`]([`Vec<ParserError>`]) containing all parsing errors if it fails.
+/// Returns [`Ok`]\([`DatabaseQuery`]) if parsing succeeds,
+/// or [`Err`]\([`Vec<ParserError>`]) containing all parsing errors if it fails.
 pub fn parse_database_query(input: &str) -> Result<DatabaseQuery, Vec<ParserError>> {
     let tokens = lex_input(input)?;
     let len = input.len();

@@ -12,6 +12,12 @@ use super::common::{
     drop_if_exists_parser, field_modifier_parser, field_type_parser, identifier_parser,
 };
 
+/// Parses a field definition in a collection schema.
+///
+/// ## Returns
+///
+/// Returns a parser that matches field definitions and returns a tuple of
+/// (field_name, [`FieldDefinition`]).
 fn field_definition_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, (String, FieldDefinition), extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -51,6 +57,11 @@ where
         })
 }
 
+/// Parses a collection schema enclosed in braces.
+///
+/// ## Returns
+///
+/// Returns a parser that matches schemas and returns a [`Schema`].
 fn schema_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, Schema, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -78,6 +89,11 @@ where
         .as_context()
 }
 
+/// Parses a CREATE COLLECTION query.
+///
+/// ## Returns
+///
+/// Returns a parser that matches CREATE COLLECTION queries and returns a [`CollectionQuery::Create`].
 fn create_collection_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, CollectionQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -97,6 +113,11 @@ where
         .as_context()
 }
 
+/// Parses a DROP COLLECTION query.
+///
+/// ## Returns
+///
+/// Returns a parser that matches DROP COLLECTION queries and returns a [`CollectionQuery::Drop`].
 fn drop_collection_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, CollectionQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -110,6 +131,11 @@ where
         .as_context()
 }
 
+/// Parses a LIST COLLECTIONS query.
+///
+/// ## Returns
+///
+/// Returns a parser that matches LIST COLLECTIONS queries and returns [`CollectionQuery::List`].
 fn list_collections_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, CollectionQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -122,6 +148,11 @@ where
         .as_context()
 }
 
+/// Parses a GET SCHEMA query.
+///
+/// ## Returns
+///
+/// Returns a parser that matches GET SCHEMA queries and returns a [`CollectionQuery::GetSchema`].
 fn get_schema_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, CollectionQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -136,6 +167,12 @@ where
         .as_context()
 }
 
+/// Parses a field modification in a MODIFY COLLECTION query.
+///
+/// ## Returns
+///
+/// Returns a parser that matches field modifications and returns a tuple of
+/// (field_name, [`FieldModification`]).
 fn field_modification_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, (String, FieldModification), extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -180,6 +217,11 @@ where
         .as_context()
 }
 
+/// Parses a modification schema enclosed in braces.
+///
+/// ## Returns
+///
+/// Returns a parser that matches modification schemas and returns a [`HashMap`] of field modifications.
 fn modification_schema_parser<'tokens, 'src: 'tokens, I>() -> impl Parser<
     'tokens,
     I,
@@ -211,6 +253,11 @@ where
         .as_context()
 }
 
+/// Parses a MODIFY COLLECTION query.
+///
+/// ## Returns
+///
+/// Returns a parser that matches MODIFY COLLECTION queries and returns a [`CollectionQuery::Modify`].
 fn modify_collection_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, CollectionQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -228,6 +275,11 @@ where
         .as_context()
 }
 
+/// Creates a parser for collection-level queries.
+///
+/// ## Returns
+///
+/// Returns a parser that matches collection queries and returns a [`CollectionQuery`].
 pub(crate) fn collection_query_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, CollectionQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
