@@ -139,7 +139,7 @@ fn with_extra_whitespace() {
 fn complex_schema() {
     let input = "CREATE COLLECTION products {
         id: id_string,
-        name: string(default = \"Unnamed\"),
+        name: string (nullable, default = \"Unnamed\"),
         price: float,
         in_stock: boolean(default = true),
         tags: array<string>,
@@ -165,7 +165,10 @@ fn complex_schema() {
     assert!(!drop_if_exists);
     assert_eq!(schema.fields.len(), 6);
     assert_eq!(schema.fields["id"].field_type, FieldType::IdString);
-    assert_eq!(schema.fields["name"].field_type, FieldType::String);
+    assert_eq!(
+        schema.fields["name"].field_type,
+        FieldType::Nullable(Box::new(FieldType::String))
+    );
     assert_eq!(
         schema.fields["name"].default_value,
         Some(bson::Bson::String("Unnamed".to_string()))

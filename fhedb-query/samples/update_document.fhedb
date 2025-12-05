@@ -1,4 +1,4 @@
-update doc|document|documents from <collection_name> {
+update doc|document|documents in <collection_name> {
     <id_field_name> = <id_field_value>,
     <field_to_update>: <updated_value>,
     ...
