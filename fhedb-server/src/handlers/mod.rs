@@ -1,3 +1,5 @@
+mod base;
+
 use axum::extract::Path;
 
 pub async fn handle_base() -> () {
