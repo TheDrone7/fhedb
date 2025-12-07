@@ -4,10 +4,7 @@ use axum::{
 };
 use log::info;
 
-use fhedb_server::{
-    logger::setup_logger,
-    prelude::{CoreConfig, handle_base, handle_db},
-};
+use fhedb_server::prelude::{CoreConfig, ServerState, handle_base, handle_db, setup_logger};
 
 #[tokio::main]
 async fn main() {
@@ -23,11 +20,16 @@ async fn main() {
     let app = Router::new()
         .route("/", get(|| async { "Hello, FHEDB!" }))
         .route("/", post(handle_base))
-        .route("/{db_name}", post(handle_db));
+        .route("/{db_name}", post(handle_db))
+        .with_state(ServerState::new(core_config.storage.get_base_dir().clone()));
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
-        .await
-        .unwrap();
-    info!("Server running on http://127.0.0.1:3000");
+    let address = format!(
+        "{}:{}",
+        core_config.server.get_host(),
+        core_config.server.get_port()
+    );
+
+    let listener = tokio::net::TcpListener::bind(&address).await.unwrap();
+    info!("Server running on http://{}", &address);
     axum::serve(listener, app).await.unwrap();
 }
