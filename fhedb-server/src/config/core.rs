@@ -1,3 +1,8 @@
+//! The core configuration for the fhedb server.
+//!
+//! This module provides the core configuration for the fhedb server.
+//! It includes the logging configuration, server configuration, and storage configuration.
+
 use dirs::config_local_dir;
 use serde::{Deserialize, Serialize};
 use serde_saphyr;
@@ -5,14 +10,19 @@ use std::fs::{create_dir_all, read_to_string, write};
 
 use super::{logging::LoggingConfig, server::ServerConfig, storage::StorageConfig};
 
+/// The core configuration for the fhedb server.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct CoreConfig {
+    /// The server configuration for the fhedb server.
     pub server: ServerConfig,
+    /// The logging configuration for the fhedb server.
     pub logging: LoggingConfig,
+    /// The storage configuration for the fhedb server.
     pub storage: StorageConfig,
 }
 
 impl CoreConfig {
+    /// Creates a new default core config.
     fn default() -> CoreConfig {
         let server = ServerConfig::default();
         let logging = LoggingConfig::default();
@@ -24,11 +34,14 @@ impl CoreConfig {
         }
     }
 
+    /// Ensures that all directories required by the core config exist.
     pub fn ensure_dirs(&self) {
         self.storage.ensure_base_dir();
         self.logging.ensure_log_dir();
     }
 
+    /// Reads the core config from the config file.
+    /// Parses and generates the server, storage and logging configurations.
     pub fn read_from_file() -> Self {
         let mut config_dir = config_local_dir().expect("Failed to locate config file's directory.");
         config_dir.push("fhedb");
