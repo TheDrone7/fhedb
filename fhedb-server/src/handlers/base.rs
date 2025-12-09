@@ -15,7 +15,7 @@ pub(crate) fn execute_base_query(
             drop_if_exists,
         } => {
             if drop_if_exists {
-                drop_db(name.clone(), state)?;
+                _ = drop_db(name.clone(), state);
             }
             return create_db(name, state);
         }
