@@ -1,10 +1,14 @@
 use axum::{
     Router,
+    handler::Handler,
+    middleware::{self},
     routing::{get, post},
 };
 use log::info;
 
-use fhedb_server::prelude::{CoreConfig, ServerState, handle_base, handle_db, setup_logger};
+use fhedb_server::prelude::{
+    CoreConfig, ServerState, check_database, handle_base, handle_db, setup_logger,
+};
 
 #[tokio::main]
 async fn main() {
@@ -17,11 +21,16 @@ async fn main() {
     )
     .expect("Unable to set up logging utility.");
 
+    let state = ServerState::new(core_config.storage.get_base_dir().clone());
+    let layered_db_handler = handle_db.layer(middleware::from_fn_with_state(
+        state.clone(),
+        check_database,
+    ));
     let app = Router::new()
         .route("/", get(|| async { "Hello, FHEDB!" }))
         .route("/", post(handle_base))
-        .route("/{db_name}", post(handle_db))
-        .with_state(ServerState::new(core_config.storage.get_base_dir().clone()));
+        .route("/{db_name}", post(layered_db_handler))
+        .with_state(state);
 
     let address = format!(
         "{}:{}",
