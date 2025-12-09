@@ -1,4 +1,5 @@
 pub mod config;
+pub mod extractor;
 pub mod handlers;
 pub mod logger;
 pub mod middleware;
