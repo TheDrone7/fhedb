@@ -42,11 +42,8 @@ pub async fn handle_db(
             );
         }
     };
-    (
-        StatusCode::OK,
-        format!(
-            "Database: {}\nState: {:#?}\n\nQuery: {:#?}",
-            db_name, state, query
-        ),
-    )
+    match contextual::execute_contextual_query(db_name, query, &state) {
+        Ok(message) => (StatusCode::OK, message),
+        Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, err),
+    }
 }
