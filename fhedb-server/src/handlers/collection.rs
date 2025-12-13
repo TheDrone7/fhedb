@@ -1,18 +1,28 @@
+//! # Collection Query Handlers
+//!
+//! This module handles collection operations within a database context,
+//! such as creating, dropping, modifying, and listing collections.
+
 use crate::state::ServerState;
 use fhedb_core::db::{
     collection_schema_ops::CollectionSchemaOps,
-    schema::{FieldDefinition, FieldType},
+    schema::{FieldDefinition, FieldType, Schema},
 };
 use fhedb_query::ast::{CollectionQuery, FieldModification};
 use serde::Serialize;
 use serde_json::json;
+use std::collections::HashMap;
 
+/// JSON-serializable representation of a field definition.
 #[derive(Serialize)]
 struct JsonFieldDefinition {
+    /// The type of the field.
     #[serde(rename = "type")]
     field_type: String,
+    /// The default value for the field, if any.
     #[serde(skip_serializing_if = "Option::is_none")]
     default: Option<String>,
+    /// Whether the field can be null.
     nullable: bool,
 }
 
@@ -27,6 +37,15 @@ impl From<&FieldDefinition> for JsonFieldDefinition {
     }
 }
 
+/// Extracts type information from a [`FieldType`], returning the type string and nullability.
+///
+/// ## Arguments
+///
+/// * `ft` - The [`FieldType`] to extract information from.
+///
+/// ## Returns
+///
+/// A tuple of (type_string, is_nullable).
 fn extract_type_info(ft: &FieldType) -> (String, bool) {
     match ft {
         FieldType::Nullable(inner) => {
@@ -37,6 +56,15 @@ fn extract_type_info(ft: &FieldType) -> (String, bool) {
     }
 }
 
+/// Formats a [`FieldType`] as a human-readable string.
+///
+/// ## Arguments
+///
+/// * `ft` - The [`FieldType`] to format.
+///
+/// ## Returns
+///
+/// A human-readable string representation of the field type.
 fn format_field_type(ft: &FieldType) -> String {
     match ft {
         FieldType::Int => "int".to_string(),
@@ -51,11 +79,40 @@ fn format_field_type(ft: &FieldType) -> String {
     }
 }
 
+/// Serializes a [`Schema`] to a JSON value.
+///
+/// ## Arguments
+///
+/// * `schema` - The [`Schema`] to serialize.
+///
+/// ## Returns
+///
+/// Returns [`Ok`]\([`serde_json::Value`]) on success, or [`Err`]\([`String`]) on failure.
+fn serialize_schema(schema: &Schema) -> Result<serde_json::Value, String> {
+    let schema_map: HashMap<String, JsonFieldDefinition> = schema
+        .fields
+        .iter()
+        .map(|(k, v)| (k.clone(), JsonFieldDefinition::from(v)))
+        .collect();
+    serde_json::to_value(&schema_map).map_err(|e| e.to_string())
+}
+
+/// Executes a collection-level query and returns the result.
+///
+/// ## Arguments
+///
+/// * `db_name` - The name of the database to operate on.
+/// * `query` - The [`CollectionQuery`] to execute.
+/// * `state` - The [`ServerState`] containing database references.
+///
+/// ## Returns
+///
+/// Returns [`Ok`]\([`serde_json::Value`]) on success, or [`Err`]\([`String`]) on failure.
 pub fn execute_collection_query(
     db_name: String,
     query: CollectionQuery,
     state: &ServerState,
-) -> Result<String, String> {
+) -> Result<serde_json::Value, String> {
     let mut dbs = state.databases.write().map_err(|e| e.to_string())?;
     let db = dbs
         .get_mut(&db_name)
@@ -67,44 +124,28 @@ pub fn execute_collection_query(
             drop_if_exists,
             schema,
         } => {
-            if drop_if_exists {
-                if db.has_collection(&name) {
-                    db.drop_collection(&name)?;
-                }
+            if drop_if_exists && db.has_collection(&name) {
+                db.drop_collection(&name)?;
             }
             db.create_collection(&name, schema)?;
             let col = db
                 .get_collection(&name)
                 .ok_or("Collection not found after creation")?;
-
-            let schema_map: std::collections::HashMap<String, JsonFieldDefinition> = col
-                .schema()
-                .fields
-                .iter()
-                .map(|(k, v)| (k.clone(), JsonFieldDefinition::from(v)))
-                .collect();
-            Ok(serde_json::to_string_pretty(&schema_map).map_err(|e| e.to_string())?)
+            serialize_schema(col.schema())
         }
         CollectionQuery::Drop { name } => {
             db.drop_collection(&name)?;
-            Ok(serde_json::to_string_pretty(&json!({"dropped": name}))
-                .map_err(|e| e.to_string())?)
+            Ok(json!({ "dropped": name }))
         }
         CollectionQuery::List => {
             let names = db.collection_names();
-            Ok(serde_json::to_string_pretty(&names).map_err(|e| e.to_string())?)
+            Ok(json!(names))
         }
         CollectionQuery::GetSchema { name } => {
             let col = db
                 .get_collection(&name)
                 .ok_or_else(|| format!("Collection '{}' not found", name))?;
-            let schema_map: std::collections::HashMap<String, JsonFieldDefinition> = col
-                .schema()
-                .fields
-                .iter()
-                .map(|(k, v)| (k.clone(), JsonFieldDefinition::from(v)))
-                .collect();
-            Ok(serde_json::to_string_pretty(&schema_map).map_err(|e| e.to_string())?)
+            serialize_schema(col.schema())
         }
         CollectionQuery::Modify {
             name,
@@ -127,14 +168,7 @@ pub fn execute_collection_query(
                     }
                 }
             }
-
-            let schema_map: std::collections::HashMap<String, JsonFieldDefinition> = col
-                .schema()
-                .fields
-                .iter()
-                .map(|(k, v)| (k.clone(), JsonFieldDefinition::from(v)))
-                .collect();
-            Ok(serde_json::to_string_pretty(&schema_map).map_err(|e| e.to_string())?)
+            serialize_schema(col.schema())
         }
     }
 }

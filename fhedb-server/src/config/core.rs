@@ -21,19 +21,17 @@ pub struct CoreConfig {
     pub storage: StorageConfig,
 }
 
-impl CoreConfig {
-    /// Creates a new default core config.
-    fn default() -> CoreConfig {
-        let server = ServerConfig::default();
-        let logging = LoggingConfig::default();
-        let storage = StorageConfig::default();
+impl Default for CoreConfig {
+    fn default() -> Self {
         Self {
-            server,
-            logging,
-            storage,
+            server: ServerConfig::default(),
+            logging: LoggingConfig::default(),
+            storage: StorageConfig::default(),
         }
     }
+}
 
+impl CoreConfig {
     /// Ensures that all directories required by the core config exist.
     pub fn ensure_dirs(&self) {
         self.storage.ensure_base_dir();
@@ -41,7 +39,13 @@ impl CoreConfig {
     }
 
     /// Reads the core config from the config file.
+    ///
     /// Parses and generates the server, storage and logging configurations.
+    /// Creates default config if file doesn't exist.
+    ///
+    /// ## Returns
+    ///
+    /// The loaded or newly created [`CoreConfig`].
     pub fn read_from_file() -> Self {
         let mut config_dir = config_local_dir().expect("Failed to locate config file's directory.");
         config_dir.push("fhedb");

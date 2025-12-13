@@ -1,14 +1,33 @@
+//! # Request Middleware
+//!
+//! This module provides middleware functions for request processing,
+//! such as validating database existence before handling requests.
+
 use axum::{
-    body::Body,
     extract::{Path, Request, State},
     http::StatusCode,
     middleware::Next,
-    response::Response,
+    response::{IntoResponse, Response},
 };
 use log::error;
 
-use crate::state::ServerState;
+use crate::{error as api_error, internal_error, state::ServerState};
 
+/// Middleware that checks if a database exists before processing the request.
+///
+/// Validates that the requested database exists either in memory or on disk
+/// before allowing the request to proceed to the handler.
+///
+/// ## Arguments
+///
+/// * `db_name` - The name of the database from the request path.
+/// * `state` - The [`ServerState`] containing database references.
+/// * `request` - The incoming HTTP [`Request`](axum::extract::Request).
+/// * `next` - The [`Next`](axum::middleware::Next) middleware/handler in the chain.
+///
+/// ## Returns
+///
+/// Returns the [`Response`] from the next handler, or an error response if the database doesn't exist.
 pub async fn check_database(
     Path(db_name): Path<String>,
     State(state): State<ServerState>,
@@ -19,39 +38,31 @@ pub async fn check_database(
         Ok(dbs) => dbs.contains_key(&db_name),
         Err(err) => {
             error!("Unable to check databases: {:#?}", err);
-            return Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(Body::from(format!("Unable to check databases: {:?}", err)))
-                .unwrap();
+            return internal_error!(format!("Unable to check databases: {:?}", err))
+                .into_response();
         }
     };
+
     if !db_exists {
         let mut db_dir = state.data_dir.clone();
         db_dir.push(&db_name);
         match db_dir.try_exists() {
             Ok(existence) => {
                 if !existence {
-                    return Response::builder()
-                        .status(StatusCode::NOT_FOUND)
-                        .body(Body::from(format!(
-                            "Database '{}' does not exist.",
-                            &db_name
-                        )))
-                        .unwrap();
+                    return api_error!(
+                        format!("Database '{}' does not exist.", &db_name),
+                        StatusCode::NOT_FOUND
+                    )
+                    .into_response();
                 }
             }
             Err(err) => {
                 error!("Unable to read database directory: {:#?}", err);
-                return Response::builder()
-                    .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(Body::from(format!(
-                        "Unable to read database directory: {:?}",
-                        err
-                    )))
-                    .unwrap();
+                return internal_error!(format!("Unable to read database directory: {:?}", err))
+                    .into_response();
             }
         }
     }
-    let response = next.run(request).await;
-    response
+
+    next.run(request).await
 }

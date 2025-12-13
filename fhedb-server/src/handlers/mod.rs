@@ -1,33 +1,38 @@
+//! # Request Handlers
+//!
+//! This module provides the HTTP request handlers for database and contextual operations.
+//! It routes incoming requests to the appropriate sub-handlers based on [`ParsedQuery`] type.
+
 mod base;
 pub(crate) mod collection;
 mod contextual;
 
-use crate::{extractor::ParsedQuery, handlers::base::execute_base_query, state::ServerState};
+use crate::{
+    extractor::ParsedQuery, handlers::base::execute_base_query, internal_error, state::ServerState,
+    success,
+};
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
     response::IntoResponse,
 };
 
-pub async fn handle_base(
-    State(state): State<ServerState>,
-    body: ParsedQuery,
-) -> (StatusCode, String) {
+/// Handles requests to the base endpoint (database-level operations).
+///
+/// Processes [`DatabaseQuery`](fhedb_query::ast::DatabaseQuery) operations such as CREATE, DROP, and LIST.
+pub async fn handle_base(State(state): State<ServerState>, body: ParsedQuery) -> impl IntoResponse {
     let query = match body {
         ParsedQuery::Base(db) => db,
-        _ => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Expected database query, this should never happen.".to_string(),
-            );
-        }
+        _ => return internal_error!("Expected database query, this should never happen."),
     };
     match execute_base_query(query, &state) {
-        Ok(message) => (StatusCode::OK, message),
-        Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, err),
+        Ok(data) => success!(data),
+        Err(err) => internal_error!(err),
     }
 }
 
+/// Handles requests to database-specific endpoints (contextual operations).
+///
+/// Processes [`ContextualQuery`](fhedb_query::ast::ContextualQuery) operations within a database context.
 pub async fn handle_db(
     Path(db_name): Path<String>,
     State(state): State<ServerState>,
@@ -35,15 +40,10 @@ pub async fn handle_db(
 ) -> impl IntoResponse {
     let query = match body {
         ParsedQuery::Context(contextual) => contextual,
-        _ => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Expected contextual query, this should never happen.".to_string(),
-            );
-        }
+        _ => return internal_error!("Expected contextual query, this should never happen."),
     };
     match contextual::execute_contextual_query(db_name, query, &state) {
-        Ok(message) => (StatusCode::OK, message),
-        Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, err),
+        Ok(data) => success!(data),
+        Err(err) => internal_error!(err),
     }
 }

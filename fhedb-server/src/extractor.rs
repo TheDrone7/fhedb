@@ -1,3 +1,8 @@
+//! # Query Extractors
+//!
+//! This module provides Axum extractors for parsing incoming query requests
+//! from HTTP request bodies into structured query types.
+
 use axum::{
     RequestExt,
     body::Body,
@@ -12,8 +17,11 @@ use fhedb_query::{
 };
 use log::debug;
 
+/// Represents a parsed query from the request body.
 pub enum ParsedQuery {
+    /// A database-level query (CREATE/DROP/LIST DATABASE).
     Base(DatabaseQuery),
+    /// A contextual query within a database (collection/document operations).
     Context(ContextualQuery),
 }
 
@@ -27,14 +35,7 @@ where
         let path = req
             .extract_parts::<Option<Path<String>>>()
             .await
-            .map(|path_param| {
-                if path_param.is_none() {
-                    return "".to_string();
-                } else {
-                    let Path(some_path) = path_param.unwrap();
-                    return some_path;
-                }
-            })
+            .map(|path_param| path_param.map_or(String::new(), |Path(p)| p))
             .map_err(IntoResponse::into_response)?;
 
         let query = req
@@ -45,25 +46,35 @@ where
         if path.trim().is_empty() {
             match parse_database_query(&query) {
                 Ok(ast) => {
-                    let query = ParsedQuery::Base(ast);
-                    log_query(&query, "");
-                    return Ok(query);
+                    let parsed = ParsedQuery::Base(ast);
+                    log_query(&parsed, "");
+                    Ok(parsed)
                 }
-                Err(err) => return Err(handle_errs(&query, err)),
-            };
+                Err(err) => Err(handle_errs(&query, err)),
+            }
         } else {
             match parse_contextual_query(&query) {
                 Ok(ast) => {
-                    let query = ParsedQuery::Context(ast);
-                    log_query(&query, &path);
-                    return Ok(query);
+                    let parsed = ParsedQuery::Context(ast);
+                    log_query(&parsed, &path);
+                    Ok(parsed)
                 }
-                Err(err) => return Err(handle_errs(&query, err)),
-            };
+                Err(err) => Err(handle_errs(&query, err)),
+            }
         }
     }
 }
 
+/// Formats parser errors into an HTTP response.
+///
+/// ## Arguments
+///
+/// * `query` - The original query string that failed to parse.
+/// * `errs` - The list of [`ParserError`]s to format.
+///
+/// ## Returns
+///
+/// Returns a [`Response`] with status `BAD_REQUEST` containing the formatted errors.
 fn handle_errs(query: &str, errs: Vec<ParserError>) -> Response {
     let errors = errs
         .iter()
@@ -76,26 +87,32 @@ fn handle_errs(query: &str, errs: Vec<ParserError>) -> Response {
         .unwrap()
 }
 
+/// Logs the parsed query type for debugging purposes.
+///
+/// ## Arguments
+///
+/// * `query` - The [`ParsedQuery`] to log.
+/// * `path` - The request path for context.
 fn log_query(query: &ParsedQuery, path: &str) {
     let query_type = match query {
         ParsedQuery::Base(ast) => match ast {
-            &DatabaseQuery::Create { .. } => "Create database",
-            &DatabaseQuery::Drop { .. } => "Drop database",
-            &DatabaseQuery::List => "List database",
+            DatabaseQuery::Create { .. } => "Create database",
+            DatabaseQuery::Drop { .. } => "Drop database",
+            DatabaseQuery::List => "List database",
         },
         ParsedQuery::Context(ast) => match ast {
             ContextualQuery::Collection(coll) => match coll {
-                &CollectionQuery::Create { .. } => "Create collection",
-                &CollectionQuery::Drop { .. } => "Drop collection",
-                &CollectionQuery::List => "List collections",
-                &CollectionQuery::GetSchema { .. } => "Get collection schema",
-                &CollectionQuery::Modify { .. } => "Modify collection",
+                CollectionQuery::Create { .. } => "Create collection",
+                CollectionQuery::Drop { .. } => "Drop collection",
+                CollectionQuery::List => "List collections",
+                CollectionQuery::GetSchema { .. } => "Get collection schema",
+                CollectionQuery::Modify { .. } => "Modify collection",
             },
             ContextualQuery::Document(doc) => match doc {
-                &DocumentQuery::Insert { .. } => "Insert document",
-                &DocumentQuery::Delete { .. } => "Delete document",
-                &DocumentQuery::Get { .. } => "Get/List documents",
-                &DocumentQuery::Update { .. } => "Update document",
+                DocumentQuery::Insert { .. } => "Insert document",
+                DocumentQuery::Delete { .. } => "Delete document",
+                DocumentQuery::Get { .. } => "Get/List documents",
+                DocumentQuery::Update { .. } => "Update document",
             },
         },
     };

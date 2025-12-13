@@ -15,13 +15,10 @@ async fn main() {
     let core_config = CoreConfig::read_from_file();
     core_config.ensure_dirs();
 
-    setup_logger(
-        core_config.logging.get_level(),
-        core_config.logging.get_file(),
-    )
-    .expect("Unable to set up logging utility.");
+    setup_logger(core_config.logging.level(), core_config.logging.file())
+        .expect("Unable to set up logging utility.");
 
-    let state = ServerState::new(core_config.storage.get_base_dir().clone());
+    let state = ServerState::new(core_config.storage.base_dir().clone());
     let layered_db_handler = handle_db.layer(middleware::from_fn_with_state(
         state.clone(),
         check_database,
@@ -34,8 +31,8 @@ async fn main() {
 
     let address = format!(
         "{}:{}",
-        core_config.server.get_host(),
-        core_config.server.get_port()
+        core_config.server.host(),
+        core_config.server.port()
     );
 
     let listener = tokio::net::TcpListener::bind(&address).await.unwrap();

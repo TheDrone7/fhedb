@@ -11,15 +11,16 @@ pub struct StorageConfig {
     base_dir: PathBuf,
 }
 
-impl StorageConfig {
-    /// Creates a new default storage configuration.
-    pub fn default() -> Self {
+impl Default for StorageConfig {
+    fn default() -> Self {
         let mut base_dir = data_local_dir().expect("Failed to locate local data directory.");
         base_dir.push("fhedb");
         base_dir.push("data");
         Self { base_dir }
     }
+}
 
+impl StorageConfig {
     /// Ensures that the base directory exists.
     pub fn ensure_base_dir(&self) {
         if !self.base_dir.exists() {
@@ -28,7 +29,7 @@ impl StorageConfig {
     }
 
     /// Returns the base directory.
-    pub fn get_base_dir(&self) -> &PathBuf {
+    pub fn base_dir(&self) -> &PathBuf {
         &self.base_dir
     }
 }

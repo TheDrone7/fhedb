@@ -6,6 +6,7 @@
 use chrono;
 use dirs::data_local_dir;
 use log::LevelFilter;
+use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fs::create_dir_all;
 use std::path::PathBuf;
@@ -40,7 +41,7 @@ mod log_level_serde {
             "info" => Ok(LevelFilter::Info),
             "warn" => Ok(LevelFilter::Warn),
             "error" => Ok(LevelFilter::Error),
-            _ => Err(serde::de::Error::custom("Invalid log level")),
+            _ => Err(DeError::custom("Invalid log level")),
         }
     }
 }
@@ -55,9 +56,8 @@ pub struct LoggingConfig {
     dir: Option<PathBuf>,
 }
 
-impl LoggingConfig {
-    /// Creats a new logging config with the default options.
-    pub fn default() -> Self {
+impl Default for LoggingConfig {
+    fn default() -> Self {
         let mut log_dir = data_local_dir().expect("Failed to locate the local data directory.");
         log_dir.push("fhedb");
         log_dir.push("logs");
@@ -66,9 +66,11 @@ impl LoggingConfig {
             dir: Some(log_dir),
         }
     }
+}
 
+impl LoggingConfig {
     /// Returns the log level for the fhedb server.
-    pub fn get_level(&self) -> LevelFilter {
+    pub fn level(&self) -> LevelFilter {
         self.level
     }
 
@@ -83,7 +85,7 @@ impl LoggingConfig {
 
     /// Returns the log file path for the fhedb server.
     /// Based on current time in the logs directory.
-    pub fn get_file(&self) -> Option<PathBuf> {
+    pub fn file(&self) -> Option<PathBuf> {
         if let Some(mut file) = self.dir.clone() {
             file.push(
                 chrono::Local::now()
