@@ -1,0 +1,23 @@
+type: http_request
+model: http_request
+id: rq_EBMajkjTY4
+createdAt: 2025-12-13T18:24:48.264803100
+updatedAt: 2025-12-13T18:27:38.372906900
+workspaceId: wk_B2naWxZpAS
+folderId: fl_vSNFj7TeUf
+authentication: {}
+authenticationType: null
+body:
+  text: LIST DATABASES
+bodyType: other
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: RKmsBzZGYV
+method: POST
+name: List databases
+sortPriority: 4000.0
+url: ${[ BASE_URL ]}
+urlParameters: []

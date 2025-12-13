@@ -1,0 +1,23 @@
+type: http_request
+model: http_request
+id: rq_oG8f8XJ6ag
+createdAt: 2025-12-13T18:08:46.592785900
+updatedAt: 2025-12-13T18:27:38.362332800
+workspaceId: wk_B2naWxZpAS
+folderId: fl_vSNFj7TeUf
+authentication: {}
+authenticationType: null
+body:
+  text: CREATE DATABASE ${[ DB_NAME ]} DROP IF EXISTS
+bodyType: other
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: 0UfCXqDJn7
+method: POST
+name: Create database (drop if exists)
+sortPriority: 1000.0
+url: ${[ BASE_URL ]}
+urlParameters: []

@@ -1,0 +1,30 @@
+type: environment
+model: environment
+id: ev_vcxN9PowcP
+workspaceId: wk_B2naWxZpAS
+createdAt: 2025-12-13T17:59:00.113783900
+updatedAt: 2025-12-13T18:01:15.518694700
+name: Global Variables
+public: true
+base: true
+parentModel: workspace
+parentId: null
+variables:
+- enabled: true
+  name: BASE_URL
+  value: http://localhost:6907/
+  id: Z7Q43u0EVm
+- enabled: true
+  name: DB_NAME
+  value: my_db
+  id: ETsfDDiIPE
+- enabled: true
+  name: TEMP
+  value: temp
+  id: xQcsT2jYRV
+- enabled: true
+  name: COLL_NAME
+  value: my_coll
+  id: wwThGphkpb
+color: null
+sortPriority: 0.0

@@ -1,0 +1,23 @@
+type: http_request
+model: http_request
+id: rq_wGfr8aohzn
+createdAt: 2025-12-13T18:10:15.428877500
+updatedAt: 2025-12-13T18:27:38.369895200
+workspaceId: wk_B2naWxZpAS
+folderId: fl_vSNFj7TeUf
+authentication: {}
+authenticationType: null
+body:
+  text: DROP DATABASE ${[ TEMP ]}
+bodyType: other
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: RKmsBzZGYV
+method: POST
+name: Drop database
+sortPriority: 3000.0
+url: ${[ BASE_URL ]}
+urlParameters: []

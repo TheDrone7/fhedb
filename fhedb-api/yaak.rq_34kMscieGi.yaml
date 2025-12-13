@@ -1,0 +1,23 @@
+type: http_request
+model: http_request
+id: rq_34kMscieGi
+createdAt: 2025-12-13T18:29:18.853991700
+updatedAt: 2025-12-13T18:29:45.930405700
+workspaceId: wk_B2naWxZpAS
+folderId: fl_vSNFj7TeUf
+authentication: {}
+authenticationType: null
+body:
+  text: 'CREATE DATABASE '
+bodyType: other
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: RKmsBzZGYV
+method: POST
+name: Error (missing name)
+sortPriority: 4000.001
+url: ${[ BASE_URL ]}
+urlParameters: []
