@@ -1,0 +1,23 @@
+type: http_request
+model: http_request
+id: rq_4MCHqCaKrU
+createdAt: 2025-12-14T00:02:16.707951300
+updatedAt: 2025-12-14T00:31:17.206139700
+workspaceId: wk_B2naWxZpAS
+folderId: fl_AovS7EydkX
+authentication: {}
+authenticationType: null
+body:
+  text: LIST COLLECTIONS
+bodyType: other
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: RKmsBzZGYV
+method: POST
+name: List collections
+sortPriority: 4000.0
+url: ${[ BASE_URL ]}${[ DB_NAME ]}
+urlParameters: []

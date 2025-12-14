@@ -1,0 +1,23 @@
+type: http_request
+model: http_request
+id: rq_bM6ATaPPii
+createdAt: 2025-12-14T00:02:16.707554400
+updatedAt: 2025-12-14T00:31:58.103359600
+workspaceId: wk_B2naWxZpAS
+folderId: fl_AovS7EydkX
+authentication: {}
+authenticationType: null
+body:
+  text: CREATE ${[ COL_NAME ]}
+bodyType: other
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: RKmsBzZGYV
+method: POST
+name: Error (missing keyword)
+sortPriority: 4000.002
+url: ${[ BASE_URL ]}${[ DB_NAME ]}
+urlParameters: []

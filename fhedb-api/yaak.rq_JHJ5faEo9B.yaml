@@ -1,0 +1,23 @@
+type: http_request
+model: http_request
+id: rq_JHJ5faEo9B
+createdAt: 2025-12-14T00:02:16.708422900
+updatedAt: 2025-12-14T00:30:09.373621900
+workspaceId: wk_B2naWxZpAS
+folderId: fl_AovS7EydkX
+authentication: {}
+authenticationType: null
+body:
+  text: CREATE COLLECTION ${[ COL_NAME ]} DROP IF EXISTS ${[ COL_SCHEMA ]}
+bodyType: other
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: 0UfCXqDJn7
+method: POST
+name: Create collection (drop if exists)
+sortPriority: 1000.0
+url: ${[ BASE_URL ]}${[ DB_NAME ]}
+urlParameters: []

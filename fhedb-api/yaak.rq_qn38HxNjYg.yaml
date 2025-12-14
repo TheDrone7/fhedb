@@ -1,0 +1,23 @@
+type: http_request
+model: http_request
+id: rq_qn38HxNjYg
+createdAt: 2025-12-14T00:32:54.893112100
+updatedAt: 2025-12-14T00:33:06.685845
+workspaceId: wk_B2naWxZpAS
+folderId: fl_AovS7EydkX
+authentication: {}
+authenticationType: null
+body:
+  text: CREATE COLLECTION ${[ COL_NAME ]}
+bodyType: other
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: RKmsBzZGYV
+method: POST
+name: Error (missing schema)
+sortPriority: 4000.003
+url: ${[ BASE_URL ]}${[ DB_NAME ]}
+urlParameters: []

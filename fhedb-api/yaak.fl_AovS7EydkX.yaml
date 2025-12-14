@@ -1,0 +1,13 @@
+type: folder
+model: folder
+id: fl_AovS7EydkX
+createdAt: 2025-12-14T00:02:16.706230900
+updatedAt: 2025-12-14T00:02:34.348771600
+workspaceId: wk_B2naWxZpAS
+folderId: null
+authentication: {}
+authenticationType: null
+description: Contains query requests for collection related operations.
+headers: []
+name: Collection
+sortPriority: 0.001

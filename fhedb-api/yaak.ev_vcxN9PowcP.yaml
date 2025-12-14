@@ -3,7 +3,7 @@ model: environment
 id: ev_vcxN9PowcP
 workspaceId: wk_B2naWxZpAS
 createdAt: 2025-12-13T17:59:00.113783900
-updatedAt: 2025-12-13T18:01:15.518694700
+updatedAt: 2025-12-14T00:29:55.668379300
 name: Global Variables
 public: true
 base: true
@@ -23,8 +23,29 @@ variables:
   value: temp
   id: xQcsT2jYRV
 - enabled: true
-  name: COLL_NAME
+  name: COL_NAME
   value: my_coll
   id: wwThGphkpb
+- enabled: true
+  name: COL_SCHEMA
+  value: |-
+    {
+      name: string,
+      age: int,
+      refer: ref<department>,
+      nickname: string(nullable),
+      defaulter: int(default=5),
+      extra: string(nullable,
+      default="something"),
+      numbers: array<array<ref<numero>>>
+    }
+  id: JxcxZSz990
+- enabled: true
+  name: TEMP_SCHEMA
+  value: |-
+    {
+      id: id_string
+    }
+  id: E9W5rJNY6A
 color: null
 sortPriority: 0.0
