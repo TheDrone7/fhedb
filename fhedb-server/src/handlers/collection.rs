@@ -21,7 +21,7 @@ struct JsonFieldDefinition {
     field_type: String,
     /// The default value for the field, if any.
     #[serde(skip_serializing_if = "Option::is_none")]
-    default: Option<String>,
+    default: Option<serde_json::Value>,
     /// Whether the field can be null.
     nullable: bool,
 }
@@ -31,7 +31,10 @@ impl From<&FieldDefinition> for JsonFieldDefinition {
         let (type_str, nullable) = extract_type_info(&def.field_type);
         JsonFieldDefinition {
             field_type: type_str,
-            default: def.default_value.as_ref().map(|v| v.to_string()),
+            default: def
+                .default_value
+                .as_ref()
+                .and_then(|v| serde_json::to_value(v).ok()),
             nullable,
         }
     }
