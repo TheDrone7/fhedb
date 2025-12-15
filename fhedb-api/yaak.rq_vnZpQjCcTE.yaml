@@ -2,15 +2,15 @@ type: http_request
 model: http_request
 id: rq_vnZpQjCcTE
 createdAt: 2025-12-14T00:02:16.708113200
-updatedAt: 2025-12-14T00:31:01.905432200
+updatedAt: 2025-12-14T02:04:56.308844100
 workspaceId: wk_B2naWxZpAS
 folderId: fl_AovS7EydkX
 authentication: {}
 authenticationType: null
 body:
-  text: DROP COLLECTION ${[ TEMP ]}
+  text: DROP COLLECTION ${[ COL_NAME ]}
 bodyType: other
-description: ''
+description: Drop the collection named `COL_NAME` in the database `DB_NAME`.
 headers:
 - enabled: true
   name: Content-Type

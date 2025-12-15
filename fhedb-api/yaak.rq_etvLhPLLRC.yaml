@@ -1,0 +1,26 @@
+type: http_request
+model: http_request
+id: rq_etvLhPLLRC
+createdAt: 2025-12-14T01:23:57.884090100
+updatedAt: 2025-12-15T01:23:36.115481700
+workspaceId: wk_B2naWxZpAS
+folderId: fl_3wM8cMyNQX
+authentication: {}
+authenticationType: null
+body:
+  text: INSERT DOCUMENTS INTO ${[ COL_NAME ]} ${[ MINIMAL_DOC ]}
+bodyType: other
+description: |-
+  Insert document `MINIMAL_DOC` into collection `COL_NAME` in database `DB_NAME`.
+
+  Fields with default values should have them assigned. Nullable fields and Reference fields should get assigned `null` values.
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: isbCUUnXQy
+method: POST
+name: Insert document (minimal)
+sortPriority: 0.0
+url: ${[ BASE_URL ]}${[ DB_NAME ]}
+urlParameters: []

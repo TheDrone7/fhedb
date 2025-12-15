@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_hHXJs5wz7w
 createdAt: 2025-12-14T00:02:16.707803300
-updatedAt: 2025-12-14T00:31:41.648069300
+updatedAt: 2025-12-14T02:03:55.590635900
 workspaceId: wk_B2naWxZpAS
 folderId: fl_AovS7EydkX
 authentication: {}
@@ -10,7 +10,7 @@ authenticationType: null
 body:
   text: 'CREATE COLLECTION '
 bodyType: other
-description: ''
+description: Invalid query with a missing collection name.
 headers:
 - enabled: true
   name: Content-Type

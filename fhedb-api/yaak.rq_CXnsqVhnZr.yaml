@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_CXnsqVhnZr
 createdAt: 2025-12-14T00:34:42.588601600
-updatedAt: 2025-12-14T00:35:05.570117200
+updatedAt: 2025-12-14T02:04:33.486467
 workspaceId: wk_B2naWxZpAS
 folderId: fl_AovS7EydkX
 authentication: {}
@@ -13,7 +13,7 @@ body:
       id: invalid
     }
 bodyType: other
-description: ''
+description: Invalid query with an invalid collection schema.
 headers:
 - enabled: true
   name: Content-Type

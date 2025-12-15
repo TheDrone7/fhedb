@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_GFfJhDbMFx
 createdAt: 2025-12-14T00:02:16.708575100
-updatedAt: 2025-12-14T00:29:45.936863
+updatedAt: 2025-12-14T02:01:36.951759600
 workspaceId: wk_B2naWxZpAS
 folderId: fl_AovS7EydkX
 authentication: {}
@@ -10,7 +10,7 @@ authenticationType: null
 body:
   text: CREATE COLLECTION ${[ COL_NAME ]} ${[ COL_SCHEMA ]}
 bodyType: other
-description: ''
+description: Create a new collection with the given `COL_NAME` and `COL_SCHEMA` inside the database named `DB_NAME`.
 headers:
 - enabled: true
   name: Content-Type

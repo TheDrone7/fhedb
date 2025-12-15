@@ -1,0 +1,31 @@
+type: http_request
+model: http_request
+id: rq_KbkUjPPD8W
+createdAt: 2025-12-15T01:53:59.820365100
+updatedAt: 2025-12-15T02:05:43.997333100
+workspaceId: wk_B2naWxZpAS
+folderId: fl_3wM8cMyNQX
+authentication: {}
+authenticationType: null
+body:
+  text: |-
+    UPDATE DOC IN ${[ COL_NAME ]} {
+        name = "Bob Wilson",
+        extra: "updated info",
+        defaulter: 15
+    }
+bodyType: other
+description: |-
+  Update documents in `COL_NAME` (where `name = "Bob Wilson"`) and set the values for the fields:
+  - `extra`: `"updated info"`
+  - `defaulter`: `15`
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: isbCUUnXQy
+method: POST
+name: Update document
+sortPriority: 7000.001
+url: ${[ BASE_URL ]}${[ DB_NAME ]}
+urlParameters: []

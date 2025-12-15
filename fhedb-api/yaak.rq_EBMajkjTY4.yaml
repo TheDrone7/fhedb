@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_EBMajkjTY4
 createdAt: 2025-12-13T18:24:48.264803100
-updatedAt: 2025-12-13T18:27:38.372906900
+updatedAt: 2025-12-14T02:03:00.309637700
 workspaceId: wk_B2naWxZpAS
 folderId: fl_vSNFj7TeUf
 authentication: {}
@@ -10,7 +10,7 @@ authenticationType: null
 body:
   text: LIST DATABASES
 bodyType: other
-description: ''
+description: List all databases currently on disk.
 headers:
 - enabled: true
   name: Content-Type

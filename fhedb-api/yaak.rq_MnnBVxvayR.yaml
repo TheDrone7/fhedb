@@ -1,0 +1,28 @@
+type: http_request
+model: http_request
+id: rq_MnnBVxvayR
+createdAt: 2025-12-15T00:55:41.684029700
+updatedAt: 2025-12-15T02:00:41.838939800
+workspaceId: wk_B2naWxZpAS
+folderId: fl_3wM8cMyNQX
+authentication: {}
+authenticationType: null
+body:
+  text: |-
+    GET DOCUMENTS FROM ${[ COL_NAME ]} {
+      age >= 25,
+      name,
+      age
+    }
+bodyType: other
+description: Get some documents from `COL_NAME` (where `age >= 25`) with specified fields `id, name, age`.
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: isbCUUnXQy
+method: POST
+name: Get document (condition)
+sortPriority: 5000.0
+url: ${[ BASE_URL ]}${[ DB_NAME ]}
+urlParameters: []

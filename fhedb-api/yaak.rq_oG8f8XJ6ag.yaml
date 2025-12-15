@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_oG8f8XJ6ag
 createdAt: 2025-12-13T18:08:46.592785900
-updatedAt: 2025-12-13T18:27:38.362332800
+updatedAt: 2025-12-14T01:53:42.603219500
 workspaceId: wk_B2naWxZpAS
 folderId: fl_vSNFj7TeUf
 authentication: {}
@@ -10,7 +10,10 @@ authenticationType: null
 body:
   text: CREATE DATABASE ${[ DB_NAME ]} DROP IF EXISTS
 bodyType: other
-description: ''
+description: |-
+  Create a new database with the given `DB_NAME`.
+
+  If a database with the name `DB_NAME` already exists, then drop it before creating a new one.
 headers:
 - enabled: true
   name: Content-Type

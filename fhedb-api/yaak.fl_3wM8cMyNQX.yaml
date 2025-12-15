@@ -1,0 +1,13 @@
+type: folder
+model: folder
+id: fl_3wM8cMyNQX
+createdAt: 2025-12-14T00:57:23.841348500
+updatedAt: 2025-12-15T00:55:36.641767600
+workspaceId: wk_B2naWxZpAS
+folderId: null
+authentication: {}
+authenticationType: null
+description: Contains query requests for document related operations.
+headers: []
+name: Document
+sortPriority: 2000.0

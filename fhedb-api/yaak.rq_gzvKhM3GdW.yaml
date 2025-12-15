@@ -1,0 +1,26 @@
+type: http_request
+model: http_request
+id: rq_gzvKhM3GdW
+createdAt: 2025-12-14T02:47:42.120011900
+updatedAt: 2025-12-15T01:23:36.129185600
+workspaceId: wk_B2naWxZpAS
+folderId: fl_3wM8cMyNQX
+authentication: {}
+authenticationType: null
+body:
+  text: INSERT DOCUMENTS INTO ${[ COL_NAME ]} ${[ COMPLETE_DOC ]}
+bodyType: other
+description: |-
+  Insert document `MINIMAL_DOC` into collection `COL_NAME` in database `DB_NAME`.
+
+  All fields should accept values of their specific type.
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: isbCUUnXQy
+method: POST
+name: Insert document (full)
+sortPriority: 2000.0
+url: ${[ BASE_URL ]}${[ DB_NAME ]}
+urlParameters: []

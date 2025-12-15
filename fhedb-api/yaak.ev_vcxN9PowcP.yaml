@@ -3,7 +3,7 @@ model: environment
 id: ev_vcxN9PowcP
 workspaceId: wk_B2naWxZpAS
 createdAt: 2025-12-13T17:59:00.113783900
-updatedAt: 2025-12-14T00:29:55.668379300
+updatedAt: 2025-12-14T02:46:35.663900800
 name: Global Variables
 public: true
 base: true
@@ -18,10 +18,6 @@ variables:
   name: DB_NAME
   value: my_db
   id: ETsfDDiIPE
-- enabled: true
-  name: TEMP
-  value: temp
-  id: xQcsT2jYRV
 - enabled: true
   name: COL_NAME
   value: my_coll
@@ -41,11 +37,35 @@ variables:
     }
   id: JxcxZSz990
 - enabled: true
-  name: TEMP_SCHEMA
+  name: COMPLETE_DOC
   value: |-
     {
-      id: id_string
+      name: "John Doe",
+      age: 30,
+      refer: "engineering",
+      nickname: "Johnny",
+      defaulter: 10,
+      extra: "some extra info",
+      numbers: [["num_001", "num_002"], ["num_003"]]
     }
-  id: E9W5rJNY6A
+  id: ve5H5jU98b
+- enabled: true
+  name: NULL_DOC
+  value: |-
+    {
+      name: "Jane Smith",
+      age: 25,
+      refer: null,
+      nickname: null
+    }
+  id: ZtcgZxCQMS
+- enabled: true
+  name: MINIMAL_DOC
+  value: |-
+    {
+      name: "Bob Wilson",
+      age: 40
+    }
+  id: Q6qTSe6yM8
 color: null
 sortPriority: 0.0

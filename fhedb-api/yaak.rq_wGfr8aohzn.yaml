@@ -2,15 +2,15 @@ type: http_request
 model: http_request
 id: rq_wGfr8aohzn
 createdAt: 2025-12-13T18:10:15.428877500
-updatedAt: 2025-12-13T18:27:38.369895200
+updatedAt: 2025-12-14T01:55:44.136630500
 workspaceId: wk_B2naWxZpAS
 folderId: fl_vSNFj7TeUf
 authentication: {}
 authenticationType: null
 body:
-  text: DROP DATABASE ${[ TEMP ]}
+  text: DROP DATABASE ${[ DB_NAME ]}
 bodyType: other
-description: ''
+description: Drop a database named `DB_NAME`.
 headers:
 - enabled: true
   name: Content-Type

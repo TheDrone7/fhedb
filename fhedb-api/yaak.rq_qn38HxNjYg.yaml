@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_qn38HxNjYg
 createdAt: 2025-12-14T00:32:54.893112100
-updatedAt: 2025-12-14T00:33:06.685845
+updatedAt: 2025-12-14T02:04:21.775593600
 workspaceId: wk_B2naWxZpAS
 folderId: fl_AovS7EydkX
 authentication: {}
@@ -10,7 +10,7 @@ authenticationType: null
 body:
   text: CREATE COLLECTION ${[ COL_NAME ]}
 bodyType: other
-description: ''
+description: Invalid query with a missing collection schema.
 headers:
 - enabled: true
   name: Content-Type

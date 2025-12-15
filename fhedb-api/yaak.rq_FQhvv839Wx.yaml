@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_FQhvv839Wx
 createdAt: 2025-12-13T18:29:36.452340100
-updatedAt: 2025-12-13T18:29:50.751230
+updatedAt: 2025-12-14T01:56:44.341908300
 workspaceId: wk_B2naWxZpAS
 folderId: fl_vSNFj7TeUf
 authentication: {}
@@ -10,7 +10,7 @@ authenticationType: null
 body:
   text: CREATE ${[ DB_NAME ]}
 bodyType: other
-description: ''
+description: Invalid query with a missing `DATABASE` keyword.
 headers:
 - enabled: true
   name: Content-Type

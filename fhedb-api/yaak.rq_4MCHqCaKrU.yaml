@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_4MCHqCaKrU
 createdAt: 2025-12-14T00:02:16.707951300
-updatedAt: 2025-12-14T00:31:17.206139700
+updatedAt: 2025-12-14T02:03:44.415534
 workspaceId: wk_B2naWxZpAS
 folderId: fl_AovS7EydkX
 authentication: {}
@@ -10,7 +10,7 @@ authenticationType: null
 body:
   text: LIST COLLECTIONS
 bodyType: other
-description: ''
+description: List all collections in the database named `DB_NAME`.
 headers:
 - enabled: true
   name: Content-Type

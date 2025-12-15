@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_JHJ5faEo9B
 createdAt: 2025-12-14T00:02:16.708422900
-updatedAt: 2025-12-14T00:30:09.373621900
+updatedAt: 2025-12-14T02:01:30.404701400
 workspaceId: wk_B2naWxZpAS
 folderId: fl_AovS7EydkX
 authentication: {}
@@ -10,7 +10,10 @@ authenticationType: null
 body:
   text: CREATE COLLECTION ${[ COL_NAME ]} DROP IF EXISTS ${[ COL_SCHEMA ]}
 bodyType: other
-description: ''
+description: |-
+  Create a new collection with the given `COL_NAME` and `COL_SCHEMA` inside the database named `DB_NAME`.
+
+  If a collection with the name `COL_NAME` already exists inside the databased named `DB_NAME`, then drop it before creating a new one with the given `COL_SCHEMA`.
 headers:
 - enabled: true
   name: Content-Type

@@ -1,0 +1,26 @@
+type: http_request
+model: http_request
+id: rq_xkbGapCTXs
+createdAt: 2025-12-15T00:55:40.006483200
+updatedAt: 2025-12-15T02:00:11.622557600
+workspaceId: wk_B2naWxZpAS
+folderId: fl_3wM8cMyNQX
+authentication: {}
+authenticationType: null
+body:
+  text: |-
+    GET DOCUMENTS FROM ${[ COL_NAME ]} {
+      id = ${[ response.body.path(behavior='always', ttl='0', result='first', join=b64'LCA', request='rq_gzvKhM3GdW', path=b64'JC5pZA') ]}
+    }
+bodyType: other
+description: Get a specific document (`id = <id>`) from `COL_NAME` with only the `id` field.
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: isbCUUnXQy
+method: POST
+name: Get document (by ID)
+sortPriority: 4000.0
+url: ${[ BASE_URL ]}${[ DB_NAME ]}
+urlParameters: []
