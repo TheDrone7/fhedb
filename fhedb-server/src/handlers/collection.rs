@@ -4,12 +4,8 @@
 //! such as creating, dropping, modifying, and listing collections.
 
 use crate::state::ServerState;
-use fhedb_core::db::{
-    collection_schema_ops::CollectionSchemaOps,
-    database::Database,
-    schema::{FieldDefinition, FieldType, Schema},
-};
-use fhedb_query::ast::{CollectionQuery, FieldModification};
+use fhedb_core::prelude::{CollectionSchemaOps, Database, FieldDefinition, FieldType, Schema};
+use fhedb_query::prelude::{CollectionQuery, FieldModification};
 use serde::Serialize;
 use serde_json::json;
 use std::collections::HashMap;
@@ -114,7 +110,7 @@ fn validate_schema_references(
     db: &Database,
     self_collection: Option<&str>,
 ) -> Result<(), String> {
-    for (_, field_def) in &schema.fields {
+    for field_def in schema.fields.values() {
         if let Some(invalid_ref) =
             find_invalid_reference(&field_def.field_type, db, self_collection)
         {
@@ -165,7 +161,7 @@ fn find_referencing_collections(db: &Database, target_collection: &str) -> Vec<S
         }
 
         if let Some(col) = db.get_collection(&collection_name) {
-            for (_, field_def) in &col.schema().fields {
+            for field_def in col.schema().fields.values() {
                 if references_collection(&field_def.field_type, target_collection) {
                     referencing.push(collection_name.clone());
                     break;
@@ -281,14 +277,12 @@ pub fn execute_collection_query(
             name,
             modifications,
         } => {
-            // Validate all Set modifications before getting mutable borrow
-            for (_, modification) in &modifications {
-                if let FieldModification::Set(def) = modification {
-                    if let Some(invalid_ref) =
+            for modification in modifications.values() {
+                if let FieldModification::Set(def) = modification
+                    && let Some(invalid_ref) =
                         find_invalid_reference(&def.field_type, db, Some(&name))
-                    {
-                        return Err(format!("Collection '{}' does not exist.", invalid_ref));
-                    }
+                {
+                    return Err(format!("Collection '{}' does not exist.", invalid_ref));
                 }
             }
 

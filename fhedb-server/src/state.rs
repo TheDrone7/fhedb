@@ -4,9 +4,11 @@
 //! It maintains a thread-safe cache of loaded databases and the base data directory path.
 
 use fhedb_core::prelude::Database;
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 
 /// The shared state for the fhedb server.
 ///

@@ -6,10 +6,8 @@
 use chrono;
 use dirs::data_local_dir;
 use log::LevelFilter;
-use serde::de::Error as DeError;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::fs::create_dir_all;
-use std::path::PathBuf;
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error as DeError};
+use std::{fs::create_dir_all, path::PathBuf};
 
 /// Serializes the log level to a string.
 mod log_level_serde {
@@ -76,10 +74,10 @@ impl LoggingConfig {
 
     /// Ensures that the log directory exists.
     pub fn ensure_log_dir(&self) {
-        if let Some(ref dir) = self.dir {
-            if !dir.exists() {
-                create_dir_all(dir).expect("Failed to create log directory");
-            }
+        if let Some(ref dir) = self.dir
+            && !dir.exists()
+        {
+            create_dir_all(dir).expect("Failed to create log directory");
         }
     }
 

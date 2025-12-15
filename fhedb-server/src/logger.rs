@@ -5,8 +5,7 @@
 
 use fern;
 use log::LevelFilter;
-use std::io;
-use std::path::PathBuf;
+use std::{io, path::PathBuf};
 
 /// Sets up the logging system with the specified configuration.
 ///

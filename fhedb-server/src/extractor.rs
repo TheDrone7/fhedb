@@ -10,10 +10,9 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use fhedb_query::{
-    ast::{CollectionQuery, DocumentQuery},
-    error::ParserError,
-    prelude::{ContextualQuery, DatabaseQuery, parse_contextual_query, parse_database_query},
+use fhedb_query::prelude::{
+    CollectionQuery, ContextualQuery, DatabaseQuery, DocumentQuery, ParserError,
+    parse_contextual_query, parse_database_query,
 };
 use log::debug;
 

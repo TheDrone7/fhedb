@@ -11,7 +11,7 @@ use std::fs::{create_dir_all, read_to_string, write};
 use super::{logging::LoggingConfig, server::ServerConfig, storage::StorageConfig};
 
 /// The core configuration for the fhedb server.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 pub struct CoreConfig {
     /// The server configuration for the fhedb server.
     pub server: ServerConfig,
@@ -19,16 +19,6 @@ pub struct CoreConfig {
     pub logging: LoggingConfig,
     /// The storage configuration for the fhedb server.
     pub storage: StorageConfig,
-}
-
-impl Default for CoreConfig {
-    fn default() -> Self {
-        Self {
-            server: ServerConfig::default(),
-            logging: LoggingConfig::default(),
-            storage: StorageConfig::default(),
-        }
-    }
 }
 
 impl CoreConfig {
@@ -71,9 +61,8 @@ impl CoreConfig {
             config
         } else {
             let config_str = read_to_string(&config_file).expect("Failed to read config file.");
-            let config =
-                serde_saphyr::from_str(&config_str).expect("Failed to deserialize config file.");
-            config
+
+            serde_saphyr::from_str(&config_str).expect("Failed to deserialize config file.")
         }
     }
 }

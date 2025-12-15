@@ -2,8 +2,7 @@
 
 use dirs::data_local_dir;
 use serde::{Deserialize, Serialize};
-use std::fs::create_dir_all;
-use std::path::PathBuf;
+use std::{fs::create_dir_all, path::PathBuf};
 
 /// The fhedb server's storage configuration.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

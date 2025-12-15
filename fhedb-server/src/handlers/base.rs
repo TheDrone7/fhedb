@@ -3,7 +3,7 @@
 //! This module handles database operations such as creating, dropping, and listing databases.
 
 use fhedb_core::prelude::Database;
-use fhedb_query::ast::DatabaseQuery;
+use fhedb_query::prelude::DatabaseQuery;
 use log::warn;
 use serde_json::json;
 use std::fs::{create_dir_all, remove_dir_all};
