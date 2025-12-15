@@ -6,6 +6,7 @@
 use crate::state::ServerState;
 use fhedb_core::db::{
     collection_schema_ops::CollectionSchemaOps,
+    database::Database,
     schema::{FieldDefinition, FieldType, Schema},
 };
 use fhedb_query::ast::{CollectionQuery, FieldModification};
@@ -57,6 +58,123 @@ fn extract_type_info(ft: &FieldType) -> (String, bool) {
         }
         other => (format_field_type(other), false),
     }
+}
+
+/// Finds the first invalid reference in a [`FieldType`].
+///
+/// Recursively checks nested types (Array, Nullable) for reference fields and returns
+/// the first collection name that doesn't exist in the database.
+///
+/// ## Arguments
+///
+/// * `ft` - The [`FieldType`] to check.
+/// * `db` - The [`Database`] to validate collection existence against.
+/// * `self_collection` - Optional name of the collection being created/modified (for self-reference allowance).
+///
+/// ## Returns
+///
+/// Returns [`Some`]\([`String`]) with the first invalid collection name, or [`None`] if all references are valid.
+fn find_invalid_reference(
+    ft: &FieldType,
+    db: &Database,
+    self_collection: Option<&str>,
+) -> Option<String> {
+    match ft {
+        FieldType::Reference(collection_name) => {
+            let is_self_ref = self_collection.is_some_and(|s| s == collection_name);
+            if is_self_ref || db.has_collection(collection_name) {
+                None
+            } else {
+                Some(collection_name.clone())
+            }
+        }
+        FieldType::Array(inner) | FieldType::Nullable(inner) => {
+            find_invalid_reference(inner, db, self_collection)
+        }
+        _ => None,
+    }
+}
+
+/// Validates that all reference fields in a schema point to existing collections.
+///
+/// This function checks all fields in the schema and returns an error for the first
+/// invalid reference found. Self-references are allowed when `self_collection` is provided.
+///
+/// ## Arguments
+///
+/// * `schema` - The [`Schema`] to validate.
+/// * `db` - The [`Database`] to check collection existence against.
+/// * `self_collection` - Optional name of the collection being created/modified.
+///
+/// ## Returns
+///
+/// Returns [`Ok`]\(()) if all references are valid, or [`Err`]\([`String`]) with the first invalid reference.
+fn validate_schema_references(
+    schema: &Schema,
+    db: &Database,
+    self_collection: Option<&str>,
+) -> Result<(), String> {
+    for (_, field_def) in &schema.fields {
+        if let Some(invalid_ref) =
+            find_invalid_reference(&field_def.field_type, db, self_collection)
+        {
+            return Err(format!("Collection '{}' does not exist.", invalid_ref));
+        }
+    }
+    Ok(())
+}
+
+/// Checks if a [`FieldType`] contains a reference to the specified collection.
+///
+/// Recursively checks nested types (Array, Nullable) for reference fields.
+///
+/// ## Arguments
+///
+/// * `ft` - The [`FieldType`] to check.
+/// * `collection_name` - The name of the collection to look for.
+///
+/// ## Returns
+///
+/// Returns `true` if the field type references the specified collection.
+fn references_collection(ft: &FieldType, collection_name: &str) -> bool {
+    match ft {
+        FieldType::Reference(ref_name) => ref_name == collection_name,
+        FieldType::Array(inner) | FieldType::Nullable(inner) => {
+            references_collection(inner, collection_name)
+        }
+        _ => false,
+    }
+}
+
+/// Finds all collections that reference the specified collection.
+///
+/// ## Arguments
+///
+/// * `db` - The [`Database`] to search.
+/// * `target_collection` - The name of the collection to find references to.
+///
+/// ## Returns
+///
+/// A vector of collection names that reference the target collection.
+fn find_referencing_collections(db: &Database, target_collection: &str) -> Vec<String> {
+    let mut referencing = Vec::new();
+
+    for collection_name in db.collection_names() {
+        if collection_name == target_collection {
+            continue;
+        }
+
+        if let Some(col) = db.get_collection(&collection_name) {
+            for (_, field_def) in &col.schema().fields {
+                if references_collection(&field_def.field_type, target_collection) {
+                    referencing.push(collection_name.clone());
+                    break;
+                }
+            }
+        }
+    }
+
+    referencing
 }
 
 /// Formats a [`FieldType`] as a human-readable string.
@@ -130,6 +248,7 @@ pub fn execute_collection_query(
             if drop_if_exists && db.has_collection(&name) {
                 db.drop_collection(&name)?;
             }
+            validate_schema_references(&schema, db, Some(&name))?;
             db.create_collection(&name, schema)?;
             let col = db
                 .get_collection(&name)
@@ -137,6 +256,14 @@ pub fn execute_collection_query(
             serialize_schema(col.schema())
         }
         CollectionQuery::Drop { name } => {
+            let referencing = find_referencing_collections(db, &name);
+            if !referencing.is_empty() {
+                return Err(format!(
+                    "Cannot drop collection '{}'. It is referenced by: {}.",
+                    name,
+                    referencing.join(", ")
+                ));
+            }
             db.drop_collection(&name)?;
             Ok(json!({ "dropped": name }))
         }
@@ -154,6 +281,17 @@ pub fn execute_collection_query(
             name,
             modifications,
         } => {
+            // Validate all Set modifications before getting mutable borrow
+            for (_, modification) in &modifications {
+                if let FieldModification::Set(def) = modification {
+                    if let Some(invalid_ref) =
+                        find_invalid_reference(&def.field_type, db, Some(&name))
+                    {
+                        return Err(format!("Collection '{}' does not exist.", invalid_ref));
+                    }
+                }
+            }
+
             let col = db
                 .get_collection_mut(&name)
                 .ok_or_else(|| format!("Collection '{}' not found", name))?;

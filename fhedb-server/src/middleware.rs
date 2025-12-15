@@ -9,14 +9,16 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Response},
 };
-use log::error;
+use fhedb_core::{db::database::Database, file::database::DatabaseFileOps};
+use log::{debug, error};
 
 use crate::{error as api_error, internal_error, state::ServerState};
 
 /// Middleware that checks if a database exists before processing the request.
 ///
 /// Validates that the requested database exists either in memory or on disk
-/// before allowing the request to proceed to the handler.
+/// before allowing the request to proceed to the handler. If the database
+/// exists on disk but not in memory, it will be loaded into the server state.
 ///
 /// ## Arguments
 ///
@@ -34,7 +36,7 @@ pub async fn check_database(
     request: Request,
     next: Next,
 ) -> Response {
-    let db_exists = match state.databases.try_read() {
+    let db_exists_in_memory = match state.databases.try_read() {
         Ok(dbs) => dbs.contains_key(&db_name),
         Err(err) => {
             error!("Unable to check databases: {:#?}", err);
@@ -43,7 +45,7 @@ pub async fn check_database(
         }
     };
 
-    if !db_exists {
+    if !db_exists_in_memory {
         let mut db_dir = state.data_dir.clone();
         db_dir.push(&db_name);
         match db_dir.try_exists() {
@@ -54,6 +56,35 @@ pub async fn check_database(
                         StatusCode::NOT_FOUND
                     )
                     .into_response();
+                }
+
+                debug!("Loading database '{}' from disk into memory.", &db_name);
+                match Database::from_files(&db_name, &state.data_dir) {
+                    Ok(db) => {
+                        let mut dbs = match state.databases.write() {
+                            Ok(dbs) => dbs,
+                            Err(err) => {
+                                error!("Unable to acquire write lock on databases: {:#?}", err);
+                                return internal_error!(format!(
+                                    "Unable to acquire write lock on databases: {:?}",
+                                    err
+                                ))
+                                .into_response();
+                            }
+                        };
+                        dbs.insert(db_name.clone(), db);
+                    }
+                    Err(err) => {
+                        error!(
+                            "Unable to load database '{}' from disk: {:#?}",
+                            &db_name, err
+                        );
+                        return internal_error!(format!(
+                            "Unable to load database '{}' from disk: {:?}",
+                            &db_name, err
+                        ))
+                        .into_response();
+                    }
                 }
             }
             Err(err) => {
