@@ -1,4 +1,7 @@
-use crate::db::{collection::Collection, schema::Schema};
+use crate::db::{
+    collection::Collection,
+    schema::{schema_from_document, schema_to_document},
+};
 use crate::file::types::{LogEntry, Operation};
 use bson::{Bson, Document as BsonDocument};
 use std::collections::HashMap;
@@ -373,7 +376,10 @@ impl CollectionFileOps for Collection {
         let mut metadata = BsonDocument::new();
         metadata.insert("name", Bson::String(self.name.clone()));
         metadata.insert("inserts", Bson::Int64(self.inserts as i64));
-        metadata.insert("schema", Bson::Document(self.schema.clone().into()));
+        metadata.insert(
+            "schema",
+            Bson::Document(schema_to_document(self.schema.clone())),
+        );
 
         let bson_bytes = metadata
             .to_vec()
@@ -402,7 +408,8 @@ impl CollectionFileOps for Collection {
             })?;
         let stored_name = metadata.get_str("name").unwrap_or("unknown");
         let inserts = metadata.get_i64("inserts").unwrap_or(0) as u64;
-        let schema = Schema::from(metadata.get_document("schema").cloned().unwrap_or_default());
+        let schema =
+            schema_from_document(metadata.get_document("schema").cloned().unwrap_or_default());
 
         let mut collection = Collection::new(stored_name, schema, &base_path).map_err(|e| {
             io::Error::new(io::ErrorKind::InvalidData, format!("Invalid schema: {}", e))

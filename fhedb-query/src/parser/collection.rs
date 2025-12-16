@@ -5,8 +5,8 @@
 use chumsky::{extra, input::ValueInput, prelude::*};
 use fhedb_core::db::schema::{FieldDefinition, FieldType, Schema, validate_bson_type};
 
-use crate::ast::{CollectionQuery, FieldModification};
 use crate::lexer::{Span, Token};
+use fhedb_types::{CollectionQuery, FieldModification};
 
 use super::common::{
     drop_if_exists_parser, field_modifier_parser, field_type_parser, identifier_parser,

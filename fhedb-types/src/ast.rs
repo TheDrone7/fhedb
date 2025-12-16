@@ -1,15 +1,13 @@
-//! Abstract Syntax Tree (AST) definitions for FHEDB queries.
+//! # AST Types
 //!
-//! This module defines the core data structures that represent the parsed
-//! form of FHEDB query language statements.
+//! Abstract Syntax Tree type definitions for FHEDB queries.
 
-use fhedb_core::db::schema::{FieldDefinition, Schema};
 use std::collections::HashMap;
 
+use crate::query::{FieldCondition, FieldSelector};
+use crate::schema::{FieldDefinition, Schema};
+
 /// Represents queries that operate at the database level.
-///
-/// Database queries are operations that work at the database level,
-/// such as creating new databases or dropping existing ones.
 #[derive(Debug, Clone, PartialEq)]
 pub enum DatabaseQuery {
     /// Create a new database with the specified name.
@@ -29,9 +27,6 @@ pub enum DatabaseQuery {
 }
 
 /// Represents queries that operate within a specific database context.
-///
-/// Contextual queries are operations that work on collections, documents,
-/// or other entities within an existing database.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ContextualQuery {
     /// A collection operation query.
@@ -49,8 +44,7 @@ pub enum FieldModification {
     Set(FieldDefinition),
 }
 
-/// Represents queries on collections within a database,
-/// such as creating collections, dropping collections, or modifying collection schemas.
+/// Represents queries on collections within a database.
 #[derive(Debug, Clone, PartialEq)]
 pub enum CollectionQuery {
     /// Create a new collection with the specified name and schema.
@@ -67,7 +61,7 @@ pub enum CollectionQuery {
         /// The name of the collection to drop.
         name: String,
     },
-    /// Modifies an existing collection's schema by adding, dropping, or changing fields.
+    /// Modifies an existing collection's schema.
     Modify {
         /// The name of the collection to modify.
         name: String,
@@ -83,8 +77,7 @@ pub enum CollectionQuery {
     },
 }
 
-/// Represents queries on documents within a database's collections,
-/// such as inserting, updating, deleting, or querying documents.
+/// Represents queries on documents within a database's collections.
 #[derive(Debug, Clone, PartialEq)]
 pub enum DocumentQuery {
     /// Insert a new document into a collection.
@@ -122,66 +115,5 @@ pub enum DocumentQuery {
         conditions: Vec<FieldCondition>,
         /// The fields to return in the response.
         selectors: Vec<FieldSelector>,
-    },
-}
-
-/// Represents comparison operators for document field conditions.
-#[derive(Debug, Clone, PartialEq)]
-pub enum QueryOperator {
-    /// Equality operator (=) - exact match
-    Equal,
-    /// Inequality operator (!=) - not equal
-    NotEqual,
-    /// Greater than operator (>) - numeric/string comparison
-    GreaterThan,
-    /// Greater than or equal operator (>=) - numeric/string comparison
-    GreaterThanOrEqual,
-    /// Less than or equal operator (<=) - numeric/string comparison
-    LessThanOrEqual,
-    /// Less than operator (<) - numeric/string comparison
-    LessThan,
-    /// Similarity operator (==) - pattern/substring matching, future regex support
-    Similar,
-}
-
-/// Represents a condition on a document field for filtering/querying.
-#[derive(Debug, Clone, PartialEq)]
-pub struct FieldCondition {
-    /// The name of the field to apply the condition to
-    pub field_name: String,
-    /// The comparison operator to use
-    pub operator: QueryOperator,
-    /// The value to compare the field against
-    pub value: String,
-}
-
-/// Represents the parsed content of a document query,
-/// including assignments, conditions, and field selectors.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ParsedDocContent {
-    /// Field assignments (field: value).
-    pub assignments: HashMap<String, String>,
-    /// Field conditions (field operator value).
-    pub conditions: Vec<FieldCondition>,
-    /// Field selectors (which fields to return).
-    pub selectors: Vec<FieldSelector>,
-}
-
-/// Represents which fields to return in a query response.
-#[derive(Debug, Clone, PartialEq)]
-pub enum FieldSelector {
-    /// Return specific named fields only
-    Field(String),
-    /// Return all fields (*) - shallow, no reference resolution
-    AllFields,
-    /// Return all fields (**) - deep, with recursive reference resolution
-    AllFieldsRecursive,
-    /// Nested sub-document field (with reference)
-    SubDocument {
-        /// The name of the sub-document field
-        field_name: String,
-        /// The parsed content for the sub-document
-        /// (only selectors and conditions allowed here)
-        content: ParsedDocContent,
     },
 }

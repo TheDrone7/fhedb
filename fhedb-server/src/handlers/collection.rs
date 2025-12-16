@@ -5,7 +5,7 @@
 
 use crate::state::ServerState;
 use fhedb_core::prelude::{CollectionSchemaOps, Database, FieldDefinition, FieldType, Schema};
-use fhedb_query::prelude::{CollectionQuery, FieldModification};
+use fhedb_types::{CollectionQuery, FieldModification};
 use serde::Serialize;
 use serde_json::json;
 use std::collections::HashMap;

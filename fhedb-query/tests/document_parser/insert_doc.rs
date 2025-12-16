@@ -1,4 +1,5 @@
-use fhedb_query::prelude::{ContextualQuery, DocumentQuery, parse_contextual_query};
+use fhedb_query::prelude::parse_contextual_query;
+use fhedb_types::{ContextualQuery, DocumentQuery};
 
 #[test]
 fn basic() {

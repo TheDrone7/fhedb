@@ -4,9 +4,9 @@
 
 use chumsky::{extra, input::ValueInput, prelude::*};
 
-use crate::ast::DatabaseQuery;
 use crate::error::ParserError;
 use crate::lexer::{Span, Token};
+use fhedb_types::DatabaseQuery;
 
 use super::common::{drop_if_exists_parser, identifier_parser, lex_input};
 

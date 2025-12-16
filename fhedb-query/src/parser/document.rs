@@ -6,8 +6,8 @@ use std::collections::HashMap;
 
 use chumsky::{extra, input::ValueInput, prelude::*};
 
-use crate::ast::{DocumentQuery, FieldCondition, FieldSelector, ParsedDocContent, QueryOperator};
 use crate::lexer::{Span, Token};
+use fhedb_types::{DocumentQuery, FieldCondition, FieldSelector, ParsedDocContent, QueryOperator};
 
 use super::common::identifier_parser;
 

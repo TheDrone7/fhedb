@@ -1,4 +1,5 @@
-use fhedb_query::prelude::{DatabaseQuery, parse_database_query};
+use fhedb_query::prelude::parse_database_query;
+use fhedb_types::DatabaseQuery;
 
 #[test]
 fn basic() {

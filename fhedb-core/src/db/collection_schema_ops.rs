@@ -1,6 +1,6 @@
 use crate::db::collection::Collection;
 use crate::db::document::DocId;
-use crate::db::schema::FieldDefinition;
+use crate::db::schema::{FieldDefinition, SchemaOps};
 use crate::file::{collection::CollectionFileOps, types::Operation};
 
 /// A trait for modifying collection schemas.

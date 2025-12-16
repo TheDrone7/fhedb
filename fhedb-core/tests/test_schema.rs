@@ -1,5 +1,5 @@
 use bson::doc;
-use fhedb_core::prelude::{FieldDefinition, FieldType, IdType, Schema};
+use fhedb_core::prelude::{FieldDefinition, FieldType, IdType, Schema, SchemaOps};
 use std::collections::HashMap;
 
 fn make_schema() -> Schema {

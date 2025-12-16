@@ -19,7 +19,7 @@ use axum::{
 
 /// Handles requests to the base endpoint (database-level operations).
 ///
-/// Processes [`DatabaseQuery`](fhedb_query::ast::DatabaseQuery) operations such as CREATE, DROP, and LIST.
+/// Processes [`DatabaseQuery`](fhedb_types::DatabaseQuery) operations such as CREATE, DROP, and LIST.
 pub async fn handle_base(State(state): State<ServerState>, body: ParsedQuery) -> impl IntoResponse {
     let query = match body {
         ParsedQuery::Base(db) => db,
@@ -33,7 +33,7 @@ pub async fn handle_base(State(state): State<ServerState>, body: ParsedQuery) ->
 
 /// Handles requests to database-specific endpoints (contextual operations).
 ///
-/// Processes [`ContextualQuery`](fhedb_query::ast::ContextualQuery) operations within a database context.
+/// Processes [`ContextualQuery`](fhedb_types::ContextualQuery) operations within a database context.
 pub async fn handle_db(
     Path(db_name): Path<String>,
     State(state): State<ServerState>,

@@ -1,6 +1,6 @@
 use crate::db::collection_schema_ops::CollectionSchemaOps;
 use crate::db::document::{DocId, Document};
-use crate::db::schema::{IdType, Schema};
+use crate::db::schema::{IdType, Schema, SchemaOps};
 use crate::file::{collection::CollectionFileOps, types::Operation};
 use std::collections::HashMap;
 use std::path::PathBuf;

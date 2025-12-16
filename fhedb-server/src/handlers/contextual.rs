@@ -3,7 +3,7 @@
 //! This module routes contextual queries (queries within a database context)
 //! to the appropriate sub-handlers for collection and document operations.
 
-use fhedb_query::prelude::ContextualQuery;
+use fhedb_types::ContextualQuery;
 
 use crate::{
     handlers::{collection::execute_collection_query, document::execute_document_query},

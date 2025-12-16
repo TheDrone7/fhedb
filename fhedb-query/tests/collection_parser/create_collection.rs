@@ -1,5 +1,6 @@
 use fhedb_core::prelude::FieldType;
-use fhedb_query::prelude::{CollectionQuery, ContextualQuery, parse_contextual_query};
+use fhedb_query::prelude::parse_contextual_query;
+use fhedb_types::{CollectionQuery, ContextualQuery};
 
 #[test]
 fn basic() {

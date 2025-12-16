@@ -1,6 +1,5 @@
-use fhedb_query::prelude::{
-    ContextualQuery, DocumentQuery, FieldSelector, QueryOperator, parse_contextual_query,
-};
+use fhedb_query::prelude::parse_contextual_query;
+use fhedb_types::{ContextualQuery, DocumentQuery, FieldSelector, QueryOperator};
 
 #[test]
 fn basic() {
