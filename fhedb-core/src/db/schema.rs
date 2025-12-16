@@ -480,8 +480,8 @@ pub fn validate_bson_type(value: &Bson, field_type: &FieldType) -> Result<(), St
             _ => Err("Expected array".to_string()),
         },
         FieldType::Reference(_) => match value {
-            Bson::String(_) => Ok(()),
-            _ => Err("Expected reference (string)".to_string()),
+            Bson::String(_) | Bson::Null => Ok(()),
+            _ => Err("Expected reference (string or null)".to_string()),
         },
         FieldType::Nullable(inner_type) => match value {
             Bson::Null => Ok(()),
