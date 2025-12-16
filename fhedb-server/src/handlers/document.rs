@@ -165,24 +165,33 @@ fn execute_update(
     let collection = db
         .get_collection(&collection_name)
         .ok_or_else(|| format!("Collection '{}' not found.", collection_name))?;
-    let matching_ids: Vec<_> = filter_documents(collection, &conditions)?
-        .into_iter()
-        .map(|d| d.id)
-        .collect();
 
-    if matching_ids.is_empty() {
+    let matching: Vec<_> = filter_documents(collection, &conditions)?;
+    if matching.is_empty() {
         return Ok(json!([]));
     }
+
+    let originals: Vec<_> = matching
+        .iter()
+        .map(|d| (d.id.clone(), d.data.clone()))
+        .collect();
+    let matching_ids: Vec<_> = matching.into_iter().map(|d| d.id).collect();
 
     let collection = db.get_collection_mut(&collection_name).unwrap();
     let update_doc = convert_fields_to_bson(&updates, collection.schema())?;
 
     let mut updated_docs = Vec::new();
-    for id in &matching_ids {
+    for (idx, id) in matching_ids.iter().enumerate() {
         match collection.update_document(id.clone(), update_doc.clone()) {
             Ok(doc) => updated_docs.push(doc),
             Err(errors) => {
-                return Err(format!("Update failed, rolled back: {}", errors.join("; ")));
+                for (orig_id, orig_data) in originals.iter().take(idx) {
+                    let _ = collection.update_document(orig_id.clone(), orig_data.clone());
+                }
+                return Err(format!(
+                    "Update failed and rolled back: {}",
+                    errors.join("; ")
+                ));
             }
         }
     }
@@ -391,13 +400,15 @@ fn evaluate_condition(
         Some(doc_val) => match &condition.operator {
             QueryOperator::Equal => Ok(doc_val == &condition_value),
             QueryOperator::NotEqual => Ok(doc_val != &condition_value),
-            QueryOperator::GreaterThan => compare_bson(doc_val, &condition_value, |a, b| a > b),
-            QueryOperator::GreaterThanOrEqual => {
-                compare_bson(doc_val, &condition_value, |a, b| a >= b)
+            QueryOperator::GreaterThan => {
+                compare_bson(doc_val, &condition_value, &condition.operator)
             }
-            QueryOperator::LessThan => compare_bson(doc_val, &condition_value, |a, b| a < b),
+            QueryOperator::GreaterThanOrEqual => {
+                compare_bson(doc_val, &condition_value, &condition.operator)
+            }
+            QueryOperator::LessThan => compare_bson(doc_val, &condition_value, &condition.operator),
             QueryOperator::LessThanOrEqual => {
-                compare_bson(doc_val, &condition_value, |a, b| a <= b)
+                compare_bson(doc_val, &condition_value, &condition.operator)
             }
             QueryOperator::Similar => Ok(match (doc_val, &condition_value) {
                 (Bson::String(s), Bson::String(p)) => s.contains(p.as_str()),
@@ -408,32 +419,74 @@ fn evaluate_condition(
     }
 }
 
-/// Compares two BSON values using the given comparator.
+/// Compares two BSON values using the given operator.
 ///
 /// ## Arguments
 ///
 /// * `a` - First value.
 /// * `b` - Second value.
-/// * `cmp` - Comparison function.
+/// * `op` - The comparison operator.
 ///
 /// ## Returns
 ///
 /// Returns the comparison result or error for incompatible types.
-fn compare_bson<F: Fn(f64, f64) -> bool>(a: &Bson, b: &Bson, cmp: F) -> Result<bool, String> {
-    match (a, b) {
-        (Bson::Int32(x), Bson::Int32(y)) => Ok(cmp(*x as f64, *y as f64)),
-        (Bson::Int64(x), Bson::Int64(y)) => Ok(cmp(*x as f64, *y as f64)),
-        (Bson::Int32(x), Bson::Int64(y)) | (Bson::Int64(y), Bson::Int32(x)) => {
-            Ok(cmp(*x as f64, *y as f64))
+fn compare_bson(a: &Bson, b: &Bson, op: &QueryOperator) -> Result<bool, String> {
+    let result = match (a, b) {
+        (Bson::Int32(x), Bson::Int32(y)) => match op {
+            QueryOperator::GreaterThan => x > y,
+            QueryOperator::GreaterThanOrEqual => x >= y,
+            QueryOperator::LessThan => x < y,
+            QueryOperator::LessThanOrEqual => x <= y,
+            _ => false,
+        },
+        (Bson::Int64(x), Bson::Int64(y)) => match op {
+            QueryOperator::GreaterThan => x > y,
+            QueryOperator::GreaterThanOrEqual => x >= y,
+            QueryOperator::LessThan => x < y,
+            QueryOperator::LessThanOrEqual => x <= y,
+            _ => false,
+        },
+        (Bson::Int32(x), Bson::Int64(y)) => {
+            let x = *x as i64;
+            match op {
+                QueryOperator::GreaterThan => x > *y,
+                QueryOperator::GreaterThanOrEqual => x >= *y,
+                QueryOperator::LessThan => x < *y,
+                QueryOperator::LessThanOrEqual => x <= *y,
+                _ => false,
+            }
         }
-        (Bson::Double(x), Bson::Double(y)) => Ok(cmp(*x, *y)),
-        (Bson::String(x), Bson::String(y)) => Ok(cmp(x.len() as f64, y.len() as f64)),
+        (Bson::Int64(x), Bson::Int32(y)) => {
+            let y = *y as i64;
+            match op {
+                QueryOperator::GreaterThan => *x > y,
+                QueryOperator::GreaterThanOrEqual => *x >= y,
+                QueryOperator::LessThan => *x < y,
+                QueryOperator::LessThanOrEqual => *x <= y,
+                _ => false,
+            }
+        }
+        (Bson::Double(x), Bson::Double(y)) => match op {
+            QueryOperator::GreaterThan => x > y,
+            QueryOperator::GreaterThanOrEqual => x >= y,
+            QueryOperator::LessThan => x < y,
+            QueryOperator::LessThanOrEqual => x <= y,
+            _ => false,
+        },
+        (Bson::String(x), Bson::String(y)) => match op {
+            QueryOperator::GreaterThan => x > y,
+            QueryOperator::GreaterThanOrEqual => x >= y,
+            QueryOperator::LessThan => x < y,
+            QueryOperator::LessThanOrEqual => x <= y,
+            _ => false,
+        },
         (Bson::Array(_), _) | (_, Bson::Array(_)) => {
-            Err("Comparison operators not supported for arrays.".to_string())
+            return Err("Comparison operators not supported for arrays.".to_string());
         }
-        (Bson::Null, _) | (_, Bson::Null) => Ok(false),
-        _ => Err("Incompatible types for comparison.".to_string()),
-    }
+        (Bson::Null, _) | (_, Bson::Null) => false,
+        _ => return Err("Incompatible types for comparison.".to_string()),
+    };
+    Ok(result)
 }
 
 /// Selects fields from a document based on selectors.
@@ -464,6 +517,9 @@ fn select_fields(
     for selector in selectors {
         match selector {
             FieldSelector::Field(name) => {
+                if !collection.schema().fields.contains_key(name) {
+                    return Err(format!("Unknown field '{}' in selector.", name));
+                }
                 if let Some(value) = doc.get(name) {
                     result.insert(
                         name.clone(),
@@ -554,16 +610,16 @@ fn resolve_value_by_type(
     match field_type {
         FieldType::Reference(ref_col) => match value {
             Bson::String(ref_id) => {
-                if let Some(ref_doc) = resolve_reference(ref_id, ref_col, database) {
-                    if let Some(ref_collection) = database.get_collection(ref_col) {
-                        return select_fields(
-                            &ref_doc.data,
-                            &[FieldSelector::AllFieldsRecursive],
-                            ref_collection,
-                            database,
-                            depth + 1,
-                        );
-                    }
+                if let Some(ref_doc) = resolve_reference(ref_id, ref_col, database)
+                    && let Some(ref_collection) = database.get_collection(ref_col)
+                {
+                    return select_fields(
+                        &ref_doc.data,
+                        &[FieldSelector::AllFieldsRecursive],
+                        ref_collection,
+                        database,
+                        depth + 1,
+                    );
                 }
                 Ok(JsonValue::Null)
             }
@@ -623,6 +679,7 @@ fn resolve_subdocument(
     resolve_subdoc_by_type(
         &field_value,
         &field_def.field_type,
+        field_name,
         content,
         database,
         depth,
@@ -635,6 +692,7 @@ fn resolve_subdocument(
 ///
 /// * `value` - The BSON value to resolve.
 /// * `field_type` - The expected field type.
+/// * `field_name` - The field name for error messages.
 /// * `content` - The subdocument content with conditions and selectors.
 /// * `database` - Database for reference lookups.
 /// * `depth` - Current recursion depth.
@@ -645,6 +703,7 @@ fn resolve_subdocument(
 fn resolve_subdoc_by_type(
     value: &Bson,
     field_type: &FieldType,
+    field_name: &str,
     content: &ParsedDocContent,
     database: &Database,
     depth: u8,
@@ -659,14 +718,14 @@ fn resolve_subdoc_by_type(
         },
         FieldType::Nullable(inner) => match value {
             Bson::Null => Ok(JsonValue::Null),
-            _ => resolve_subdoc_by_type(value, inner, content, database, depth),
+            _ => resolve_subdoc_by_type(value, inner, field_name, content, database, depth),
         },
         FieldType::Array(inner) => match value {
             Bson::Array(arr) => {
                 let mut results = Vec::new();
                 for item in arr {
                     results.push(resolve_subdoc_by_type(
-                        item, inner, content, database, depth,
+                        item, inner, field_name, content, database, depth,
                     )?);
                 }
                 Ok(JsonValue::Array(results))
@@ -674,7 +733,7 @@ fn resolve_subdoc_by_type(
             Bson::Null => Ok(JsonValue::Array(vec![])),
             _ => Ok(JsonValue::Array(vec![])),
         },
-        _ => Err(format!("Field type is not a reference.")),
+        _ => Err(format!("Field '{}' is not a reference type.", field_name)),
     }
 }
 
