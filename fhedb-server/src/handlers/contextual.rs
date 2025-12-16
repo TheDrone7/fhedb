@@ -5,7 +5,10 @@
 
 use fhedb_query::prelude::ContextualQuery;
 
-use crate::{handlers::collection::execute_collection_query, state::ServerState};
+use crate::{
+    handlers::{collection::execute_collection_query, document::execute_document_query},
+    state::ServerState,
+};
 
 /// Executes a contextual query within a specific database.
 ///
@@ -27,6 +30,8 @@ pub(crate) fn execute_contextual_query(
         ContextualQuery::Collection(collection_query) => {
             execute_collection_query(db_name, collection_query, state)
         }
-        ContextualQuery::Document(_) => Err("Not implemented".to_string()),
+        ContextualQuery::Document(document_query) => {
+            execute_document_query(db_name, document_query, state)
+        }
     }
 }

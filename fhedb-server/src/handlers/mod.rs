@@ -6,6 +6,7 @@
 mod base;
 pub(crate) mod collection;
 mod contextual;
+mod document;
 
 use crate::{
     extractor::ParsedQuery, handlers::base::execute_base_query, internal_error, state::ServerState,
