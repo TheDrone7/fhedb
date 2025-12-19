@@ -7,22 +7,28 @@ use fhedb_types::FieldType;
 
 use crate::db::schema::validate_bson_type;
 
-/// Parses a string value into BSON based on the expected field type.
-///
-/// ## Arguments
-///
-/// * `input` - Raw value string (e.g., "42", "\"hello\"", "true", "[1, 2, 3]").
-/// * `expected_type` - The expected field type for validation.
-///
-/// ## Returns
-///
-/// Returns [`Ok`]\([`Bson`]) with the parsed value, or [`Err`]\([`String`]) if
-/// parsing or type validation fails.
-pub fn parse_bson_value(input: &str, expected_type: &FieldType) -> Result<Bson, String> {
-    let input = input.trim();
-    let value = parse_value_string(input)?;
-    validate_bson_type(&value, expected_type)?;
-    Ok(value)
+/// Trait for parsing string values into BSON.
+pub trait ValueParseable {
+    /// Parses this string value into BSON based on the expected field type.
+    ///
+    /// ## Arguments
+    ///
+    /// * `expected_type` - The expected field type for validation.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`Bson`]) with the parsed value, or [`Err`]\([`String`]) if
+    /// parsing or type validation fails.
+    fn parse_as_bson(&self, expected_type: &FieldType) -> Result<Bson, String>;
+}
+
+impl ValueParseable for str {
+    fn parse_as_bson(&self, expected_type: &FieldType) -> Result<Bson, String> {
+        let input = self.trim();
+        let value = parse_value_string(input)?;
+        validate_bson_type(&value, expected_type)?;
+        Ok(value)
+    }
 }
 
 /// Parses a value string to BSON without type validation.
@@ -50,7 +56,7 @@ fn parse_value_string(input: &str) -> Result<Bson, String> {
         || (input.starts_with('\'') && input.ends_with('\''))
     {
         let inner = &input[1..input.len() - 1];
-        return Ok(Bson::String(unescape(inner)));
+        return Ok(Bson::String(inner.unescape()));
     }
 
     if input.starts_with('[') && input.ends_with(']') {
@@ -136,56 +142,61 @@ fn split_array_elements(inner: &str) -> Result<Vec<&str>, String> {
     Ok(elements)
 }
 
-/// Unescapes a string, processing escape sequences.
-///
-/// ## Arguments
-///
-/// * `input` - The escaped string content (without surrounding quotes).
-///
-/// ## Returns
-///
-/// Returns the unescaped string.
-pub fn unescape(input: &str) -> String {
-    let mut result = String::with_capacity(input.len());
-    let mut chars = input.chars().peekable();
+/// Trait for unescaping string content.
+pub trait Unescapable {
+    /// Unescapes this string, processing escape sequences.
+    ///
+    /// Handles `\n`, `\t`, `\r`, `\0`, `\\`, `\"`, and `\'` sequences.
+    ///
+    /// ## Returns
+    ///
+    /// Returns the unescaped string.
+    fn unescape(&self) -> String;
+}
 
-    while let Some(c) = chars.next() {
-        if c == '\\' {
-            match chars.peek() {
-                Some('n') => {
-                    chars.next();
-                    result.push('\n');
+impl Unescapable for str {
+    fn unescape(&self) -> String {
+        let mut result = String::with_capacity(self.len());
+        let mut chars = self.chars().peekable();
+
+        while let Some(c) = chars.next() {
+            if c == '\\' {
+                match chars.peek() {
+                    Some('n') => {
+                        chars.next();
+                        result.push('\n');
+                    }
+                    Some('t') => {
+                        chars.next();
+                        result.push('\t');
+                    }
+                    Some('r') => {
+                        chars.next();
+                        result.push('\r');
+                    }
+                    Some('0') => {
+                        chars.next();
+                        result.push('\0');
+                    }
+                    Some('\\') => {
+                        chars.next();
+                        result.push('\\');
+                    }
+                    Some('"') => {
+                        chars.next();
+                        result.push('"');
+                    }
+                    Some('\'') => {
+                        chars.next();
+                        result.push('\'');
+                    }
+                    _ => result.push('\\'),
                 }
-                Some('t') => {
-                    chars.next();
-                    result.push('\t');
-                }
-                Some('r') => {
-                    chars.next();
-                    result.push('\r');
-                }
-                Some('0') => {
-                    chars.next();
-                    result.push('\0');
-                }
-                Some('\\') => {
-                    chars.next();
-                    result.push('\\');
-                }
-                Some('"') => {
-                    chars.next();
-                    result.push('"');
-                }
-                Some('\'') => {
-                    chars.next();
-                    result.push('\'');
-                }
-                _ => result.push('\\'),
+            } else {
+                result.push(c);
             }
-        } else {
-            result.push(c);
         }
-    }
 
-    result
+        result
+    }
 }

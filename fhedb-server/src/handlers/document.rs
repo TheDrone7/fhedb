@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use bson::{Bson, Document as BsonDocument};
 use fhedb_core::prelude::{
-    Collection, Database, DocId, Document, FieldType, Schema, parse_bson_value,
+    Collection, Database, DocId, Document, FieldType, Schema, ValueParseable,
 };
 use fhedb_types::{DocumentQuery, FieldCondition, FieldSelector, ParsedDocContent, QueryOperator};
 use serde_json::{Value as JsonValue, json};
@@ -331,7 +331,7 @@ fn convert_fields_to_bson(
             .ok_or_else(|| format!("Unknown field '{}' not in schema.", field_name))?;
         doc.insert(
             field_name.clone(),
-            parse_bson_value(value_str, &field_def.field_type)?,
+            value_str.parse_as_bson(&field_def.field_type)?,
         );
     }
     Ok(doc)
@@ -388,7 +388,7 @@ fn evaluate_condition(
         .fields
         .get(&condition.field_name)
         .ok_or_else(|| format!("Unknown field '{}'.", condition.field_name))?;
-    let condition_value = parse_bson_value(&condition.value, &field_def.field_type)?;
+    let condition_value = condition.value.parse_as_bson(&field_def.field_type)?;
 
     match doc.get(&condition.field_name) {
         None => Ok(false),

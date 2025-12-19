@@ -1,73 +1,73 @@
-use fhedb_core::prelude::unescape;
+use fhedb_core::prelude::Unescapable;
 
 #[test]
 fn basic_escape_sequences() {
-    assert_eq!(unescape("Hello\\nWorld"), "Hello\nWorld");
-    assert_eq!(unescape("Tab\\tSeparated"), "Tab\tSeparated");
-    assert_eq!(unescape("Carriage\\rReturn"), "Carriage\rReturn");
-    assert_eq!(unescape("Null\\0Character"), "Null\0Character");
-    assert_eq!(unescape("Back\\\\slash"), "Back\\slash");
-    assert_eq!(unescape("Double\\\"Quote"), "Double\"Quote");
-    assert_eq!(unescape("Single\\'Quote"), "Single'Quote");
+    assert_eq!("Hello\\nWorld".unescape(), "Hello\nWorld");
+    assert_eq!("Tab\\tSeparated".unescape(), "Tab\tSeparated");
+    assert_eq!("Carriage\\rReturn".unescape(), "Carriage\rReturn");
+    assert_eq!("Null\\0Character".unescape(), "Null\0Character");
+    assert_eq!("Back\\\\slash".unescape(), "Back\\slash");
+    assert_eq!("Double\\\"Quote".unescape(), "Double\"Quote");
+    assert_eq!("Single\\'Quote".unescape(), "Single'Quote");
 }
 
 #[test]
 fn realistic_strings() {
-    assert_eq!(unescape("Line1\\nLine2\\nLine3"), "Line1\nLine2\nLine3");
-    assert_eq!(unescape("\\\"Hello\\\" \\t\\n"), "\"Hello\" \t\n");
-    assert_eq!(unescape("\\\\n\\\\t\\\\r"), "\\n\\t\\r");
-    assert_eq!(unescape("\\n\\t\\r\\0\\\\\\\""), "\n\t\r\0\\\"");
+    assert_eq!("Line1\\nLine2\\nLine3".unescape(), "Line1\nLine2\nLine3");
+    assert_eq!("\\\"Hello\\\" \\t\\n".unescape(), "\"Hello\" \t\n");
+    assert_eq!("\\\\n\\\\t\\\\r".unescape(), "\\n\\t\\r");
+    assert_eq!("\\n\\t\\r\\0\\\\\\\"".unescape(), "\n\t\r\0\\\"");
     assert_eq!(
-        unescape("Path: C:\\\\Users\\\\Name"),
+        "Path: C:\\\\Users\\\\Name".unescape(),
         "Path: C:\\Users\\Name"
     );
     assert_eq!(
-        unescape("JSON: {\\\"key\\\": \\\"value\\\"}"),
+        "JSON: {\\\"key\\\": \\\"value\\\"}".unescape(),
         "JSON: {\"key\": \"value\"}"
     );
-    assert_eq!(unescape("Tab\\tdelimited\\tdata"), "Tab\tdelimited\tdata");
+    assert_eq!("Tab\\tdelimited\\tdata".unescape(), "Tab\tdelimited\tdata");
 }
 
 #[test]
 fn no_escape_sequences() {
-    assert_eq!(unescape("Hello World"), "Hello World");
-    assert_eq!(unescape(""), "");
+    assert_eq!("Hello World".unescape(), "Hello World");
+    assert_eq!("".unescape(), "");
     assert_eq!(
-        unescape("Simple text with no escapes"),
+        "Simple text with no escapes".unescape(),
         "Simple text with no escapes"
     );
-    assert_eq!(unescape("123456789"), "123456789");
+    assert_eq!("123456789".unescape(), "123456789");
 }
 
 #[test]
 fn invalid_escape_sequences() {
-    assert_eq!(unescape("\\z"), "\\z");
-    assert_eq!(unescape("\\x"), "\\x");
-    assert_eq!(unescape("\\1"), "\\1");
-    assert_eq!(unescape("Hello\\zWorld"), "Hello\\zWorld");
-    assert_eq!(unescape("\\a"), "\\a");
+    assert_eq!("\\z".unescape(), "\\z");
+    assert_eq!("\\x".unescape(), "\\x");
+    assert_eq!("\\1".unescape(), "\\1");
+    assert_eq!("Hello\\zWorld".unescape(), "Hello\\zWorld");
+    assert_eq!("\\a".unescape(), "\\a");
 }
 
 #[test]
 fn backslash_at_end() {
-    assert_eq!(unescape("Hello\\"), "Hello\\");
-    assert_eq!(unescape("\\"), "\\");
-    assert_eq!(unescape("Test\\n\\"), "Test\n\\");
+    assert_eq!("Hello\\".unescape(), "Hello\\");
+    assert_eq!("\\".unescape(), "\\");
+    assert_eq!("Test\\n\\".unescape(), "Test\n\\");
 }
 
 #[test]
 fn mixed_valid_invalid() {
     assert_eq!(
-        unescape("\\nValid\\zInvalid\\tValid"),
+        "\\nValid\\zInvalid\\tValid".unescape(),
         "\nValid\\zInvalid\tValid"
     );
-    assert_eq!(unescape("\\\"Good\\xBad\\\\Good"), "\"Good\\xBad\\Good");
+    assert_eq!("\\\"Good\\xBad\\\\Good".unescape(), "\"Good\\xBad\\Good");
 }
 
 #[test]
 fn edge_cases() {
-    assert_eq!(unescape("\\\\\\\\"), "\\\\");
-    assert_eq!(unescape("\\n\\n\\n"), "\n\n\n");
-    assert_eq!(unescape("\\\"\\\"\\\""), "\"\"\"");
-    assert_eq!(unescape("\\'\\'\\'"), "'''");
+    assert_eq!("\\\\\\\\".unescape(), "\\\\");
+    assert_eq!("\\n\\n\\n".unescape(), "\n\n\n");
+    assert_eq!("\\\"\\\"\\\"".unescape(), "\"\"\"");
+    assert_eq!("\\'\\'\\'".unescape(), "'''");
 }

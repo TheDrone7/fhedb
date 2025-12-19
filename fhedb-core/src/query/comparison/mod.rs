@@ -5,5 +5,5 @@
 mod compare;
 mod condition;
 
-pub use compare::compare_bson;
-pub use condition::evaluate_condition;
+pub use compare::BsonComparable;
+pub use condition::ConditionEvaluable;

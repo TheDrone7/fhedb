@@ -1,31 +1,30 @@
 use bson::{Bson, doc};
-use fhedb_core::prelude::{FieldDefinition, FieldType, Schema, evaluate_condition};
-use fhedb_types::FieldCondition;
+use fhedb_core::prelude::{ConditionEvaluable, FieldDefinition, FieldType, Schema};
+use fhedb_types::{FieldCondition, QueryOperator};
 use std::collections::HashMap;
 
 fn test_schema() -> Schema {
     let mut fields = HashMap::new();
     fields.insert("id".to_string(), FieldDefinition::new(FieldType::IdInt));
+    fields.insert("name".to_string(), FieldDefinition::new(FieldType::String));
     fields.insert("age".to_string(), FieldDefinition::new(FieldType::Int));
     fields.insert("score".to_string(), FieldDefinition::new(FieldType::Float));
-    fields.insert("name".to_string(), FieldDefinition::new(FieldType::String));
     fields.insert(
         "active".to_string(),
         FieldDefinition::new(FieldType::Boolean),
     );
     fields.insert(
-        "nullable_val".to_string(),
-        FieldDefinition::new(FieldType::Nullable(Box::new(FieldType::Int))),
-    );
-    fields.insert(
         "tags".to_string(),
         FieldDefinition::new(FieldType::Array(Box::new(FieldType::String))),
+    );
+    fields.insert(
+        "nullable_val".to_string(),
+        FieldDefinition::new(FieldType::Nullable(Box::new(FieldType::Int))),
     );
     Schema { fields }
 }
 
 fn condition(field: &str, op: &str, value: &str) -> FieldCondition {
-    use fhedb_types::QueryOperator;
     let operator = match op {
         "=" => QueryOperator::Equal,
         "!=" => QueryOperator::NotEqual,
@@ -47,52 +46,52 @@ fn condition(field: &str, op: &str, value: &str) -> FieldCondition {
 fn equal_int_match() {
     let doc = doc! { "age": 25_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", "=", "25"), &test_schema()),
+        doc.matches(&condition("age", "=", "25"), &test_schema()),
         Ok(true)
     );
 }
 
 #[test]
 fn equal_int_no_match() {
-    let doc = doc! { "age": 30_i64 };
+    let doc = doc! { "age": 25_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", "=", "25"), &test_schema()),
-        Ok(false)
-    );
-}
-
-#[test]
-fn equal_float_match() {
-    let doc = doc! { "score": 75.5 };
-    assert_eq!(
-        evaluate_condition(&doc, &condition("score", "=", "75.5"), &test_schema()),
-        Ok(true)
-    );
-}
-
-#[test]
-fn equal_float_no_match() {
-    let doc = doc! { "score": 80.0 };
-    assert_eq!(
-        evaluate_condition(&doc, &condition("score", "=", "75.5"), &test_schema()),
+        doc.matches(&condition("age", "=", "30"), &test_schema()),
         Ok(false)
     );
 }
 
 #[test]
 fn equal_string_match() {
-    let doc = doc! { "name": "alice" };
+    let doc = doc! { "name": "Alice" };
     assert_eq!(
-        evaluate_condition(&doc, &condition("name", "=", "\"alice\""), &test_schema()),
+        doc.matches(&condition("name", "=", "\"Alice\""), &test_schema()),
         Ok(true)
     );
 }
 
 #[test]
 fn equal_string_no_match() {
-    let doc = doc! { "name": "bob" };
+    let doc = doc! { "name": "Alice" };
     assert_eq!(
-        evaluate_condition(&doc, &condition("name", "=", "\"alice\""), &test_schema()),
+        doc.matches(&condition("name", "=", "\"Bob\""), &test_schema()),
+        Ok(false)
+    );
+}
+
+#[test]
+fn equal_float_match() {
+    let doc = doc! { "score": 95.5 };
+    assert_eq!(
+        doc.matches(&condition("score", "=", "95.5"), &test_schema()),
+        Ok(true)
+    );
+}
+
+#[test]
+fn equal_float_no_match() {
+    let doc = doc! { "score": 95.5 };
+    assert_eq!(
+        doc.matches(&condition("score", "=", "90.0"), &test_schema()),
         Ok(false)
     );
 }
@@ -101,25 +100,25 @@ fn equal_string_no_match() {
 fn equal_bool_match() {
     let doc = doc! { "active": true };
     assert_eq!(
-        evaluate_condition(&doc, &condition("active", "=", "true"), &test_schema()),
+        doc.matches(&condition("active", "=", "true"), &test_schema()),
         Ok(true)
     );
 }
 
 #[test]
 fn equal_bool_no_match() {
-    let doc = doc! { "active": false };
+    let doc = doc! { "active": true };
     assert_eq!(
-        evaluate_condition(&doc, &condition("active", "=", "true"), &test_schema()),
+        doc.matches(&condition("active", "=", "false"), &test_schema()),
         Ok(false)
     );
 }
 
 #[test]
 fn not_equal_int_match() {
-    let doc = doc! { "age": 30_i64 };
+    let doc = doc! { "age": 25_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", "!=", "25"), &test_schema()),
+        doc.matches(&condition("age", "!=", "30"), &test_schema()),
         Ok(true)
     );
 }
@@ -128,25 +127,25 @@ fn not_equal_int_match() {
 fn not_equal_int_no_match() {
     let doc = doc! { "age": 25_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", "!=", "25"), &test_schema()),
+        doc.matches(&condition("age", "!=", "25"), &test_schema()),
         Ok(false)
     );
 }
 
 #[test]
 fn not_equal_string_match() {
-    let doc = doc! { "name": "alice" };
+    let doc = doc! { "name": "Alice" };
     assert_eq!(
-        evaluate_condition(&doc, &condition("name", "!=", "\"bob\""), &test_schema()),
+        doc.matches(&condition("name", "!=", "\"Bob\""), &test_schema()),
         Ok(true)
     );
 }
 
 #[test]
 fn not_equal_string_no_match() {
-    let doc = doc! { "name": "alice" };
+    let doc = doc! { "name": "Alice" };
     assert_eq!(
-        evaluate_condition(&doc, &condition("name", "!=", "\"alice\""), &test_schema()),
+        doc.matches(&condition("name", "!=", "\"Alice\""), &test_schema()),
         Ok(false)
     );
 }
@@ -155,7 +154,7 @@ fn not_equal_string_no_match() {
 fn greater_than_int_true() {
     let doc = doc! { "age": 30_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", ">", "25"), &test_schema()),
+        doc.matches(&condition("age", ">", "25"), &test_schema()),
         Ok(true)
     );
 }
@@ -164,7 +163,7 @@ fn greater_than_int_true() {
 fn greater_than_int_false() {
     let doc = doc! { "age": 20_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", ">", "25"), &test_schema()),
+        doc.matches(&condition("age", ">", "25"), &test_schema()),
         Ok(false)
     );
 }
@@ -173,43 +172,43 @@ fn greater_than_int_false() {
 fn greater_than_int_equal_false() {
     let doc = doc! { "age": 25_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", ">", "25"), &test_schema()),
+        doc.matches(&condition("age", ">", "25"), &test_schema()),
         Ok(false)
     );
 }
 
 #[test]
 fn greater_than_float_true() {
-    let doc = doc! { "score": 75.0 };
+    let doc = doc! { "score": 95.5 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("score", ">", "50.0"), &test_schema()),
+        doc.matches(&condition("score", ">", "90.0"), &test_schema()),
         Ok(true)
     );
 }
 
 #[test]
 fn greater_than_float_false() {
-    let doc = doc! { "score": 40.0 };
+    let doc = doc! { "score": 85.5 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("score", ">", "50.0"), &test_schema()),
+        doc.matches(&condition("score", ">", "90.0"), &test_schema()),
         Ok(false)
     );
 }
 
 #[test]
 fn greater_than_string_true() {
-    let doc = doc! { "name": "bob" };
+    let doc = doc! { "name": "Bob" };
     assert_eq!(
-        evaluate_condition(&doc, &condition("name", ">", "\"alice\""), &test_schema()),
+        doc.matches(&condition("name", ">", "\"Alice\""), &test_schema()),
         Ok(true)
     );
 }
 
 #[test]
 fn greater_than_string_false() {
-    let doc = doc! { "name": "alice" };
+    let doc = doc! { "name": "Alice" };
     assert_eq!(
-        evaluate_condition(&doc, &condition("name", ">", "\"bob\""), &test_schema()),
+        doc.matches(&condition("name", ">", "\"Bob\""), &test_schema()),
         Ok(false)
     );
 }
@@ -218,7 +217,7 @@ fn greater_than_string_false() {
 fn gte_int_greater_true() {
     let doc = doc! { "age": 30_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", ">=", "25"), &test_schema()),
+        doc.matches(&condition("age", ">=", "25"), &test_schema()),
         Ok(true)
     );
 }
@@ -227,7 +226,7 @@ fn gte_int_greater_true() {
 fn gte_int_equal_true() {
     let doc = doc! { "age": 25_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", ">=", "25"), &test_schema()),
+        doc.matches(&condition("age", ">=", "25"), &test_schema()),
         Ok(true)
     );
 }
@@ -236,16 +235,16 @@ fn gte_int_equal_true() {
 fn gte_int_false() {
     let doc = doc! { "age": 20_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", ">=", "25"), &test_schema()),
+        doc.matches(&condition("age", ">=", "25"), &test_schema()),
         Ok(false)
     );
 }
 
 #[test]
 fn gte_float_equal_true() {
-    let doc = doc! { "score": 50.0 };
+    let doc = doc! { "score": 90.0 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("score", ">=", "50.0"), &test_schema()),
+        doc.matches(&condition("score", ">=", "90.0"), &test_schema()),
         Ok(true)
     );
 }
@@ -254,7 +253,7 @@ fn gte_float_equal_true() {
 fn less_than_int_true() {
     let doc = doc! { "age": 20_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", "<", "25"), &test_schema()),
+        doc.matches(&condition("age", "<", "25"), &test_schema()),
         Ok(true)
     );
 }
@@ -263,7 +262,7 @@ fn less_than_int_true() {
 fn less_than_int_false() {
     let doc = doc! { "age": 30_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", "<", "25"), &test_schema()),
+        doc.matches(&condition("age", "<", "25"), &test_schema()),
         Ok(false)
     );
 }
@@ -272,16 +271,16 @@ fn less_than_int_false() {
 fn less_than_int_equal_false() {
     let doc = doc! { "age": 25_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", "<", "25"), &test_schema()),
+        doc.matches(&condition("age", "<", "25"), &test_schema()),
         Ok(false)
     );
 }
 
 #[test]
 fn less_than_float_true() {
-    let doc = doc! { "score": 40.0 };
+    let doc = doc! { "score": 85.5 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("score", "<", "50.0"), &test_schema()),
+        doc.matches(&condition("score", "<", "90.0"), &test_schema()),
         Ok(true)
     );
 }
@@ -290,7 +289,7 @@ fn less_than_float_true() {
 fn lte_int_less_true() {
     let doc = doc! { "age": 20_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", "<=", "25"), &test_schema()),
+        doc.matches(&condition("age", "<=", "25"), &test_schema()),
         Ok(true)
     );
 }
@@ -299,7 +298,7 @@ fn lte_int_less_true() {
 fn lte_int_equal_true() {
     let doc = doc! { "age": 25_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", "<=", "25"), &test_schema()),
+        doc.matches(&condition("age", "<=", "25"), &test_schema()),
         Ok(true)
     );
 }
@@ -308,52 +307,52 @@ fn lte_int_equal_true() {
 fn lte_int_false() {
     let doc = doc! { "age": 30_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", "<=", "25"), &test_schema()),
+        doc.matches(&condition("age", "<=", "25"), &test_schema()),
         Ok(false)
     );
 }
 
 #[test]
 fn lte_float_equal_true() {
-    let doc = doc! { "score": 100.0 };
+    let doc = doc! { "score": 90.0 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("score", "<=", "100.0"), &test_schema()),
+        doc.matches(&condition("score", "<=", "90.0"), &test_schema()),
         Ok(true)
     );
 }
 
 #[test]
 fn similar_string_contains_true() {
-    let doc = doc! { "name": "alice" };
+    let doc = doc! { "name": "Alexander" };
     assert_eq!(
-        evaluate_condition(&doc, &condition("name", "==", "\"li\""), &test_schema()),
+        doc.matches(&condition("name", "==", "\"Alex\""), &test_schema()),
         Ok(true)
     );
 }
 
 #[test]
 fn similar_string_contains_false() {
-    let doc = doc! { "name": "alice" };
+    let doc = doc! { "name": "Bob" };
     assert_eq!(
-        evaluate_condition(&doc, &condition("name", "==", "\"bob\""), &test_schema()),
+        doc.matches(&condition("name", "==", "\"Alex\""), &test_schema()),
         Ok(false)
     );
 }
 
 #[test]
 fn similar_array_contains_true() {
-    let doc = doc! { "tags": ["rust", "go", "python"] };
+    let doc = doc! { "tags": ["rust", "programming"] };
     assert_eq!(
-        evaluate_condition(&doc, &condition("tags", "==", "\"rust\""), &test_schema()),
+        doc.matches(&condition("tags", "==", "\"rust\""), &test_schema()),
         Ok(true)
     );
 }
 
 #[test]
 fn similar_array_contains_false() {
-    let doc = doc! { "tags": ["rust", "go"] };
+    let doc = doc! { "tags": ["rust", "programming"] };
     assert_eq!(
-        evaluate_condition(&doc, &condition("tags", "==", "\"java\""), &test_schema()),
+        doc.matches(&condition("tags", "==", "\"python\""), &test_schema()),
         Ok(false)
     );
 }
@@ -362,11 +361,7 @@ fn similar_array_contains_false() {
 fn null_equals_null() {
     let doc = doc! { "nullable_val": Bson::Null };
     assert_eq!(
-        evaluate_condition(
-            &doc,
-            &condition("nullable_val", "=", "null"),
-            &test_schema()
-        ),
+        doc.matches(&condition("nullable_val", "=", "null"), &test_schema()),
         Ok(true)
     );
 }
@@ -375,20 +370,16 @@ fn null_equals_null() {
 fn null_not_equals_value() {
     let doc = doc! { "nullable_val": Bson::Null };
     assert_eq!(
-        evaluate_condition(&doc, &condition("nullable_val", "!=", "5"), &test_schema()),
-        Ok(true)
+        doc.matches(&condition("nullable_val", "=", "5"), &test_schema()),
+        Ok(false)
     );
 }
 
 #[test]
 fn value_not_equals_null() {
-    let doc = doc! { "nullable_val": 5_i64 };
+    let doc = doc! { "nullable_val": 10_i64 };
     assert_eq!(
-        evaluate_condition(
-            &doc,
-            &condition("nullable_val", "!=", "null"),
-            &test_schema()
-        ),
+        doc.matches(&condition("nullable_val", "!=", "null"), &test_schema()),
         Ok(true)
     );
 }
@@ -397,7 +388,7 @@ fn value_not_equals_null() {
 fn null_gt_returns_false() {
     let doc = doc! { "nullable_val": Bson::Null };
     assert_eq!(
-        evaluate_condition(&doc, &condition("nullable_val", ">", "5"), &test_schema()),
+        doc.matches(&condition("nullable_val", ">", "5"), &test_schema()),
         Ok(false)
     );
 }
@@ -406,33 +397,33 @@ fn null_gt_returns_false() {
 fn null_lt_returns_false() {
     let doc = doc! { "nullable_val": Bson::Null };
     assert_eq!(
-        evaluate_condition(&doc, &condition("nullable_val", "<", "5"), &test_schema()),
+        doc.matches(&condition("nullable_val", "<", "5"), &test_schema()),
         Ok(false)
     );
 }
 
 #[test]
 fn missing_field_returns_false() {
-    let doc = doc! { "name": "alice" };
+    let doc = doc! { "other": "value" };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", "=", "25"), &test_schema()),
+        doc.matches(&condition("age", "=", "25"), &test_schema()),
         Ok(false)
     );
 }
 
 #[test]
 fn missing_field_not_equal_returns_false() {
-    let doc = doc! { "name": "alice" };
+    let doc = doc! { "other": "value" };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", "!=", "25"), &test_schema()),
+        doc.matches(&condition("age", "!=", "25"), &test_schema()),
         Ok(false)
     );
 }
 
 #[test]
 fn unknown_field_error() {
-    let doc = doc! { "age": 25_i64 };
-    let result = evaluate_condition(&doc, &condition("unknown", "=", "5"), &test_schema());
+    let doc = doc! { "name": "Alice" };
+    let result = doc.matches(&condition("unknown", "=", "\"value\""), &test_schema());
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Unknown field"));
 }
@@ -441,7 +432,7 @@ fn unknown_field_error() {
 fn similar_on_int_returns_false() {
     let doc = doc! { "age": 25_i64 };
     assert_eq!(
-        evaluate_condition(&doc, &condition("age", "==", "25"), &test_schema()),
+        doc.matches(&condition("age", "==", "25"), &test_schema()),
         Ok(false)
     );
 }
@@ -450,7 +441,7 @@ fn similar_on_int_returns_false() {
 fn similar_on_bool_returns_false() {
     let doc = doc! { "active": true };
     assert_eq!(
-        evaluate_condition(&doc, &condition("active", "==", "true"), &test_schema()),
+        doc.matches(&condition("active", "==", "true"), &test_schema()),
         Ok(false)
     );
 }
@@ -458,7 +449,7 @@ fn similar_on_bool_returns_false() {
 #[test]
 fn parse_value_error() {
     let doc = doc! { "age": 25_i64 };
-    let result = evaluate_condition(&doc, &condition("age", "=", "not_a_number"), &test_schema());
+    let result = doc.matches(&condition("age", "=", "not_a_number"), &test_schema());
     assert!(result.is_err());
 }
 
@@ -466,7 +457,7 @@ fn parse_value_error() {
 fn null_gte_returns_false() {
     let doc = doc! { "nullable_val": Bson::Null };
     assert_eq!(
-        evaluate_condition(&doc, &condition("nullable_val", ">=", "5"), &test_schema()),
+        doc.matches(&condition("nullable_val", ">=", "5"), &test_schema()),
         Ok(false)
     );
 }
@@ -475,7 +466,7 @@ fn null_gte_returns_false() {
 fn null_lte_returns_false() {
     let doc = doc! { "nullable_val": Bson::Null };
     assert_eq!(
-        evaluate_condition(&doc, &condition("nullable_val", "<=", "5"), &test_schema()),
+        doc.matches(&condition("nullable_val", "<=", "5"), &test_schema()),
         Ok(false)
     );
 }
@@ -484,7 +475,7 @@ fn null_lte_returns_false() {
 fn null_similar_returns_false() {
     let doc = doc! { "nullable_val": Bson::Null };
     assert_eq!(
-        evaluate_condition(&doc, &condition("nullable_val", "==", "5"), &test_schema()),
+        doc.matches(&condition("nullable_val", "==", "5"), &test_schema()),
         Ok(false)
     );
 }

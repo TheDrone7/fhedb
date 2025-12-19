@@ -1,5 +1,5 @@
 use bson::doc;
-use fhedb_core::prelude::{Database, FieldDefinition, FieldType, Schema, filter_documents};
+use fhedb_core::prelude::{Database, FieldDefinition, FieldType, Filterable, Schema};
 use fhedb_types::FieldCondition;
 use std::collections::HashMap;
 use tempfile::TempDir;
@@ -58,7 +58,7 @@ fn empty_conditions_returns_all() {
     let (_temp, db) = setup_collection();
     let col = db.get_collection("users").unwrap();
 
-    let result = filter_documents(col, &[]).unwrap();
+    let result = col.filter(&[]).unwrap();
     assert_eq!(result.len(), 4);
 }
 
@@ -68,7 +68,7 @@ fn single_equal_condition() {
     let col = db.get_collection("users").unwrap();
 
     let conditions = vec![condition("name", "=", "\"Alice\"")];
-    let result = filter_documents(col, &conditions).unwrap();
+    let result = col.filter(&conditions).unwrap();
 
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].data.get_str("name").unwrap(), "Alice");
@@ -80,7 +80,7 @@ fn single_condition_no_matches() {
     let col = db.get_collection("users").unwrap();
 
     let conditions = vec![condition("name", "=", "\"Nonexistent\"")];
-    let result = filter_documents(col, &conditions).unwrap();
+    let result = col.filter(&conditions).unwrap();
 
     assert!(result.is_empty());
 }
@@ -91,7 +91,7 @@ fn single_condition_multiple_matches() {
     let col = db.get_collection("users").unwrap();
 
     let conditions = vec![condition("active", "=", "true")];
-    let result = filter_documents(col, &conditions).unwrap();
+    let result = col.filter(&conditions).unwrap();
 
     assert_eq!(result.len(), 3);
 }
@@ -105,7 +105,7 @@ fn multiple_conditions_and_logic() {
         condition("active", "=", "true"),
         condition("age", ">", "26"),
     ];
-    let result = filter_documents(col, &conditions).unwrap();
+    let result = col.filter(&conditions).unwrap();
 
     assert_eq!(result.len(), 2);
 }
@@ -119,7 +119,7 @@ fn multiple_conditions_narrow_to_one() {
         condition("active", "=", "true"),
         condition("age", ">=", "30"),
     ];
-    let result = filter_documents(col, &conditions).unwrap();
+    let result = col.filter(&conditions).unwrap();
 
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].data.get_str("name").unwrap(), "Alice");
@@ -134,7 +134,7 @@ fn multiple_conditions_no_matches() {
         condition("active", "=", "false"),
         condition("age", "<", "30"),
     ];
-    let result = filter_documents(col, &conditions).unwrap();
+    let result = col.filter(&conditions).unwrap();
 
     assert!(result.is_empty());
 }
@@ -144,16 +144,16 @@ fn comparison_operators() {
     let (_temp, db) = setup_collection();
     let col = db.get_collection("users").unwrap();
 
-    let lt_result = filter_documents(col, &[condition("age", "<", "28")]).unwrap();
+    let lt_result = col.filter(&[condition("age", "<", "28")]).unwrap();
     assert_eq!(lt_result.len(), 1);
 
-    let lte_result = filter_documents(col, &[condition("age", "<=", "28")]).unwrap();
+    let lte_result = col.filter(&[condition("age", "<=", "28")]).unwrap();
     assert_eq!(lte_result.len(), 2);
 
-    let gt_result = filter_documents(col, &[condition("age", ">", "30")]).unwrap();
+    let gt_result = col.filter(&[condition("age", ">", "30")]).unwrap();
     assert_eq!(gt_result.len(), 1);
 
-    let gte_result = filter_documents(col, &[condition("age", ">=", "30")]).unwrap();
+    let gte_result = col.filter(&[condition("age", ">=", "30")]).unwrap();
     assert_eq!(gte_result.len(), 2);
 }
 
@@ -163,7 +163,7 @@ fn not_equal_operator() {
     let col = db.get_collection("users").unwrap();
 
     let conditions = vec![condition("active", "!=", "true")];
-    let result = filter_documents(col, &conditions).unwrap();
+    let result = col.filter(&conditions).unwrap();
 
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].data.get_str("name").unwrap(), "Charlie");
@@ -175,7 +175,7 @@ fn unknown_field_error() {
     let col = db.get_collection("users").unwrap();
 
     let conditions = vec![condition("nonexistent_field", "=", "\"value\"")];
-    let result = filter_documents(col, &conditions);
+    let result = col.filter(&conditions);
 
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Unknown field"));
@@ -187,7 +187,7 @@ fn parse_error_propagates() {
     let col = db.get_collection("users").unwrap();
 
     let conditions = vec![condition("age", "=", "not_a_number")];
-    let result = filter_documents(col, &conditions);
+    let result = col.filter(&conditions);
 
     assert!(result.is_err());
 }
@@ -199,7 +199,7 @@ fn empty_collection_returns_empty() {
     db.create_collection("empty", test_schema()).unwrap();
     let col = db.get_collection("empty").unwrap();
 
-    let result = filter_documents(col, &[condition("name", "=", "\"Alice\"")]).unwrap();
+    let result = col.filter(&[condition("name", "=", "\"Alice\"")]).unwrap();
     assert!(result.is_empty());
 }
 
@@ -210,7 +210,7 @@ fn empty_collection_empty_conditions() {
     db.create_collection("empty", test_schema()).unwrap();
     let col = db.get_collection("empty").unwrap();
 
-    let result = filter_documents(col, &[]).unwrap();
+    let result = col.filter(&[]).unwrap();
     assert!(result.is_empty());
 }
 
@@ -224,7 +224,7 @@ fn three_conditions_and_logic() {
         condition("age", ">=", "25"),
         condition("age", "<=", "30"),
     ];
-    let result = filter_documents(col, &conditions).unwrap();
+    let result = col.filter(&conditions).unwrap();
 
     assert_eq!(result.len(), 3);
 }
@@ -238,7 +238,7 @@ fn first_condition_fails_short_circuits() {
         condition("unknown", "=", "\"value\""),
         condition("name", "=", "\"Alice\""),
     ];
-    let result = filter_documents(col, &conditions);
+    let result = col.filter(&conditions);
 
     assert!(result.is_err());
 }

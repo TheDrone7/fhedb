@@ -5,42 +5,41 @@
 use bson::Bson;
 use fhedb_types::QueryOperator;
 
-/// Compares two BSON values using the given operator.
-///
-/// Supports comparison between:
-/// - Integers (Int64)
-/// - Floats (Double)
-/// - Mixed Int64/Double (converted to f64)
-/// - Strings (lexicographic)
-///
-/// ## Arguments
-///
-/// * `a` - First value.
-/// * `b` - Second value.
-/// * `op` - The comparison operator (GreaterThan, GreaterThanOrEqual, LessThan, LessThanOrEqual).
-///
-/// ## Returns
-///
-/// Returns [`Ok`]\([`bool`]) with the comparison result, or [`Err`]\([`String`]) for:
-/// - Array operands (not supported)
-/// - Incompatible types (e.g., String vs Int)
-pub fn compare_bson(a: &Bson, b: &Bson, op: &QueryOperator) -> Result<bool, String> {
-    let result = match (a, b) {
-        (Bson::Int64(x), Bson::Int64(y)) => compare_ord(x, y, op),
-        (Bson::Double(x), Bson::Double(y)) => compare_ord(x, y, op),
-        (Bson::Int64(x), Bson::Double(y)) => compare_ord(&(*x as f64), y, op),
-        (Bson::Double(x), Bson::Int64(y)) => compare_ord(x, &(*y as f64), op),
-        (Bson::String(x), Bson::String(y)) => compare_ord(x, y, op),
-        (Bson::Array(_), _) | (_, Bson::Array(_)) => {
-            return Err("Comparison operators not supported for arrays.".to_string());
-        }
-        (Bson::Null, _) | (_, Bson::Null) => false,
-        _ => return Err("Incompatible types for comparison.".to_string()),
-    };
-    Ok(result)
+/// Trait for comparing BSON values.
+pub trait BsonComparable {
+    /// Compares this BSON value to another using the given operator.
+    ///
+    /// ## Arguments
+    ///
+    /// * `other` - The value to compare against.
+    /// * `op` - The comparison operator.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`bool`]) with the comparison result, or [`Err`]\([`String`]) for
+    /// incompatible types or unsupported operations.
+    fn compare_to(&self, other: &Bson, op: &QueryOperator) -> Result<bool, String>;
 }
 
-/// Compares two values implementing Ord using the given operator.
+impl BsonComparable for Bson {
+    fn compare_to(&self, other: &Bson, op: &QueryOperator) -> Result<bool, String> {
+        let result = match (self, other) {
+            (Bson::Int64(x), Bson::Int64(y)) => compare_ord(x, y, op),
+            (Bson::Double(x), Bson::Double(y)) => compare_ord(x, y, op),
+            (Bson::Int64(x), Bson::Double(y)) => compare_ord(&(*x as f64), y, op),
+            (Bson::Double(x), Bson::Int64(y)) => compare_ord(x, &(*y as f64), op),
+            (Bson::String(x), Bson::String(y)) => compare_ord(x, y, op),
+            (Bson::Array(_), _) | (_, Bson::Array(_)) => {
+                return Err("Comparison operators not supported for arrays.".to_string());
+            }
+            (Bson::Null, _) | (_, Bson::Null) => false,
+            _ => return Err("Incompatible types for comparison.".to_string()),
+        };
+        Ok(result)
+    }
+}
+
+/// Compares two values implementing PartialOrd using the given operator.
 ///
 /// ## Arguments
 ///
