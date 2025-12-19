@@ -8,6 +8,9 @@ pub mod db;
 /// The file module - contains the file operations for the database.
 pub mod file;
 
+/// The query module - contains query execution utilities.
+pub mod query;
+
 /// Re-exports commonly used types for easy access.
 pub mod prelude {
     pub use crate::db::collection::Collection;
@@ -21,4 +24,5 @@ pub mod prelude {
     pub use crate::file::collection::CollectionFileOps;
     pub use crate::file::database::DatabaseFileOps;
     pub use crate::file::types::{LogEntry, Operation};
+    pub use crate::query::{compare_bson, evaluate_condition, parse_bson_value, unescape};
 }

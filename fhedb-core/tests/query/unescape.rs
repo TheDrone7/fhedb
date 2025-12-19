@@ -1,4 +1,4 @@
-use fhedb_query::prelude::unescape;
+use fhedb_core::prelude::unescape;
 
 #[test]
 fn basic_escape_sequences() {
