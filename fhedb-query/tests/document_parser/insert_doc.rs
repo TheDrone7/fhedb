@@ -124,9 +124,9 @@ fn complex_data_types() {
     assert_eq!(fields["price"], "1299.99");
     assert_eq!(fields["in_stock"], "true");
     assert_eq!(fields["tags"], "[\"gaming\", \"laptop\"]");
-    assert_eq!(fields["config"], "\"{\"theme\": \"dark\"}\"");
+    assert_eq!(fields["config"], "\"{\\\"theme\\\": \\\"dark\\\"}\"");
     assert_eq!(fields["matrix"], "[[1, 2], [3, 4]]");
-    assert_eq!(fields["path"], "\"C:\\\\Users\\\\Admin\"");
+    assert_eq!(fields["path"], "\"C:\\\\\\\\Users\\\\\\\\Admin\"");
 }
 
 #[test]

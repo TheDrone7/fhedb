@@ -4,8 +4,6 @@
 
 use chumsky::{extra, prelude::*};
 
-use crate::utilities::unescape;
-
 /// Represents a token in the FHEDB query language.
 ///
 /// Tokens are the smallest meaningful units produced by the lexer.
@@ -292,7 +290,7 @@ pub fn lexer<'src>()
     let string_lit = just('"')
         .ignore_then(string_char.repeated().collect::<Vec<_>>())
         .then_ignore(just('"'))
-        .map(|parts| Token::StringLit(unescape(&parts.join(""))))
+        .map(|parts| Token::StringLit(parts.join("")))
         .labelled("string");
 
     let single_escape_seq = just('\\').then(any()).map(|(slash, c): (char, char)| {
@@ -308,7 +306,7 @@ pub fn lexer<'src>()
     let single_string_lit = just('\'')
         .ignore_then(single_string_char.repeated().collect::<Vec<_>>())
         .then_ignore(just('\''))
-        .map(|parts| Token::StringLit(unescape(&parts.join(""))))
+        .map(|parts| Token::StringLit(parts.join("")))
         .labelled("string");
 
     let float_lit = just('-')

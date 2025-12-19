@@ -6,8 +6,9 @@
 use std::collections::HashMap;
 
 use bson::{Bson, Document as BsonDocument};
-use fhedb_core::prelude::{Collection, Database, DocId, Document, FieldType, Schema};
-use fhedb_query::prelude::parse_bson_value;
+use fhedb_core::prelude::{
+    Collection, Database, DocId, Document, FieldType, Schema, parse_bson_value,
+};
 use fhedb_types::{DocumentQuery, FieldCondition, FieldSelector, ParsedDocContent, QueryOperator};
 use serde_json::{Value as JsonValue, json};
 

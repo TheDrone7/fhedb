@@ -123,7 +123,7 @@ fn complex_data_types() {
     assert_eq!(updates["price"], "1299.99");
     assert_eq!(updates["in_stock"], "true");
     assert_eq!(updates["tags"], "[\"gaming\", \"laptop\"]");
-    assert_eq!(updates["config"], "\"{\"theme\": \"dark\"}\"");
+    assert_eq!(updates["config"], "\"{\\\"theme\\\": \\\"dark\\\"}\"");
     assert_eq!(updates["matrix"], "[[1, 2], [3, 4]]");
     assert_eq!(updates["path"], "\"C:\\Users\\Admin\"");
 }

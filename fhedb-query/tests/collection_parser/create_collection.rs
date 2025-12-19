@@ -222,7 +222,7 @@ fn nested_braces_in_strings() {
     assert_eq!(
         schema.fields["config"].default_value,
         Some(bson::Bson::String(
-            "{\"key\": {\"nested\": \"value\"}}".to_string()
+            "{\\\"key\\\": {\\\"nested\\\": \\\"value\\\"}}".to_string()
         ))
     );
     assert_eq!(schema.fields["template"].field_type, FieldType::String);
