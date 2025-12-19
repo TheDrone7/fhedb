@@ -2,10 +2,8 @@
 //!
 //! Provides query execution utilities for document operations.
 
-mod compare;
-mod condition;
+mod comparison;
 mod value;
 
-pub use compare::compare_bson;
-pub use condition::evaluate_condition;
+pub use comparison::{compare_bson, evaluate_condition};
 pub use value::{parse_bson_value, unescape};

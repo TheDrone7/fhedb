@@ -6,7 +6,7 @@ use bson::{Bson, Document as BsonDocument};
 use fhedb_types::{FieldCondition, FieldType, QueryOperator, Schema};
 
 use super::compare::compare_bson;
-use super::value::parse_bson_value;
+use crate::query::value::parse_bson_value;
 
 /// Evaluates a single condition against a document.
 ///
