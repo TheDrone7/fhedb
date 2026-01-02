@@ -23,9 +23,12 @@ fn setup_int_id_collection() -> (TempDir, Database) {
     db.create_collection("users", int_id_schema()).unwrap();
 
     let col = db.get_collection_mut("users").unwrap();
-    col.add_document(doc! { "id": 1_i64, "name": "Alice" }).unwrap();
-    col.add_document(doc! { "id": 2_i64, "name": "Bob" }).unwrap();
-    col.add_document(doc! { "id": 3_i64, "name": "Charlie" }).unwrap();
+    col.add_document(doc! { "id": 1_i64, "name": "Alice" })
+        .unwrap();
+    col.add_document(doc! { "id": 2_i64, "name": "Bob" })
+        .unwrap();
+    col.add_document(doc! { "id": 3_i64, "name": "Charlie" })
+        .unwrap();
 
     (temp_dir, db)
 }
@@ -36,8 +39,10 @@ fn setup_string_id_collection() -> (TempDir, Database) {
     db.create_collection("users", string_id_schema()).unwrap();
 
     let col = db.get_collection_mut("users").unwrap();
-    col.add_document(doc! { "id": "user-1", "name": "Alice" }).unwrap();
-    col.add_document(doc! { "id": "user-2", "name": "Bob" }).unwrap();
+    col.add_document(doc! { "id": "user-1", "name": "Alice" })
+        .unwrap();
+    col.add_document(doc! { "id": "user-2", "name": "Bob" })
+        .unwrap();
 
     (temp_dir, db)
 }
