@@ -37,24 +37,28 @@ fn empty_content() -> fhedb_types::ParsedDocContent {
 #[test]
 fn empty_selectors_returns_empty() {
     let doc = doc! { "id": 1_i64, "name": "Alice", "age": 30_i64, "active": true };
-    let result = doc.select_fields(&[], &test_schema()).unwrap();
-    assert!(result.is_empty());
+    let result = doc.select_fields(&[], &test_schema());
+    assert!(result.is_ok());
+    let selected = result.unwrap();
+    assert!(selected.is_empty());
 }
 
 #[test]
 fn select_single_field() {
     let doc = doc! { "id": 1_i64, "name": "Alice", "age": 30_i64, "active": true };
     let selectors = vec![FieldSelector::Field("name".to_string())];
-    let result = doc.select_fields(&selectors, &test_schema()).unwrap();
+    let result = doc.select_fields(&selectors, &test_schema());
+    assert!(result.is_ok());
+    let selected = result.unwrap();
 
-    assert_eq!(result.len(), 1);
+    assert_eq!(selected.len(), 1);
     assert_eq!(
-        result.get("name").unwrap(),
+        selected.get("name").unwrap(),
         &Bson::String("Alice".to_string())
     );
-    assert!(result.get("id").is_none());
-    assert!(result.get("age").is_none());
-    assert!(result.get("active").is_none());
+    assert!(selected.get("id").is_none());
+    assert!(selected.get("age").is_none());
+    assert!(selected.get("active").is_none());
 }
 
 #[test]
@@ -64,32 +68,36 @@ fn select_multiple_fields() {
         FieldSelector::Field("name".to_string()),
         FieldSelector::Field("age".to_string()),
     ];
-    let result = doc.select_fields(&selectors, &test_schema()).unwrap();
+    let result = doc.select_fields(&selectors, &test_schema());
+    assert!(result.is_ok());
+    let selected = result.unwrap();
 
-    assert_eq!(result.len(), 2);
+    assert_eq!(selected.len(), 2);
     assert_eq!(
-        result.get("name").unwrap(),
+        selected.get("name").unwrap(),
         &Bson::String("Alice".to_string())
     );
-    assert_eq!(result.get("age").unwrap(), &Bson::Int64(30));
-    assert!(result.get("id").is_none());
-    assert!(result.get("active").is_none());
+    assert_eq!(selected.get("age").unwrap(), &Bson::Int64(30));
+    assert!(selected.get("id").is_none());
+    assert!(selected.get("active").is_none());
 }
 
 #[test]
 fn select_all_fields() {
     let doc = doc! { "id": 1_i64, "name": "Alice", "age": 30_i64, "active": true };
     let selectors = vec![FieldSelector::AllFields];
-    let result = doc.select_fields(&selectors, &test_schema()).unwrap();
+    let result = doc.select_fields(&selectors, &test_schema());
+    assert!(result.is_ok());
+    let selected = result.unwrap();
 
-    assert_eq!(result.len(), 4);
-    assert_eq!(result.get("id").unwrap(), &Bson::Int64(1));
+    assert_eq!(selected.len(), 4);
+    assert_eq!(selected.get("id").unwrap(), &Bson::Int64(1));
     assert_eq!(
-        result.get("name").unwrap(),
+        selected.get("name").unwrap(),
         &Bson::String("Alice".to_string())
     );
-    assert_eq!(result.get("age").unwrap(), &Bson::Int64(30));
-    assert_eq!(result.get("active").unwrap(), &Bson::Boolean(true));
+    assert_eq!(selected.get("age").unwrap(), &Bson::Int64(30));
+    assert_eq!(selected.get("active").unwrap(), &Bson::Boolean(true));
 }
 
 #[test]
@@ -106,10 +114,12 @@ fn select_unknown_field_error() {
 fn select_with_null_value() {
     let doc = doc! { "id": 1_i64, "name": Bson::Null, "age": 30_i64, "active": true };
     let selectors = vec![FieldSelector::Field("name".to_string())];
-    let result = doc.select_fields(&selectors, &test_schema()).unwrap();
+    let result = doc.select_fields(&selectors, &test_schema());
+    assert!(result.is_ok());
+    let selected = result.unwrap();
 
-    assert_eq!(result.len(), 1);
-    assert_eq!(result.get("name").unwrap(), &Bson::Null);
+    assert_eq!(selected.len(), 1);
+    assert_eq!(selected.get("name").unwrap(), &Bson::Null);
 }
 
 #[test]
@@ -119,11 +129,13 @@ fn duplicate_selectors() {
         FieldSelector::Field("name".to_string()),
         FieldSelector::Field("name".to_string()),
     ];
-    let result = doc.select_fields(&selectors, &test_schema()).unwrap();
+    let result = doc.select_fields(&selectors, &test_schema());
+    assert!(result.is_ok());
+    let selected = result.unwrap();
 
-    assert_eq!(result.len(), 1);
+    assert_eq!(selected.len(), 1);
     assert_eq!(
-        result.get("name").unwrap(),
+        selected.get("name").unwrap(),
         &Bson::String("Alice".to_string())
     );
 }
@@ -135,13 +147,13 @@ fn subdocument_with_value() {
         field_name: "manager".to_string(),
         content: empty_content(),
     }];
-    let result = doc
-        .select_fields(&selectors, &schema_with_reference())
-        .unwrap();
+    let result = doc.select_fields(&selectors, &schema_with_reference());
+    assert!(result.is_ok());
+    let selected = result.unwrap();
 
-    assert_eq!(result.len(), 1);
+    assert_eq!(selected.len(), 1);
     assert_eq!(
-        result.get("manager").unwrap(),
+        selected.get("manager").unwrap(),
         &Bson::String("ref-123".to_string())
     );
 }
@@ -153,12 +165,12 @@ fn subdocument_defaults_to_null() {
         field_name: "manager".to_string(),
         content: empty_content(),
     }];
-    let result = doc
-        .select_fields(&selectors, &schema_with_reference())
-        .unwrap();
+    let result = doc.select_fields(&selectors, &schema_with_reference());
+    assert!(result.is_ok());
+    let selected = result.unwrap();
 
-    assert_eq!(result.len(), 1);
-    assert_eq!(result.get("manager").unwrap(), &Bson::Null);
+    assert_eq!(selected.len(), 1);
+    assert_eq!(selected.get("manager").unwrap(), &Bson::Null);
 }
 
 #[test]

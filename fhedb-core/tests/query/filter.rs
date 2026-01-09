@@ -58,8 +58,10 @@ fn empty_conditions_returns_all() {
     let (_temp, db) = setup_collection();
     let col = db.get_collection("users").unwrap();
 
-    let result = col.filter(&[]).unwrap();
-    assert_eq!(result.len(), 4);
+    let result = col.filter(&[]);
+    assert!(result.is_ok());
+    let docs = result.unwrap();
+    assert_eq!(docs.len(), 4);
 }
 
 #[test]
@@ -68,10 +70,12 @@ fn single_equal_condition() {
     let col = db.get_collection("users").unwrap();
 
     let conditions = vec![condition("name", "=", "\"Alice\"")];
-    let result = col.filter(&conditions).unwrap();
+    let result = col.filter(&conditions);
+    assert!(result.is_ok());
+    let docs = result.unwrap();
 
-    assert_eq!(result.len(), 1);
-    assert_eq!(result[0].data.get_str("name").unwrap(), "Alice");
+    assert_eq!(docs.len(), 1);
+    assert_eq!(docs[0].data.get_str("name").unwrap(), "Alice");
 }
 
 #[test]
@@ -80,9 +84,11 @@ fn single_condition_no_matches() {
     let col = db.get_collection("users").unwrap();
 
     let conditions = vec![condition("name", "=", "\"Nonexistent\"")];
-    let result = col.filter(&conditions).unwrap();
+    let result = col.filter(&conditions);
+    assert!(result.is_ok());
+    let docs = result.unwrap();
 
-    assert!(result.is_empty());
+    assert!(docs.is_empty());
 }
 
 #[test]
@@ -91,9 +97,11 @@ fn single_condition_multiple_matches() {
     let col = db.get_collection("users").unwrap();
 
     let conditions = vec![condition("active", "=", "true")];
-    let result = col.filter(&conditions).unwrap();
+    let result = col.filter(&conditions);
+    assert!(result.is_ok());
+    let docs = result.unwrap();
 
-    assert_eq!(result.len(), 3);
+    assert_eq!(docs.len(), 3);
 }
 
 #[test]
@@ -105,9 +113,11 @@ fn multiple_conditions_and_logic() {
         condition("active", "=", "true"),
         condition("age", ">", "26"),
     ];
-    let result = col.filter(&conditions).unwrap();
+    let result = col.filter(&conditions);
+    assert!(result.is_ok());
+    let docs = result.unwrap();
 
-    assert_eq!(result.len(), 2);
+    assert_eq!(docs.len(), 2);
 }
 
 #[test]
@@ -119,10 +129,12 @@ fn multiple_conditions_narrow_to_one() {
         condition("active", "=", "true"),
         condition("age", ">=", "30"),
     ];
-    let result = col.filter(&conditions).unwrap();
+    let result = col.filter(&conditions);
+    assert!(result.is_ok());
+    let docs = result.unwrap();
 
-    assert_eq!(result.len(), 1);
-    assert_eq!(result[0].data.get_str("name").unwrap(), "Alice");
+    assert_eq!(docs.len(), 1);
+    assert_eq!(docs[0].data.get_str("name").unwrap(), "Alice");
 }
 
 #[test]
@@ -134,9 +146,11 @@ fn multiple_conditions_no_matches() {
         condition("active", "=", "false"),
         condition("age", "<", "30"),
     ];
-    let result = col.filter(&conditions).unwrap();
+    let result = col.filter(&conditions);
+    assert!(result.is_ok());
+    let docs = result.unwrap();
 
-    assert!(result.is_empty());
+    assert!(docs.is_empty());
 }
 
 #[test]
@@ -144,17 +158,21 @@ fn comparison_operators() {
     let (_temp, db) = setup_collection();
     let col = db.get_collection("users").unwrap();
 
-    let lt_result = col.filter(&[condition("age", "<", "28")]).unwrap();
-    assert_eq!(lt_result.len(), 1);
+    let lt_result = col.filter(&[condition("age", "<", "28")]);
+    assert!(lt_result.is_ok());
+    assert_eq!(lt_result.unwrap().len(), 1);
 
-    let lte_result = col.filter(&[condition("age", "<=", "28")]).unwrap();
-    assert_eq!(lte_result.len(), 2);
+    let lte_result = col.filter(&[condition("age", "<=", "28")]);
+    assert!(lte_result.is_ok());
+    assert_eq!(lte_result.unwrap().len(), 2);
 
-    let gt_result = col.filter(&[condition("age", ">", "30")]).unwrap();
-    assert_eq!(gt_result.len(), 1);
+    let gt_result = col.filter(&[condition("age", ">", "30")]);
+    assert!(gt_result.is_ok());
+    assert_eq!(gt_result.unwrap().len(), 1);
 
-    let gte_result = col.filter(&[condition("age", ">=", "30")]).unwrap();
-    assert_eq!(gte_result.len(), 2);
+    let gte_result = col.filter(&[condition("age", ">=", "30")]);
+    assert!(gte_result.is_ok());
+    assert_eq!(gte_result.unwrap().len(), 2);
 }
 
 #[test]
@@ -163,10 +181,12 @@ fn not_equal_operator() {
     let col = db.get_collection("users").unwrap();
 
     let conditions = vec![condition("active", "!=", "true")];
-    let result = col.filter(&conditions).unwrap();
+    let result = col.filter(&conditions);
+    assert!(result.is_ok());
+    let docs = result.unwrap();
 
-    assert_eq!(result.len(), 1);
-    assert_eq!(result[0].data.get_str("name").unwrap(), "Charlie");
+    assert_eq!(docs.len(), 1);
+    assert_eq!(docs[0].data.get_str("name").unwrap(), "Charlie");
 }
 
 #[test]
@@ -199,8 +219,10 @@ fn empty_collection_returns_empty() {
     db.create_collection("empty", test_schema()).unwrap();
     let col = db.get_collection("empty").unwrap();
 
-    let result = col.filter(&[condition("name", "=", "\"Alice\"")]).unwrap();
-    assert!(result.is_empty());
+    let result = col.filter(&[condition("name", "=", "\"Alice\"")]);
+    assert!(result.is_ok());
+    let docs = result.unwrap();
+    assert!(docs.is_empty());
 }
 
 #[test]
@@ -210,8 +232,10 @@ fn empty_collection_empty_conditions() {
     db.create_collection("empty", test_schema()).unwrap();
     let col = db.get_collection("empty").unwrap();
 
-    let result = col.filter(&[]).unwrap();
-    assert!(result.is_empty());
+    let result = col.filter(&[]);
+    assert!(result.is_ok());
+    let docs = result.unwrap();
+    assert!(docs.is_empty());
 }
 
 #[test]
@@ -224,9 +248,11 @@ fn three_conditions_and_logic() {
         condition("age", ">=", "25"),
         condition("age", "<=", "30"),
     ];
-    let result = col.filter(&conditions).unwrap();
+    let result = col.filter(&conditions);
+    assert!(result.is_ok());
+    let docs = result.unwrap();
 
-    assert_eq!(result.len(), 3);
+    assert_eq!(docs.len(), 3);
 }
 
 #[test]
