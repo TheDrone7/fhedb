@@ -25,7 +25,7 @@ pub mod prelude {
     pub use crate::file::database::DatabaseFileOps;
     pub use crate::file::types::{LogEntry, Operation};
     pub use crate::query::{
-        BsonComparable, ConditionEvaluable, FieldSelectable, Filterable, ReferenceResolvable,
-        Unescapable, ValueParseable,
+        BsonComparable, ConditionEvaluable, DocumentPreparable, FieldSelectable, Filterable,
+        ReferenceResolvable, Unescapable, ValueParseable,
     };
 }
