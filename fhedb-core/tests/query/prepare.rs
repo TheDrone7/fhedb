@@ -7,7 +7,10 @@ fn test_schema() -> Schema {
     fields.insert("id".to_string(), FieldDefinition::new(FieldType::IdInt));
     fields.insert("name".to_string(), FieldDefinition::new(FieldType::String));
     fields.insert("age".to_string(), FieldDefinition::new(FieldType::Int));
-    fields.insert("active".to_string(), FieldDefinition::new(FieldType::Boolean));
+    fields.insert(
+        "active".to_string(),
+        FieldDefinition::new(FieldType::Boolean),
+    );
     Schema { fields }
 }
 

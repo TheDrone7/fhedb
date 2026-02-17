@@ -97,7 +97,8 @@ fn parse_array_of_ints() {
 
 #[test]
 fn parse_array_of_strings() {
-    let result = "[\"a\", \"b\", \"c\"]".parse_as_bson(&FieldType::Array(Box::new(FieldType::String)));
+    let result =
+        "[\"a\", \"b\", \"c\"]".parse_as_bson(&FieldType::Array(Box::new(FieldType::String)));
     assert!(result.is_ok());
     assert_eq!(
         result.unwrap(),
@@ -230,7 +231,10 @@ fn parse_string_with_null_char() {
 fn parse_string_with_unknown_escape() {
     let result = "\"unknown\\xescape\"".parse_as_bson(&FieldType::String);
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), Bson::String("unknown\\xescape".to_string()));
+    assert_eq!(
+        result.unwrap(),
+        Bson::String("unknown\\xescape".to_string())
+    );
 }
 
 #[test]
