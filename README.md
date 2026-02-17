@@ -27,7 +27,7 @@ The "fancy" part of this **_(planned)_** would be that the DBMS applies FHE (Ful
 - [x] CRUD operations (other than create)
 - [x] Database metadata management
 - [x] Server for accessing the database
-- [ ] Querying (basic, fields other than ID)
+- [x] Querying (basic, fields other than ID)
 - [ ] Secondary indices
 - [x] Custom query language (GraphQL-like, allows for easy joins)
 - [ ] Basic security (authentication, authorization)
