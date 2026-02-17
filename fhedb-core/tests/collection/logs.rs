@@ -303,13 +303,13 @@ fn update_document_logs_correctly() {
     );
     assert_eq!(update_entry.document.get_f64("salary").unwrap(), 80000.0);
     assert_eq!(update_entry.document.get_i64("age").unwrap(), 30);
-    assert_eq!(update_entry.document.get_bool("active").unwrap(), true);
+    assert!(update_entry.document.get_bool("active").unwrap());
 
     let retrieved_doc = collection.get_document(doc_id).unwrap();
     assert_eq!(retrieved_doc.data.get_str("name").unwrap(), "Alice Updated");
     assert_eq!(retrieved_doc.data.get_f64("salary").unwrap(), 80000.0);
     assert_eq!(retrieved_doc.data.get_i64("age").unwrap(), 30);
-    assert_eq!(retrieved_doc.data.get_bool("active").unwrap(), true);
+    assert!(retrieved_doc.data.get_bool("active").unwrap());
 }
 
 #[test]
@@ -348,7 +348,7 @@ fn collection_from_files_handles_update_operations() {
     assert_eq!(retrieved_doc.data.get_str("name").unwrap(), "Bob Smith");
     assert_eq!(retrieved_doc.data.get_i64("age").unwrap(), 25);
     assert_eq!(retrieved_doc.data.get_f64("salary").unwrap(), 65000.0);
-    assert_eq!(retrieved_doc.data.get_bool("active").unwrap(), false);
+    assert!(!retrieved_doc.data.get_bool("active").unwrap());
 
     let all_docs = loaded_collection.get_documents();
     assert_eq!(all_docs.len(), 1);

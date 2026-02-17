@@ -40,7 +40,7 @@ fn valid_document() {
     let schema = make_schema();
     let doc = doc! {
         "int_field": 69i64,
-        "float_field": 3.14f64,
+        "float_field": 5.69f64,
         "bool_field": true,
         "string_field": "hello world",
         "array_field": [1i32, 2i32, 3i32],
@@ -76,7 +76,7 @@ fn type_mismatch() {
     let schema = make_schema();
     let doc = doc! {
         "int_field": "not an int",
-        "float_field": 3.14f64,
+        "float_field": 4.56f64,
         "bool_field": true,
         "string_field": "hello world",
         "array_field": [1i32, 2i32, 3i32],
@@ -98,7 +98,7 @@ fn array_type_mismatch() {
     let schema = make_schema();
     let doc = doc! {
         "int_field": 69i64,
-        "float_field": 3.14f64,
+        "float_field": 3.54f64,
         "bool_field": true,
         "string_field": "hello world",
         "array_field": [1i32, "not an int", 3i32],
@@ -120,7 +120,7 @@ fn invalid_id_type() {
     let schema = make_schema();
     let doc = doc! {
         "int_field": 69i64,
-        "float_field": 3.14f64,
+        "float_field": 3.54f64,
         "bool_field": true,
         "string_field": "hello world",
         "array_field": [1i32, 2i32, 3i32],
@@ -356,7 +356,7 @@ fn default_values() {
     let applied_count = schema.apply_defaults(&mut doc4);
     assert_eq!(applied_count, 3);
     assert_eq!(doc4.get_i64("age").unwrap(), 18);
-    assert_eq!(doc4.get_bool("active").unwrap(), true);
+    assert!(doc4.get_bool("active").unwrap());
     assert_eq!(doc4.get_str("role").unwrap(), "user");
 
     let mut doc5 = doc! {
@@ -369,6 +369,6 @@ fn default_values() {
     let applied_count = schema.apply_defaults(&mut doc5);
     assert_eq!(applied_count, 2);
     assert_eq!(doc5.get_i64("age").unwrap(), 30);
-    assert_eq!(doc5.get_bool("active").unwrap(), true);
+    assert!(doc5.get_bool("active").unwrap());
     assert_eq!(doc5.get_str("role").unwrap(), "user");
 }

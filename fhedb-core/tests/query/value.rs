@@ -38,16 +38,16 @@ fn parse_negative_int() {
 
 #[test]
 fn parse_float() {
-    let result = "3.14".parse_as_bson(&FieldType::Float);
+    let result = "1.49".parse_as_bson(&FieldType::Float);
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), Bson::Double(3.14));
+    assert_eq!(result.unwrap(), Bson::Double(1.49));
 }
 
 #[test]
 fn parse_negative_float() {
-    let result = "-3.14".parse_as_bson(&FieldType::Float);
+    let result = "-1.46".parse_as_bson(&FieldType::Float);
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), Bson::Double(-3.14));
+    assert_eq!(result.unwrap(), Bson::Double(-1.46));
 }
 
 #[test]

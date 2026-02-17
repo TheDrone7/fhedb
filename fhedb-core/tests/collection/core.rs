@@ -77,7 +77,7 @@ fn with_default_values() {
         "alice@example.com"
     );
     assert_eq!(retrieved_doc.data.get_i64("age").unwrap(), 18);
-    assert_eq!(retrieved_doc.data.get_bool("active").unwrap(), true);
+    assert!(retrieved_doc.data.get_bool("active").unwrap());
     assert_eq!(retrieved_doc.data.get_str("role").unwrap(), "user");
     assert_eq!(retrieved_doc.data.get_f64("score").unwrap(), 0.0);
 
@@ -97,7 +97,7 @@ fn with_default_values() {
         "bob@example.com"
     );
     assert_eq!(retrieved_doc2.data.get_i64("age").unwrap(), 25);
-    assert_eq!(retrieved_doc2.data.get_bool("active").unwrap(), true);
+    assert!(retrieved_doc2.data.get_bool("active").unwrap());
     assert_eq!(retrieved_doc2.data.get_str("role").unwrap(), "admin");
     assert_eq!(retrieved_doc2.data.get_f64("score").unwrap(), 0.0);
 }

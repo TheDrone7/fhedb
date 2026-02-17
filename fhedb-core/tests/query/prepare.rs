@@ -70,7 +70,7 @@ fn all_fields_provided() {
 
     assert_eq!(doc.get_str("name").unwrap(), "Alice");
     assert_eq!(doc.get_i64("age").unwrap(), 30);
-    assert_eq!(doc.get_bool("active").unwrap(), true);
+    assert!(doc.get_bool("active").unwrap());
 }
 
 #[test]
