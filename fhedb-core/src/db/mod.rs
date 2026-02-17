@@ -16,3 +16,6 @@ pub mod schema;
 
 /// The document module - contains the Document struct.
 pub mod document;
+
+/// The reference utilities module - contains traits for inspecting and validating schema references.
+pub mod reference_utils;
