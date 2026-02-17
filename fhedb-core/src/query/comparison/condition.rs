@@ -73,10 +73,9 @@ impl ConditionEvaluable for BsonDocument {
 ///
 /// Returns the type to use for parsing the condition value.
 fn get_parse_type<'a>(field_type: &'a FieldType, operator: &QueryOperator) -> &'a FieldType {
-    if *operator == QueryOperator::Similar {
-        if let FieldType::Array(inner) = field_type {
+    if *operator == QueryOperator::Similar
+        && let FieldType::Array(inner) = field_type {
             return inner.as_ref();
         }
-    }
     field_type
 }

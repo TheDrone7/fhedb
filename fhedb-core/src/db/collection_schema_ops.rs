@@ -247,12 +247,11 @@ impl CollectionSchemaOps for Collection {
             .fields
             .insert(field_name.clone(), field_definition.clone());
 
-        if field_definition.default_value.is_some() {
-            if let Err(e) = self.apply_defaults_to_existing(&field_name, &field_definition) {
+        if field_definition.default_value.is_some()
+            && let Err(e) = self.apply_defaults_to_existing(&field_name, &field_definition) {
                 self.schema.fields.remove(&field_name);
                 return Err(e);
             }
-        }
 
         Ok(())
     }
@@ -431,8 +430,8 @@ impl CollectionSchemaOps for Collection {
         let document_ids: Vec<DocId> = self.document_indices.keys().cloned().collect();
 
         for doc_id in document_ids {
-            if let Some(document) = self.get_document(doc_id.clone()) {
-                if document.data.contains_key(field_name) {
+            if let Some(document) = self.get_document(doc_id.clone())
+                && document.data.contains_key(field_name) {
                     let mut cleaned_doc = document.data.clone();
                     cleaned_doc.remove(field_name);
 
@@ -449,7 +448,6 @@ impl CollectionSchemaOps for Collection {
                         }
                     }
                 }
-            }
         }
 
         Ok(updated_document_ids)
@@ -464,8 +462,8 @@ impl CollectionSchemaOps for Collection {
         let document_ids: Vec<DocId> = self.document_indices.keys().cloned().collect();
 
         for doc_id in document_ids {
-            if let Some(document) = self.get_document(doc_id.clone()) {
-                if let Some(field_value) = document.data.get(old_field_name) {
+            if let Some(document) = self.get_document(doc_id.clone())
+                && let Some(field_value) = document.data.get(old_field_name) {
                     let mut updated_doc = document.data.clone();
                     updated_doc.remove(old_field_name);
                     updated_doc.insert(new_field_name, field_value.clone());
@@ -483,7 +481,6 @@ impl CollectionSchemaOps for Collection {
                         }
                     }
                 }
-            }
         }
 
         Ok(updated_document_ids)

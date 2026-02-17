@@ -71,9 +71,7 @@ impl Collection {
     pub fn add_document(&mut self, mut doc: bson::Document) -> Result<DocId, Vec<String>> {
         self.schema.apply_defaults(&mut doc);
 
-        if let Err(errors) = self.validate_document(&doc) {
-            return Err(errors);
-        }
+        self.validate_document(&doc)?;
         let id_field = &self.id_field;
         let doc_id = match self.get_doc_id_from_bson(&doc) {
             Some(value) => value,
@@ -185,9 +183,7 @@ impl Collection {
             updated_doc.insert(key, value);
         }
 
-        if let Err(validation_errors) = self.validate_document(&updated_doc) {
-            return Err(validation_errors);
-        }
+        self.validate_document(&updated_doc)?;
 
         match self.append_to_log(&Operation::Update, &updated_doc) {
             Ok(new_offset) => {
@@ -195,10 +191,10 @@ impl Collection {
                 Ok(Document::new(id, updated_doc))
             }
             Err(e) => {
-                return Err(vec![format!(
+                Err(vec![format!(
                     "Failed to write updated document to log: {}",
                     e
-                )]);
+                )])
             }
         }
     }
@@ -213,13 +209,12 @@ impl Collection {
     ///
     /// Returns [`Some`]\([`Document`]) if the document was present and removed, or [`None`] if not found.
     pub fn remove_document(&mut self, id: DocId) -> Option<Document> {
-        if let Some(offset) = self.document_indices.remove(&id) {
-            if let Ok(log_entry) = self.read_log_entry_at_offset(offset) {
+        if let Some(offset) = self.document_indices.remove(&id)
+            && let Ok(log_entry) = self.read_log_entry_at_offset(offset) {
                 self.append_to_log(&Operation::Delete, &log_entry.document)
                     .ok();
                 return Some(Document::new(id.clone(), log_entry.document));
             }
-        }
         None
     }
 
@@ -233,11 +228,10 @@ impl Collection {
     ///
     /// Returns [`Some`]\([`Document`]) if found, or [`None`] if not present.
     pub fn get_document(&self, id: DocId) -> Option<Document> {
-        if let Some(&offset) = self.document_indices.get(&id) {
-            if let Ok(log_entry) = self.read_log_entry_at_offset(offset) {
+        if let Some(&offset) = self.document_indices.get(&id)
+            && let Ok(log_entry) = self.read_log_entry_at_offset(offset) {
                 return Some(Document::new(id.clone(), log_entry.document));
             }
-        }
         None
     }
 

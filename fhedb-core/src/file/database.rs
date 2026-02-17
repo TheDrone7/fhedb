@@ -54,14 +54,13 @@ impl DatabaseFileOps for Database {
             let entry = entry?;
             let path = entry.path();
 
-            if path.is_dir() {
-                if let Some(collection_name) = path.file_name().and_then(|n| n.to_str()) {
+            if path.is_dir()
+                && let Some(collection_name) = path.file_name().and_then(|n| n.to_str()) {
                     let collection = Collection::from_files(&database.base_path, collection_name)?;
                     database
                         .collections
                         .insert(collection_name.to_string(), collection);
                 }
-            }
         }
 
         Ok(database)

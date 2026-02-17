@@ -237,7 +237,7 @@ impl CollectionFileOps for Collection {
         }
 
         let contents = fs::read(&logfile_path)?;
-        let offset = offset as usize;
+        let offset = offset;
 
         if offset >= contents.len() {
             return Err(io::Error::new(
