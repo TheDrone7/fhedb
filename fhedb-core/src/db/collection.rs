@@ -95,6 +95,8 @@ impl Collection {
         }
 
         self.inserts += 1;
+        self.write_metadata()
+            .map_err(|e| vec![format!("Failed to write metadata: {}", e)])?;
         Ok(doc_id)
     }
 
