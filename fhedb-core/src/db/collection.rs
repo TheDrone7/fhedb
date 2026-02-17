@@ -83,6 +83,14 @@ impl Collection {
                 new_id
             }
         };
+
+        if self.document_indices.contains_key(&doc_id) {
+            return Err(vec![format!(
+                "Document with ID '{}' already exists.",
+                doc_id.to_string()
+            )]);
+        }
+
         let db_doc = Document::new(doc_id.clone(), doc);
 
         match self.append_to_log(&Operation::Insert, &db_doc.data) {
