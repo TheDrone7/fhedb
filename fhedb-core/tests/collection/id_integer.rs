@@ -249,3 +249,24 @@ fn update_document_schema_validation() {
     let errors = result.unwrap_err();
     assert!(errors.iter().any(|e| e.contains("Field 'age'")));
 }
+
+#[test]
+fn add_document_duplicate_id() {
+    let schema = make_int_schema();
+    let temp_dir = tempdir().unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
+
+    let doc1 = doc! { "id": 1i64, "name": "Alice", "age": 30i64 };
+    let doc2 = doc! { "id": 1i64, "name": "Bob", "age": 25i64 };
+
+    collection.add_document(doc1).unwrap();
+    let result = collection.add_document(doc2);
+
+    assert!(result.is_err());
+    let errors = result.unwrap_err();
+    assert!(errors.iter().any(|e| e.contains("already exists")));
+
+    let documents = collection.get_documents();
+    assert_eq!(documents.len(), 1);
+    assert_eq!(documents[0].data.get_str("name").unwrap(), "Alice");
+}
