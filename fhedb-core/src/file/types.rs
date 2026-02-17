@@ -1,3 +1,6 @@
+use std::fmt;
+use std::str::FromStr;
+
 use bson::Document as BsonDocument;
 
 /// Represents a database operation type.
@@ -24,6 +27,20 @@ impl Operation {
             Operation::Update => "UPDATE",
         }
     }
+}
+
+/// Error returned when parsing an invalid operation string.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParseOperationError(String);
+
+impl fmt::Display for ParseOperationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "unrecognized operation: {:?}", self.0)
+    }
+}
+
+impl FromStr for Operation {
+    type Err = ParseOperationError;
 
     /// Converts a string to an operation.
     ///
@@ -33,13 +50,13 @@ impl Operation {
     ///
     /// ## Returns
     ///
-    /// Returns [`Some`]\([`Operation`]) if the string is valid, or [`None`] if not recognized.
-    pub fn from_str(s: &str) -> Option<Self> {
+    /// Returns [`Ok`]\([`Operation`]) if the string is valid, or [`Err`]\([`ParseOperationError`]) if not recognized.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "INSERT" => Some(Operation::Insert),
-            "DELETE" => Some(Operation::Delete),
-            "UPDATE" => Some(Operation::Update),
-            _ => None,
+            "INSERT" => Ok(Operation::Insert),
+            "DELETE" => Ok(Operation::Delete),
+            "UPDATE" => Ok(Operation::Update),
+            _ => Err(ParseOperationError(s.to_string())),
         }
     }
 }

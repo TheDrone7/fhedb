@@ -191,7 +191,9 @@ impl CollectionFileOps for Collection {
                         .unwrap_or("unknown")
                         .to_string();
                     let operation_str = log_doc.get_str("operation").unwrap_or("unknown");
-                    let operation = Operation::from_str(operation_str).unwrap_or(Operation::Insert);
+                    let operation = operation_str
+                        .parse::<Operation>()
+                        .unwrap_or(Operation::Insert);
                     let document = log_doc
                         .get_document("document")
                         .cloned()
@@ -237,7 +239,6 @@ impl CollectionFileOps for Collection {
         }
 
         let contents = fs::read(&logfile_path)?;
-        let offset = offset;
 
         if offset >= contents.len() {
             return Err(io::Error::new(
@@ -280,7 +281,9 @@ impl CollectionFileOps for Collection {
             .unwrap_or("unknown")
             .to_string();
         let operation_str = log_doc.get_str("operation").unwrap_or("unknown");
-        let operation = Operation::from_str(operation_str).unwrap_or(Operation::Insert);
+        let operation = operation_str
+            .parse::<Operation>()
+            .unwrap_or(Operation::Insert);
         let document = log_doc
             .get_document("document")
             .cloned()
@@ -338,6 +341,7 @@ impl CollectionFileOps for Collection {
         let temp_path = logfile_path.with_extension("tmp");
         let mut temp_file = OpenOptions::new()
             .create(true)
+            .truncate(true)
             .write(true)
             .open(&temp_path)?;
 
@@ -370,6 +374,7 @@ impl CollectionFileOps for Collection {
         let metadata_path = self.metadata_path();
         let mut file = OpenOptions::new()
             .create(true)
+            .truncate(true)
             .write(true)
             .open(metadata_path)?;
 

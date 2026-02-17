@@ -100,18 +100,10 @@ impl FieldDefinition {
 }
 
 /// Describes the schema for a document.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Schema {
     /// A map from field names to their corresponding field definitions.
     pub fields: HashMap<String, FieldDefinition>,
-}
-
-impl Default for Schema {
-    fn default() -> Self {
-        Self {
-            fields: HashMap::new(),
-        }
-    }
 }
 
 impl Schema {

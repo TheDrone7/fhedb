@@ -1,3 +1,5 @@
+use std::fmt;
+
 use bson::Document as BsonDocument;
 use uuid::Uuid;
 
@@ -59,18 +61,6 @@ impl DocId {
     /// A new [`DocId`] with the specified string value.
     pub fn from_string(value: String) -> Self {
         Self::String(value)
-    }
-
-    /// Converts the document ID to a string representation.
-    ///
-    /// ## Returns
-    ///
-    /// A string representation of the document ID.
-    pub fn to_string(&self) -> String {
-        match self {
-            DocId::String(s) => s.clone(),
-            DocId::U64(value) => value.to_string(),
-        }
     }
 
     /// Converts the document ID to a BSON value.
@@ -215,5 +205,14 @@ impl From<(DocId, BsonDocument)> for Document {
     /// A new [`Document`] with the specified ID and data.
     fn from((id, data): (DocId, BsonDocument)) -> Self {
         Self::new(id, data)
+    }
+}
+
+impl fmt::Display for DocId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DocId::String(s) => write!(f, "{}", s),
+            DocId::U64(value) => write!(f, "{}", value),
+        }
     }
 }
