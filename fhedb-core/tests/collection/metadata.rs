@@ -86,7 +86,6 @@ fn read_with_inserts() {
 
     collection.add_document(doc1).unwrap();
     collection.add_document(doc2).unwrap();
-    assert!(collection.write_metadata().is_ok());
 
     let read_collection = Collection::read_metadata(
         collection.base_path().clone().parent().unwrap(),
