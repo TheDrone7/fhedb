@@ -88,7 +88,8 @@ impl Database {
     pub fn drop_collection(&mut self, collection_name: &str) -> Result<String, String> {
         if let Some(collection) = self.collections.remove(collection_name) {
             if let Err(e) = collection.delete_collection_files() {
-                self.collections.insert(collection_name.to_string(), collection);
+                self.collections
+                    .insert(collection_name.to_string(), collection);
                 return Err(format!("Failed to delete collection files: {}", e));
             }
 
