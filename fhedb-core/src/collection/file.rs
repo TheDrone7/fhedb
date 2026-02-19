@@ -125,7 +125,11 @@ impl Collection {
     ///
     /// Returns [`Ok`]\([`usize`]) with the file offset where the entry was written,
     /// or [`Err`]\([`io::Error`]) if the write failed.
-    pub fn append_to_log(&self, operation: &Operation, document: &BsonDocument) -> io::Result<usize> {
+    pub fn append_to_log(
+        &self,
+        operation: &Operation,
+        document: &BsonDocument,
+    ) -> io::Result<usize> {
         self.ensure_collection_dir()?;
 
         let logfile_path = self.logfile_path();

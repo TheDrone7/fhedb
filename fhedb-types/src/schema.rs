@@ -2,8 +2,8 @@
 //!
 //! Type definitions for document schemas in FHEDB.
 
-use std::collections::HashMap;
 use bson::Bson;
+use std::collections::HashMap;
 
 /// Represents the type of ID that can be used in a collection.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
