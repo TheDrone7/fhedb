@@ -3,7 +3,6 @@
 //! Type definitions for document schemas in FHEDB.
 
 use std::collections::HashMap;
-
 use bson::Bson;
 
 /// Represents the type of ID that can be used in a collection.
@@ -48,15 +47,11 @@ pub struct FieldDefinition {
 }
 
 impl FieldDefinition {
-    /// Creates a new required field definition (no default value).
+    /// Creates a new required [`FieldDefinition`] (no default value).
     ///
     /// ## Arguments
     ///
     /// * `field_type` - The [`FieldType`] for this field.
-    ///
-    /// ## Returns
-    ///
-    /// A new [`FieldDefinition`] with no default value.
     pub fn new(field_type: FieldType) -> Self {
         Self {
             field_type,
@@ -64,16 +59,12 @@ impl FieldDefinition {
         }
     }
 
-    /// Creates a new field definition with a default value.
+    /// Creates a new [`FieldDefinition`] with a default value.
     ///
     /// ## Arguments
     ///
     /// * `field_type` - The [`FieldType`] for this field.
     /// * `default_value` - The default [`Bson`] value.
-    ///
-    /// ## Returns
-    ///
-    /// A new [`FieldDefinition`] with the specified default value.
     pub fn with_default(field_type: FieldType, default_value: Bson) -> Self {
         Self {
             field_type,
@@ -81,16 +72,12 @@ impl FieldDefinition {
         }
     }
 
-    /// Creates a new field definition with an optional default value.
+    /// Creates a new [`FieldDefinition`] with an optional default value.
     ///
     /// ## Arguments
     ///
     /// * `field_type` - The [`FieldType`] for this field.
     /// * `default_value` - The optional default [`Bson`] value.
-    ///
-    /// ## Returns
-    ///
-    /// A new [`FieldDefinition`] with the specified optional default value.
     pub fn with_optional_default(field_type: FieldType, default_value: Option<Bson>) -> Self {
         Self {
             field_type,
@@ -107,11 +94,7 @@ pub struct Schema {
 }
 
 impl Schema {
-    /// Creates a new empty schema.
-    ///
-    /// ## Returns
-    ///
-    /// A new [`Schema`] with no fields defined.
+    /// Creates a new empty [`Schema`].
     pub fn new() -> Self {
         Self::default()
     }

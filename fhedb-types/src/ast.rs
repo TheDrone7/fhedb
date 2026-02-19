@@ -4,8 +4,10 @@
 
 use std::collections::HashMap;
 
-use crate::query::{FieldCondition, FieldSelector};
-use crate::schema::{FieldDefinition, Schema};
+use crate::{
+    query::{FieldCondition, FieldSelector},
+    schema::{FieldDefinition, Schema},
+};
 
 /// Represents queries that operate at the database level.
 #[derive(Debug, Clone, PartialEq)]
