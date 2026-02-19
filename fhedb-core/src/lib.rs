@@ -20,6 +20,9 @@ pub mod schema;
 /// The query module - contains query execution utilities.
 pub mod query;
 
+/// The index module - contains B+ tree index structures and operations.
+pub mod index;
+
 /// Commonly used types re-exported for easy access.
 pub mod prelude {
     pub use crate::collection::{
