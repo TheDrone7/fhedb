@@ -9,7 +9,7 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Response},
 };
-use fhedb_core::prelude::{Database, DatabaseFileOps};
+use fhedb_core::prelude::Database;
 use log::{debug, error};
 
 use crate::{error as api_error, internal_error, state::ServerState};

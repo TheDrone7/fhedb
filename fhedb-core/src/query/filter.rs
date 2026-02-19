@@ -6,8 +6,8 @@ use fhedb_types::FieldCondition;
 
 use crate::{collection::Collection, document::Document, query::comparison::ConditionEvaluable};
 
-/// Trait for filtering documents from a collection.
-pub trait Filterable {
+/// Implement functionality for filtering documents from a collection.
+impl Collection {
     /// Filters documents based on conditions.
     ///
     /// ## Arguments
@@ -17,11 +17,7 @@ pub trait Filterable {
     /// ## Returns
     ///
     /// Returns matching documents. Empty conditions returns all documents.
-    fn filter(&self, conditions: &[FieldCondition]) -> Result<Vec<Document>, String>;
-}
-
-impl Filterable for Collection {
-    fn filter(&self, conditions: &[FieldCondition]) -> Result<Vec<Document>, String> {
+    pub fn filter(&self, conditions: &[FieldCondition]) -> Result<Vec<Document>, String> {
         let all_docs = self.get_documents();
         if conditions.is_empty() {
             return Ok(all_docs);

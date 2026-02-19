@@ -1,14 +1,12 @@
 use crate::{
-    collection::{Collection, CollectionFileOps, Operation},
+    collection::{Collection, Operation},
     document::DocId,
     schema::{FieldDefinition, FieldType, IdType, SchemaOps},
 };
 
-/// A trait for modifying collection schemas.
-///
-/// This trait provides methods to add and remove columns (fields) from a collection's schema.
-/// Implementations should handle the persistence of schema changes and ensure data consistency.
-pub trait CollectionSchemaOps {
+/// Implements methods to add and remove columns (fields) from a collection's schema
+/// and handle the persistence of schema changes and ensure data consistency.
+impl Collection {
     /// Checks if the schema contains a field with the given name.
     ///
     /// ## Arguments
@@ -18,7 +16,9 @@ pub trait CollectionSchemaOps {
     /// ## Returns
     ///
     /// `true` if the field exists in the schema, `false` otherwise.
-    fn has_field(&self, field: &str) -> bool;
+    pub fn has_field(&self, field: &str) -> bool {
+        self.schema.fields.contains_key(field)
+    }
 
     /// Validates a BSON document against this collection's schema.
     ///
@@ -29,7 +29,9 @@ pub trait CollectionSchemaOps {
     /// ## Returns
     ///
     /// Returns [`Ok(())`](Result::Ok) if the document matches the schema. Returns [`Err(Vec<String>)`](Result::Err) containing error messages for each field that does not conform to the schema.
-    fn validate_document(&self, doc: &bson::Document) -> Result<(), Vec<String>>;
+    pub fn validate_document(&self, doc: &bson::Document) -> Result<(), Vec<String>> {
+        self.schema.validate_document(doc)
+    }
 
     /// Adds a new field to the collection's schema.
     ///
@@ -46,165 +48,7 @@ pub trait CollectionSchemaOps {
     ///
     /// Returns [`Ok(())`] if the field was successfully added,
     /// or [`Err(String)`] with an error message if the operation failed.
-    fn add_field(
-        &mut self,
-        field_name: String,
-        field_definition: FieldDefinition,
-    ) -> Result<(), String>;
-
-    /// Removes a field from the collection's schema.
-    ///
-    /// This method removes a field definition from the collection. If the field doesn't exist,
-    /// it should return an error. The implementation should handle updating the schema and
-    /// managing existing document data that contains the removed field.
-    ///
-    /// ## Arguments
-    ///
-    /// * `field_name` - The name of the field to remove.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok(())`] if the field was successfully removed,
-    /// or [`Err(String)`] with an error message if the operation failed.
-    fn remove_field(&mut self, field_name: &str) -> Result<(), String>;
-
-    /// Modifies an existing field's definition in the collection's schema.
-    ///
-    /// This method updates the definition of an existing field. If the field doesn't exist,
-    /// it should return an error. The implementation should validate that the new definition
-    /// is compatible with existing data or handle data migration appropriately.
-    ///
-    /// ## Arguments
-    ///
-    /// * `field_name` - The name of the field to modify.
-    /// * `new_definition` - The new [`FieldDefinition`] for the field.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok(())`] if the field was successfully modified,
-    /// or [`Err(String)`] with an error message if the operation failed.
-    fn modify_field(
-        &mut self,
-        field_name: &str,
-        new_definition: FieldDefinition,
-    ) -> Result<(), String>;
-
-    /// Renames a field in the collection's schema.
-    ///
-    /// This method changes the name of an existing field while preserving its definition
-    /// and data. If the source field doesn't exist or the target field name already exists,
-    /// it should return an error.
-    ///
-    /// ## Arguments
-    ///
-    /// * `old_name` - The current name of the field.
-    /// * `new_name` - The new name for the field.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok(())`] if the field was successfully renamed,
-    /// or [`Err(String)`] with an error message if the operation failed.
-    fn rename_field(&mut self, old_name: &str, new_name: String) -> Result<(), String>;
-
-    /// Applies default values to existing documents when a new field with a default is added.
-    ///
-    /// This method updates all existing documents in the collection to include the new field
-    /// with its default value. It should be called after successfully adding a field with
-    /// a default value to the schema.
-    ///
-    /// ## Arguments
-    ///
-    /// * `field_name` - The name of the newly added field.
-    /// * `field_definition` - The [`FieldDefinition`] containing the default value.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok(Vec<DocId>)`] with the IDs of documents that were updated,
-    /// or [`Err(String)`] with an error message if the operation failed.
-    fn apply_defaults_to_existing(
-        &mut self,
-        field_name: &str,
-        field_definition: &FieldDefinition,
-    ) -> Result<Vec<DocId>, String>;
-
-    /// Removes field data from existing documents when a field is removed from the schema.
-    ///
-    /// This method updates all existing documents in the collection to remove the specified
-    /// field. It should be called after successfully removing a field from the schema.
-    ///
-    /// ## Arguments
-    ///
-    /// * `field_name` - The name of the removed field.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok(Vec<DocId>)`] with the IDs of documents that were updated,
-    /// or [`Err(String)`] with an error message if the operation failed.
-    fn cleanup_removed_field(&mut self, field_name: &str) -> Result<Vec<DocId>, String>;
-
-    /// Renames a field in all existing documents when a field is renamed in the schema.
-    ///
-    /// This method updates all existing documents in the collection to rename the specified
-    /// field from the old name to the new name. It should be called after successfully
-    /// renaming a field in the schema.
-    ///
-    /// ## Arguments
-    ///
-    /// * `old_field_name` - The current name of the field.
-    /// * `new_field_name` - The new name for the field.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok(Vec<DocId>)`] with the IDs of documents that were updated,
-    /// or [`Err(String)`] with an error message if the operation failed.
-    fn rename_field_in_documents(
-        &mut self,
-        old_field_name: &str,
-        new_field_name: &str,
-    ) -> Result<Vec<DocId>, String>;
-
-    /// Lists all fields currently defined in the collection's schema.
-    ///
-    /// This method returns the names of all fields currently present in the schema,
-    /// which can be useful for schema introspection and validation.
-    ///
-    /// ## Returns
-    ///
-    /// A [`Vec<String>`] containing the names of all fields in the schema.
-    fn list_fields(&self) -> Vec<String>;
-
-    /// Adds IDs to all documents in the collection that don't have them.
-    ///
-    /// This method ensures that all documents in the collection have a proper ID field
-    /// according to the collection's ID type. Documents that already have IDs are left
-    /// unchanged.
-    ///
-    /// ## Arguments
-    ///
-    /// * `old_field_name` - The name of the current/old ID field.
-    /// * `new_field_name` - The name of the new ID field to use.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok(Vec<DocId>)`] with the IDs of documents that were updated,
-    /// or [`Err(String)`] with an error message if the operation failed.
-    fn add_ids_to_all_documents(
-        &mut self,
-        old_field_name: &str,
-        new_field_name: &str,
-    ) -> Result<Vec<DocId>, String>;
-}
-
-impl CollectionSchemaOps for Collection {
-    fn has_field(&self, field: &str) -> bool {
-        self.schema.fields.contains_key(field)
-    }
-
-    fn validate_document(&self, doc: &bson::Document) -> Result<(), Vec<String>> {
-        self.schema.validate_document(doc)
-    }
-
-    fn add_field(
+    pub fn add_field(
         &mut self,
         field_name: String,
         mut field_definition: FieldDefinition,
@@ -255,7 +99,21 @@ impl CollectionSchemaOps for Collection {
         Ok(())
     }
 
-    fn remove_field(&mut self, field_name: &str) -> Result<(), String> {
+    /// Removes a field from the collection's schema.
+    ///
+    /// This method removes a field definition from the collection. If the field doesn't exist,
+    /// it should return an error. The implementation should handle updating the schema and
+    /// managing existing document data that contains the removed field.
+    ///
+    /// ## Arguments
+    ///
+    /// * `field_name` - The name of the field to remove.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok(())`] if the field was successfully removed,
+    /// or [`Err(String)`] with an error message if the operation failed.
+    pub fn remove_field(&mut self, field_name: &str) -> Result<(), String> {
         if !self.schema.fields.contains_key(field_name) {
             return Err(format!(
                 "Field '{}' does not exist in the schema",
@@ -284,7 +142,22 @@ impl CollectionSchemaOps for Collection {
         Ok(())
     }
 
-    fn modify_field(
+    /// Modifies an existing field's definition in the collection's schema.
+    ///
+    /// This method updates the definition of an existing field. If the field doesn't exist,
+    /// it should return an error. The implementation should validate that the new definition
+    /// is compatible with existing data or handle data migration appropriately.
+    ///
+    /// ## Arguments
+    ///
+    /// * `field_name` - The name of the field to modify.
+    /// * `new_definition` - The new [`FieldDefinition`] for the field.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok(())`] if the field was successfully modified,
+    /// or [`Err(String)`] with an error message if the operation failed.
+    pub fn modify_field(
         &mut self,
         field_name: &str,
         mut new_definition: FieldDefinition,
@@ -366,7 +239,22 @@ impl CollectionSchemaOps for Collection {
         Ok(())
     }
 
-    fn rename_field(&mut self, old_name: &str, new_name: String) -> Result<(), String> {
+    /// Renames a field in the collection's schema.
+    ///
+    /// This method changes the name of an existing field while preserving its definition
+    /// and data. If the source field doesn't exist or the target field name already exists,
+    /// it should return an error.
+    ///
+    /// ## Arguments
+    ///
+    /// * `old_name` - The current name of the field.
+    /// * `new_name` - The new name for the field.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok(())`] if the field was successfully renamed,
+    /// or [`Err(String)`] with an error message if the operation failed.
+    pub fn rename_field(&mut self, old_name: &str, new_name: String) -> Result<(), String> {
         if !self.has_field(old_name) {
             return Err(format!("Field '{}' does not exist", old_name));
         }
@@ -387,7 +275,22 @@ impl CollectionSchemaOps for Collection {
         Ok(())
     }
 
-    fn apply_defaults_to_existing(
+    /// Applies default values to existing documents when a new field with a default is added.
+    ///
+    /// This method updates all existing documents in the collection to include the new field
+    /// with its default value. It should be called after successfully adding a field with
+    /// a default value to the schema.
+    ///
+    /// ## Arguments
+    ///
+    /// * `field_name` - The name of the newly added field.
+    /// * `field_definition` - The [`FieldDefinition`] containing the default value.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok(Vec<DocId>)`] with the IDs of documents that were updated,
+    /// or [`Err(String)`] with an error message if the operation failed.
+    pub fn apply_defaults_to_existing(
         &mut self,
         field_name: &str,
         field_definition: &FieldDefinition,
@@ -421,7 +324,20 @@ impl CollectionSchemaOps for Collection {
         Ok(updated_document_ids)
     }
 
-    fn cleanup_removed_field(&mut self, field_name: &str) -> Result<Vec<DocId>, String> {
+    /// Removes field data from existing documents when a field is removed from the schema.
+    ///
+    /// This method updates all existing documents in the collection to remove the specified
+    /// field. It should be called after successfully removing a field from the schema.
+    ///
+    /// ## Arguments
+    ///
+    /// * `field_name` - The name of the removed field.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok(Vec<DocId>)`] with the IDs of documents that were updated,
+    /// or [`Err(String)`] with an error message if the operation failed.
+    pub fn cleanup_removed_field(&mut self, field_name: &str) -> Result<Vec<DocId>, String> {
         let mut updated_document_ids = Vec::new();
         let document_ids: Vec<DocId> = self.document_indices.keys().cloned().collect();
 
@@ -450,7 +366,22 @@ impl CollectionSchemaOps for Collection {
         Ok(updated_document_ids)
     }
 
-    fn rename_field_in_documents(
+    /// Renames a field in all existing documents when a field is renamed in the schema.
+    ///
+    /// This method updates all existing documents in the collection to rename the specified
+    /// field from the old name to the new name. It should be called after successfully
+    /// renaming a field in the schema.
+    ///
+    /// ## Arguments
+    ///
+    /// * `old_field_name` - The current name of the field.
+    /// * `new_field_name` - The new name for the field.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok(Vec<DocId>)`] with the IDs of documents that were updated,
+    /// or [`Err(String)`] with an error message if the operation failed.
+    pub fn rename_field_in_documents(
         &mut self,
         old_field_name: &str,
         new_field_name: &str,
@@ -484,11 +415,34 @@ impl CollectionSchemaOps for Collection {
         Ok(updated_document_ids)
     }
 
-    fn list_fields(&self) -> Vec<String> {
+    /// Lists all fields currently defined in the collection's schema.
+    ///
+    /// This method returns the names of all fields currently present in the schema,
+    /// which can be useful for schema introspection and validation.
+    ///
+    /// ## Returns
+    ///
+    /// A [`Vec<String>`] containing the names of all fields in the schema.
+    pub fn list_fields(&self) -> Vec<String> {
         self.schema.fields.keys().cloned().collect()
     }
 
-    fn add_ids_to_all_documents(
+    /// Adds IDs to all documents in the collection that don't have them.
+    ///
+    /// This method ensures that all documents in the collection have a proper ID field
+    /// according to the collection's ID type. Documents that already have IDs are left
+    /// unchanged.
+    ///
+    /// ## Arguments
+    ///
+    /// * `old_field_name` - The name of the current/old ID field.
+    /// * `new_field_name` - The name of the new ID field to use.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok(Vec<DocId>)`] with the IDs of documents that were updated,
+    /// or [`Err(String)`] with an error message if the operation failed.
+    pub fn add_ids_to_all_documents(
         &mut self,
         old_field_name: &str,
         new_field_name: &str,

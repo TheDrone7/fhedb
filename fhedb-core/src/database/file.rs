@@ -1,13 +1,8 @@
-use crate::{
-    collection::{Collection, file::CollectionFileOps},
-    database::Database,
-};
+use crate::{collection::Collection, database::Database};
 use std::{fs, io, path::PathBuf};
 
-/// Trait for file operations on databases.
-///
-/// This trait provides functionality for loading databases and collections from disk.
-pub trait DatabaseFileOps {
+/// Implement functionality for loading databases and collections from disk.
+impl Database {
     /// Loads a database from existing files on disk.
     ///
     /// This method creates a new database instance and loads all collections
@@ -23,16 +18,7 @@ pub trait DatabaseFileOps {
     ///
     /// Returns [`Ok`]\([`Database`]) if the database was loaded successfully,
     /// or [`Err`]\([`std::io::Error`]) if the database could not be loaded.
-    fn from_files(
-        name: impl Into<String>,
-        base_path: impl Into<PathBuf>,
-    ) -> Result<Self, std::io::Error>
-    where
-        Self: Sized;
-}
-
-impl DatabaseFileOps for Database {
-    fn from_files(
+    pub fn from_files(
         name: impl Into<String>,
         base_path: impl Into<PathBuf>,
     ) -> Result<Self, std::io::Error> {

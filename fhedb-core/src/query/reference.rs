@@ -8,8 +8,8 @@ use crate::{
 };
 use fhedb_types::FieldType;
 
-/// Trait for resolving document references across collections.
-pub trait ReferenceResolvable {
+/// Implement functionality for resolving document references across collections.
+impl Database {
     /// Resolves a reference value to a document in the specified collection.
     ///
     /// ## Arguments
@@ -21,11 +21,7 @@ pub trait ReferenceResolvable {
     ///
     /// Returns [`Some`]\([`Document`]) if found, or [`None`] if the collection
     /// doesn't exist, the ID format is invalid, or no document matches.
-    fn resolve_reference(&self, ref_value: &str, collection_name: &str) -> Option<Document>;
-}
-
-impl ReferenceResolvable for Database {
-    fn resolve_reference(&self, ref_value: &str, collection_name: &str) -> Option<Document> {
+    pub fn resolve_reference(&self, ref_value: &str, collection_name: &str) -> Option<Document> {
         let collection = self.get_collection(collection_name)?;
         let id_field_def = collection.schema().fields.get(collection.id_field_name())?;
 

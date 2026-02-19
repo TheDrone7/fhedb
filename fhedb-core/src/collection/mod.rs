@@ -5,8 +5,7 @@ use crate::{
     document::{DocId, Document},
     schema::{IdType, Schema, SchemaOps},
 };
-use data::CollectionSchemaOps;
-use file::{CollectionFileOps, Operation};
+use file::Operation;
 use std::{collections::HashMap, path::PathBuf};
 use uuid::Uuid;
 

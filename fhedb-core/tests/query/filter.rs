@@ -1,5 +1,5 @@
 use bson::doc;
-use fhedb_core::prelude::{Database, FieldDefinition, FieldType, Filterable, Schema};
+use fhedb_core::prelude::{Database, FieldDefinition, FieldType, Schema};
 use fhedb_types::FieldCondition;
 use std::collections::HashMap;
 use tempfile::TempDir;

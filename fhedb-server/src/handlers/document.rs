@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use bson::{Bson, Document as BsonDocument};
 use fhedb_core::prelude::{
     Collection, ConditionEvaluable, Database, DocumentPreparable, FieldSelectable, FieldType,
-    Filterable, ReferenceResolvable, Schema, ValueParseable,
+    Schema, ValueParseable,
 };
 use fhedb_types::{DocumentQuery, FieldCondition, FieldSelector};
 use serde_json::{Value as JsonValue, json};

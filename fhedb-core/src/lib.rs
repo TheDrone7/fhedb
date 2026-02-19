@@ -19,14 +19,13 @@ pub mod query;
 pub mod prelude {
     pub use crate::collection::{
         Collection,
-        data::CollectionSchemaOps,
-        file::{CollectionFileOps, LogEntry, Operation},
+        file::{LogEntry, Operation},
     };
-    pub use crate::database::{Database, file::DatabaseFileOps};
+    pub use crate::database::Database;
     pub use crate::document::{DocId, Document};
     pub use crate::query::{
-        BsonComparable, ConditionEvaluable, DocumentPreparable, FieldSelectable, Filterable,
-        ReferenceResolvable, Unescapable, ValueParseable,
+        BsonComparable, ConditionEvaluable, DocumentPreparable, FieldSelectable, Unescapable,
+        ValueParseable,
     };
     pub use crate::reference_utils::{ReferenceChecker, SchemaReferenceValidator};
     pub use crate::schema::{

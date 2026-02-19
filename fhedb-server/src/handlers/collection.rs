@@ -5,8 +5,7 @@
 
 use crate::state::ServerState;
 use fhedb_core::prelude::{
-    CollectionSchemaOps, FieldDefinition, FieldType, ReferenceChecker, Schema,
-    SchemaReferenceValidator,
+    FieldDefinition, FieldType, ReferenceChecker, Schema, SchemaReferenceValidator,
 };
 use fhedb_types::{CollectionQuery, FieldModification};
 use serde::Serialize;

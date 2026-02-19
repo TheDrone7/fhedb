@@ -101,19 +101,23 @@ impl LogEntry {
     }
 }
 
-/// Trait for file operations on collections.
-///
-/// This trait provides functionality for creating collection directories
+/// Implement functionality for creating collection directories
 /// and maintaining append-only logfiles for each collection.
-pub trait CollectionFileOps {
+impl Collection {
     /// Gets the path to the collection's logfile.
-    fn logfile_path(&self) -> PathBuf;
+    pub fn logfile_path(&self) -> PathBuf {
+        self.base_path.join("logfile.log")
+    }
 
     /// Gets the path to the collection's metadata file.
-    fn metadata_path(&self) -> PathBuf;
+    pub fn metadata_path(&self) -> PathBuf {
+        self.base_path.join("metadata.bin")
+    }
 
     /// Ensures the collection's directory exists.
-    fn ensure_collection_dir(&self) -> io::Result<()>;
+    pub fn ensure_collection_dir(&self) -> io::Result<()> {
+        fs::create_dir_all(self.base_path.clone())
+    }
 
     /// Appends a document operation to the collection's logfile.
     ///
@@ -126,101 +130,7 @@ pub trait CollectionFileOps {
     ///
     /// Returns [`Ok(usize)`](Result::Ok) with the file offset where the entry was written,
     /// or [`Err`]\([`io::Error`]) if the operation failed.
-    fn append_to_log(&self, operation: &Operation, document: &BsonDocument) -> io::Result<usize>;
-
-    /// Reads all log entries from the collection's logfile.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok`]\([`Vec`]<\([`LogEntry`], [`usize`])>) if the log entries were read successfully,
-    /// or [`Err`]\([`io::Error`]) if the log entries could not be read.
-    fn read_log_entries(&self) -> io::Result<Vec<(LogEntry, usize)>>;
-
-    /// Reads a single log entry from the collection's logfile at the specified offset.
-    ///
-    /// ## Arguments
-    ///
-    /// * `offset` - The byte offset in the logfile where the entry begins.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok`]\([`LogEntry`]) if the log entry was read successfully,
-    /// or [`Err`]\([`io::Error`]) if the entry could not be read or the offset is invalid.
-    fn read_log_entry_at_offset(&self, offset: usize) -> io::Result<LogEntry>;
-
-    /// Compacts the logfile by applying all operations and creating a new logfile
-    /// with only the final state of each document.
-    ///
-    /// This method reads all log entries, applies them in order to reconstruct
-    /// the current state of documents, then writes a new compacted logfile
-    /// containing only the final state of each document as INSERT operations.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok(())`](Result::Ok) if the logfile was compacted successfully,
-    /// or [`Err`]\([`io::Error`]) if the compaction failed.
-    fn compact_logfile(&self) -> io::Result<()>;
-
-    /// Writes the collection's metadata to the metadata file.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok(())`](Result::Ok) if the metadata was written successfully,
-    /// or [`Err`]\([`io::Error`]) if the metadata could not be written.
-    fn write_metadata(&self) -> io::Result<()>;
-
-    /// Reads the collection's metadata from the metadata file.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok`]\([`Collection`]) if the metadata was read successfully,
-    /// or [`Err`]\([`io::Error`]) if the metadata could not be read.
-    fn read_metadata(base_path: impl Into<PathBuf>, name: &str) -> io::Result<Collection>;
-
-    /// Creates a collection from existing files on disk.
-    ///
-    /// This method reads the collection's metadata from the filesystem and reconstructs
-    /// the collection instance. It reads all log entries and processes them to rebuild
-    /// the collection's state.
-    ///
-    /// ## Arguments
-    ///
-    /// * `base_path` - The base directory path where collections are stored.
-    /// * `name` - The name of the collection to load.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok`]\([`Collection`]) if the collection was loaded successfully,
-    /// or [`Err`]\([`std::io::Error`]) if the collection could not be loaded.
-    fn from_files(base_path: impl Into<PathBuf>, name: &str) -> io::Result<Collection>;
-
-    /// Deletes the entire collection directory and all its files.
-    ///
-    /// This method removes the collection's directory and all files within it,
-    /// including the logfile and metadata file.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok(())`](Result::Ok) if the collection directory was deleted successfully,
-    /// or [`Err`]\([`io::Error`]) if the deletion failed.
-    fn delete_collection_files(&self) -> io::Result<()>;
-}
-
-// Implementation for Collection should be added in collection.rs:
-impl CollectionFileOps for Collection {
-    fn logfile_path(&self) -> PathBuf {
-        self.base_path.join("logfile.log")
-    }
-
-    fn metadata_path(&self) -> PathBuf {
-        self.base_path.join("metadata.bin")
-    }
-
-    fn ensure_collection_dir(&self) -> io::Result<()> {
-        fs::create_dir_all(self.base_path.clone())
-    }
-
-    fn append_to_log(&self, operation: &Operation, document: &BsonDocument) -> io::Result<usize> {
+    pub fn append_to_log(&self, operation: &Operation, document: &BsonDocument) -> io::Result<usize> {
         self.ensure_collection_dir()?;
 
         let logfile_path = self.logfile_path();
@@ -248,7 +158,13 @@ impl CollectionFileOps for Collection {
         Ok(offset)
     }
 
-    fn read_log_entries(&self) -> io::Result<Vec<(LogEntry, usize)>> {
+    /// Reads all log entries from the collection's logfile.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`Vec`]<\([`LogEntry`], [`usize`])>) if the log entries were read successfully,
+    /// or [`Err`]\([`io::Error`]) if the log entries could not be read.
+    pub fn read_log_entries(&self) -> io::Result<Vec<(LogEntry, usize)>> {
         let logfile_path = self.logfile_path();
 
         if !logfile_path.exists() {
@@ -320,7 +236,17 @@ impl CollectionFileOps for Collection {
         Ok(entries)
     }
 
-    fn read_log_entry_at_offset(&self, offset: usize) -> io::Result<LogEntry> {
+    /// Reads a single log entry from the collection's logfile at the specified offset.
+    ///
+    /// ## Arguments
+    ///
+    /// * `offset` - The byte offset in the logfile where the entry begins.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`LogEntry`]) if the log entry was read successfully,
+    /// or [`Err`]\([`io::Error`]) if the entry could not be read or the offset is invalid.
+    pub fn read_log_entry_at_offset(&self, offset: usize) -> io::Result<LogEntry> {
         let logfile_path = self.logfile_path();
 
         if !logfile_path.exists() {
@@ -388,7 +314,18 @@ impl CollectionFileOps for Collection {
         })
     }
 
-    fn compact_logfile(&self) -> io::Result<()> {
+    /// Compacts the logfile by applying all operations and creating a new logfile
+    /// with only the final state of each document.
+    ///
+    /// This method reads all log entries, applies them in order to reconstruct
+    /// the current state of documents, then writes a new compacted logfile
+    /// containing only the final state of each document as INSERT operations.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok(())`](Result::Ok) if the logfile was compacted successfully,
+    /// or [`Err`]\([`io::Error`]) if the compaction failed.
+    pub fn compact_logfile(&self) -> io::Result<()> {
         let logfile_path = self.logfile_path();
 
         let entries = self.read_log_entries()?;
@@ -460,7 +397,13 @@ impl CollectionFileOps for Collection {
         Ok(())
     }
 
-    fn write_metadata(&self) -> io::Result<()> {
+    /// Writes the collection's metadata to the metadata file.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok(())`](Result::Ok) if the metadata was written successfully,
+    /// or [`Err`]\([`io::Error`]) if the metadata could not be written.
+    pub fn write_metadata(&self) -> io::Result<()> {
         self.ensure_collection_dir()?;
 
         let metadata_path = self.metadata_path();
@@ -486,7 +429,13 @@ impl CollectionFileOps for Collection {
         Ok(())
     }
 
-    fn read_metadata(base_path: impl Into<PathBuf>, name: &str) -> io::Result<Collection> {
+    /// Reads the collection's metadata from the metadata file.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`Collection`]) if the metadata was read successfully,
+    /// or [`Err`]\([`io::Error`]) if the metadata could not be read.
+    pub fn read_metadata(base_path: impl Into<PathBuf>, name: &str) -> io::Result<Collection> {
         let base_path: PathBuf = base_path.into();
         let collection_dir = base_path.join(name);
         let metadata_path = collection_dir.join("metadata.bin");
@@ -515,7 +464,22 @@ impl CollectionFileOps for Collection {
         Ok(collection)
     }
 
-    fn from_files(base_path: impl Into<PathBuf>, name: &str) -> io::Result<Collection> {
+    /// Creates a collection from existing files on disk.
+    ///
+    /// This method reads the collection's metadata from the filesystem and reconstructs
+    /// the collection instance. It reads all log entries and processes them to rebuild
+    /// the collection's state.
+    ///
+    /// ## Arguments
+    ///
+    /// * `base_path` - The base directory path where collections are stored.
+    /// * `name` - The name of the collection to load.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`Collection`]) if the collection was loaded successfully,
+    /// or [`Err`]\([`std::io::Error`]) if the collection could not be loaded.
+    pub fn from_files(base_path: impl Into<PathBuf>, name: &str) -> io::Result<Collection> {
         let mut collection = Self::read_metadata(base_path, name)?;
         collection.compact_logfile()?;
         let log_entries = collection.read_log_entries()?;
@@ -546,7 +510,16 @@ impl CollectionFileOps for Collection {
         Ok(collection)
     }
 
-    fn delete_collection_files(&self) -> io::Result<()> {
+    /// Deletes the entire collection directory and all its files.
+    ///
+    /// This method removes the collection's directory and all files within it,
+    /// including the logfile and metadata file.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok(())`](Result::Ok) if the collection directory was deleted successfully,
+    /// or [`Err`]\([`io::Error`]) if the deletion failed.
+    pub fn delete_collection_files(&self) -> io::Result<()> {
         if self.base_path.exists() {
             fs::remove_dir_all(&self.base_path)?;
         }
