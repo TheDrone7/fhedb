@@ -4,9 +4,8 @@
 
 use chumsky::{extra, prelude::*};
 
-/// Represents a token in the FHEDB query language.
+/// A token in the FHEDB query language.
 ///
-/// Tokens are the smallest meaningful units produced by the lexer.
 /// Keywords are case-insensitive during lexing but stored as distinct token variants.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Token {
@@ -204,10 +203,6 @@ pub type Spanned<T> = (T, Span);
 /// ## Arguments
 ///
 /// * `kw` - The keyword to match (case-insensitive).
-///
-/// ## Returns
-///
-/// Returns a parser that matches the keyword regardless of case.
 fn keyword_ci<'src>(
     kw: &'static str,
 ) -> impl Parser<'src, &'src str, &'src str, extra::Err<Rich<'src, char, Span>>> + Clone {
@@ -215,13 +210,7 @@ fn keyword_ci<'src>(
 }
 
 /// Creates the main lexer for tokenizing FHEDB query strings.
-///
-/// The lexer recognizes keywords (case-insensitive) and identifiers,
-/// producing a list of tokens with their source spans.
-///
-/// ## Returns
-///
-/// Returns a parser that transforms a string input into a vector of spanned tokens.
+/// Recognizes keywords (case-insensitive), identifiers, and literals.
 pub fn lexer<'src>()
 -> impl Parser<'src, &'src str, Vec<Spanned<Token>>, extra::Err<Rich<'src, char, Span>>> {
     let query_kw = choice((

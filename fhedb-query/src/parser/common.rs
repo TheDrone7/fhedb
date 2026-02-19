@@ -6,19 +6,16 @@ use bson::Bson;
 use chumsky::{extra, input::ValueInput, prelude::*};
 use fhedb_core::schema::FieldType;
 
-use crate::error::ParserError;
-use crate::lexer::{Span, Token, lexer};
+use crate::{
+    error::ParserError,
+    lexer::{Span, Token, lexer},
+};
 
 /// Lexes the input string into a vector of tokens.
 ///
 /// ## Arguments
 ///
 /// * `input` - The input string to lex.
-///
-/// ## Returns
-///
-/// Returns [`Ok`]\([`Vec<(Token, Span)>`]) if lexing succeeds,
-/// or [`Err`]\([`Vec<ParserError>`]) if it fails.
 pub(crate) fn lex_input(input: &str) -> Result<Vec<(Token, Span)>, Vec<ParserError>> {
     let (tokens, lex_errs) = lexer().parse(input).into_output_errors();
 
@@ -37,10 +34,6 @@ pub(crate) fn lex_input(input: &str) -> Result<Vec<(Token, Span)>, Vec<ParserErr
 /// ## Arguments
 ///
 /// * `label` - The label to use for error messages.
-///
-/// ## Returns
-///
-/// Returns a parser that matches an identifier and returns the identifier string.
 pub(crate) fn identifier_parser<'tokens, 'src: 'tokens, I>(
     label: &'static str,
 ) -> impl Parser<'tokens, I, String, extra::Err<Rich<'tokens, Token, Span>>> + Clone
@@ -51,11 +44,6 @@ where
 }
 
 /// Creates a parser for the `DROP IF EXISTS` clause.
-///
-/// ## Returns
-///
-/// Returns a parser that matches the optional `DROP IF EXISTS` clause,
-/// returning [`Some(())`] if present or [`None`] if absent.
 pub(crate) fn drop_if_exists_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, Option<()>, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -68,11 +56,7 @@ where
         .or_not()
 }
 
-/// Creates a parser for BSON values.
-///
-/// ## Returns
-///
-/// Returns a parser that matches BSON values and returns a [`Bson`].
+/// Creates a parser for [`Bson`] values.
 pub(crate) fn bson_value_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, Bson, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -102,12 +86,7 @@ where
     })
 }
 
-/// Creates a parser for field type modifiers.
-///
-/// ## Returns
-///
-/// Returns a parser that matches field modifiers and returns a tuple of
-/// (is_nullable, optional_default_value).
+/// Creates a parser for field type modifiers (nullable, default value).
 pub(crate) fn field_modifier_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, (bool, Option<Bson>), extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -133,10 +112,6 @@ where
 }
 
 /// Creates a parser for field types.
-///
-/// ## Returns
-///
-/// Returns a parser that matches field types and returns a [`FieldType`].
 pub(crate) fn field_type_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, FieldType, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where

@@ -3,18 +3,16 @@
 //! This module provides parsing functionality for database-level FHEDB queries.
 
 use chumsky::{extra, input::ValueInput, prelude::*};
-
-use crate::error::ParserError;
-use crate::lexer::{Span, Token};
 use fhedb_types::DatabaseQuery;
+
+use crate::{
+    error::ParserError,
+    lexer::{Span, Token},
+};
 
 use super::common::{drop_if_exists_parser, identifier_parser, lex_input};
 
 /// Creates a parser for database-level queries.
-///
-/// ## Returns
-///
-/// Returns a parser that matches database queries and returns a [`DatabaseQuery`].
 fn database_query_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, DatabaseQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -55,11 +53,6 @@ where
 /// ## Arguments
 ///
 /// * `input` - The query string to parse.
-///
-/// ## Returns
-///
-/// Returns [`Ok`]\([`DatabaseQuery`]) if parsing succeeds,
-/// or [`Err`]\([`Vec<ParserError>`]) containing all parsing errors if it fails.
 pub fn parse_database_query(input: &str) -> Result<DatabaseQuery, Vec<ParserError>> {
     let tokens = lex_input(input)?;
     let len = input.len();

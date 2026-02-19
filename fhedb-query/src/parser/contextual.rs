@@ -3,20 +3,17 @@
 //! This module provides parsing functionality for contextual FHEDB queries.
 
 use chumsky::{extra, input::ValueInput, prelude::*};
-
-use crate::error::ParserError;
-use crate::lexer::{Span, Token};
 use fhedb_types::ContextualQuery;
 
-use super::collection::collection_query_parser;
-use super::common::lex_input;
-use super::document::document_query_parser;
+use crate::{
+    error::ParserError,
+    lexer::{Span, Token},
+    parser::{
+        collection::collection_query_parser, common::lex_input, document::document_query_parser,
+    },
+};
 
 /// Creates a parser for contextual queries.
-///
-/// ## Returns
-///
-/// Returns a parser that matches contextual queries and returns a [`ContextualQuery`].
 fn contextual_query_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, ContextualQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -34,11 +31,6 @@ where
 /// ## Arguments
 ///
 /// * `input` - The query string to parse.
-///
-/// ## Returns
-///
-/// Returns [`Ok`]\([`ContextualQuery`]) if parsing succeeds,
-/// or [`Err`]\([`Vec<ParserError>`]) containing all parsing errors if it fails.
 pub fn parse_contextual_query(input: &str) -> Result<ContextualQuery, Vec<ParserError>> {
     let tokens = lex_input(input)?;
     let len = input.len();

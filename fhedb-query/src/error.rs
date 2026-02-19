@@ -49,10 +49,7 @@ const STRUCTURAL_CONTEXTS: &[&str] = &[
     "document query",
 ];
 
-/// Represents a parsing error with detailed context for user-friendly error messages.
-///
-/// This struct captures all relevant information about a parsing failure,
-/// including what was expected, what was found, and the parsing context.
+/// A parsing error with detailed context for user-friendly error messages.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParserError {
     /// A human-readable error message describing the failure.
@@ -77,10 +74,6 @@ impl ParserError {
     /// * `expected` - The list of expected tokens or patterns.
     /// * `found` - The actual token found, if any.
     /// * `context` - The parsing context stack.
-    ///
-    /// ## Returns
-    ///
-    /// Returns a new [`ParserError`] instance.
     pub fn new(
         message: String,
         span: Span,
@@ -102,11 +95,7 @@ impl ParserError {
     /// ## Arguments
     ///
     /// * `err` - The chumsky Rich error to convert.
-    /// * `_source` - The original source string
-    ///
-    /// ## Returns
-    ///
-    /// Returns a new [`ParserError`] with information extracted from the Rich error.
+    /// * `_source` - The original source string.
     pub fn from_rich(err: &chumsky::error::Rich<'_, Token, Span>, _source: &str) -> Self {
         let span = *err.span();
         let found = err.found().map(|t| t.to_string());
@@ -184,11 +173,7 @@ impl ParserError {
     /// ## Arguments
     ///
     /// * `err` - The chumsky Rich error from the lexer.
-    /// * `_source` - The original source string
-    ///
-    /// ## Returns
-    ///
-    /// Returns a new [`ParserError`] with information extracted from the lexer error.
+    /// * `_source` - The original source string.
     pub fn from_lexer_rich(err: &chumsky::error::Rich<'_, char, Span>, _source: &str) -> Self {
         let span = *err.span();
         let found = err.found().map(|c| c.to_string());
@@ -236,10 +221,6 @@ impl ParserError {
     /// ## Arguments
     ///
     /// * `source` - The original source string for context display.
-    ///
-    /// ## Returns
-    ///
-    /// Returns a formatted error string with source context.
     pub fn format(&self, source: &str) -> String {
         self.format_impl(source, "<input>", false)
     }
@@ -249,10 +230,6 @@ impl ParserError {
     /// ## Arguments
     ///
     /// * `source` - The original source string for context display.
-    ///
-    /// ## Returns
-    ///
-    /// Returns a formatted error string with source context and ANSI color codes.
     pub fn format_colored(&self, source: &str) -> String {
         self.format_impl(source, "<input>", true)
     }
@@ -263,10 +240,6 @@ impl ParserError {
     ///
     /// * `source` - The original source string for context display.
     /// * `filename` - The filename to display in the error output.
-    ///
-    /// ## Returns
-    ///
-    /// Returns a formatted error string with the specified filename.
     pub fn format_with_filename(&self, source: &str, filename: &str) -> String {
         self.format_impl(source, filename, false)
     }
@@ -277,10 +250,6 @@ impl ParserError {
     ///
     /// * `source` - The original source string for context display.
     /// * `filename` - The filename to display in the error output.
-    ///
-    /// ## Returns
-    ///
-    /// Returns a formatted error string with the specified filename and ANSI color codes.
     pub fn format_with_filename_colored(&self, source: &str, filename: &str) -> String {
         self.format_impl(source, filename, true)
     }

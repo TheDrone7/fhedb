@@ -12,10 +12,6 @@ use fhedb_types::{DocumentQuery, FieldCondition, FieldSelector, ParsedDocContent
 use super::common::identifier_parser;
 
 /// Parses a value that can be used in assignments and conditions.
-///
-/// ## Returns
-///
-/// Returns a parser that matches values and returns their string representation.
 fn value_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, String, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -45,10 +41,6 @@ where
 }
 
 /// Parses a query operator used in conditions.
-///
-/// ## Returns
-///
-/// Returns a parser that matches operators and returns the corresponding [`QueryOperator`].
 fn operator_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, QueryOperator, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -82,10 +74,6 @@ enum DocumentBodyItem {
 /// ## Arguments
 ///
 /// * `body_parser` - A parser for nested document body content.
-///
-/// ## Returns
-///
-/// Returns a parser that matches field selectors and returns a [`DocumentBodyItem::Selector`].
 fn document_selector_parser<'tokens, 'src: 'tokens, I>(
     body_parser: impl Parser<'tokens, I, ParsedDocContent, extra::Err<Rich<'tokens, Token, Span>>>
     + Clone
@@ -139,10 +127,6 @@ where
 }
 
 /// Parses a field condition in a document body.
-///
-/// ## Returns
-///
-/// Returns a parser that matches field conditions and returns a [`DocumentBodyItem::Condition`].
 fn document_condition_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, DocumentBodyItem, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -162,10 +146,6 @@ where
 }
 
 /// Parses a field assignment in a document body.
-///
-/// ## Returns
-///
-/// Returns a parser that matches field assignments and returns a [`DocumentBodyItem::Assignment`].
 fn document_assignment_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, DocumentBodyItem, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -179,10 +159,6 @@ where
 }
 
 /// Parses a document body enclosed in braces.
-///
-/// ## Returns
-///
-/// Returns a parser that matches document bodies and returns a [`ParsedDocContent`].
 fn document_body_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, ParsedDocContent, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -235,10 +211,6 @@ where
 }
 
 /// Parses an INSERT document query.
-///
-/// ## Returns
-///
-/// Returns a parser that matches INSERT queries and returns a [`DocumentQuery::Insert`].
 fn insert_document_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, DocumentQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -277,10 +249,6 @@ where
 }
 
 /// Parses a GET document query.
-///
-/// ## Returns
-///
-/// Returns a parser that matches GET queries and returns a [`DocumentQuery::Get`].
 fn get_document_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, DocumentQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -320,10 +288,6 @@ where
 }
 
 /// Parses an UPDATE document query.
-///
-/// ## Returns
-///
-/// Returns a parser that matches UPDATE queries and returns a [`DocumentQuery::Update`].
 fn update_document_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, DocumentQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -358,10 +322,6 @@ where
 }
 
 /// Parses a DELETE document query.
-///
-/// ## Returns
-///
-/// Returns a parser that matches DELETE queries and returns a [`DocumentQuery::Delete`].
 fn delete_document_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, DocumentQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
@@ -401,10 +361,6 @@ where
 }
 
 /// Creates a parser for document-level queries.
-///
-/// ## Returns
-///
-/// Returns a parser that matches document queries and returns a [`DocumentQuery`].
 pub(crate) fn document_query_parser<'tokens, 'src: 'tokens, I>()
 -> impl Parser<'tokens, I, DocumentQuery, extra::Err<Rich<'tokens, Token, Span>>> + Clone
 where
