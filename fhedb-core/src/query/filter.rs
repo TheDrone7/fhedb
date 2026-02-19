@@ -4,9 +4,7 @@
 
 use fhedb_types::FieldCondition;
 
-use crate::db::collection::Collection;
-use crate::db::document::Document;
-use crate::query::comparison::ConditionEvaluable;
+use crate::{collection::Collection, document::Document, query::comparison::ConditionEvaluable};
 
 /// Trait for filtering documents from a collection.
 pub trait Filterable {

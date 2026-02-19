@@ -1,9 +1,13 @@
-use crate::db::collection_schema_ops::CollectionSchemaOps;
-use crate::db::document::{DocId, Document};
-use crate::db::schema::{IdType, Schema, SchemaOps};
-use crate::file::{collection::CollectionFileOps, types::Operation};
-use std::collections::HashMap;
-use std::path::PathBuf;
+pub mod data;
+pub mod file;
+
+use crate::{
+    document::{DocId, Document},
+    schema::{IdType, Schema, SchemaOps},
+};
+use data::CollectionSchemaOps;
+use file::{CollectionFileOps, Operation};
+use std::{collections::HashMap, path::PathBuf};
 use uuid::Uuid;
 
 /// Describes a collection of documents in the database.
@@ -190,12 +194,10 @@ impl Collection {
                 self.document_indices.insert(id.clone(), new_offset);
                 Ok(Document::new(id, updated_doc))
             }
-            Err(e) => {
-                Err(vec![format!(
-                    "Failed to write updated document to log: {}",
-                    e
-                )])
-            }
+            Err(e) => Err(vec![format!(
+                "Failed to write updated document to log: {}",
+                e
+            )]),
         }
     }
 
@@ -210,11 +212,12 @@ impl Collection {
     /// Returns [`Some`]\([`Document`]) if the document was present and removed, or [`None`] if not found.
     pub fn remove_document(&mut self, id: DocId) -> Option<Document> {
         if let Some(offset) = self.document_indices.remove(&id)
-            && let Ok(log_entry) = self.read_log_entry_at_offset(offset) {
-                self.append_to_log(&Operation::Delete, &log_entry.document)
-                    .ok();
-                return Some(Document::new(id.clone(), log_entry.document));
-            }
+            && let Ok(log_entry) = self.read_log_entry_at_offset(offset)
+        {
+            self.append_to_log(&Operation::Delete, &log_entry.document)
+                .ok();
+            return Some(Document::new(id.clone(), log_entry.document));
+        }
         None
     }
 
@@ -229,9 +232,10 @@ impl Collection {
     /// Returns [`Some`]\([`Document`]) if found, or [`None`] if not present.
     pub fn get_document(&self, id: DocId) -> Option<Document> {
         if let Some(&offset) = self.document_indices.get(&id)
-            && let Ok(log_entry) = self.read_log_entry_at_offset(offset) {
-                return Some(Document::new(id.clone(), log_entry.document));
-            }
+            && let Ok(log_entry) = self.read_log_entry_at_offset(offset)
+        {
+            return Some(Document::new(id.clone(), log_entry.document));
+        }
         None
     }
 

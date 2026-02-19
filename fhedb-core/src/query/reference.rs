@@ -2,8 +2,10 @@
 //!
 //! Provides reference resolution utilities for cross-collection lookups.
 
-use crate::db::database::Database;
-use crate::db::document::{DocId, Document};
+use crate::{
+    database::Database,
+    document::{DocId, Document},
+};
 use fhedb_types::FieldType;
 
 /// Trait for resolving document references across collections.

@@ -1,7 +1,8 @@
-use crate::db::collection::Collection;
-use crate::db::document::DocId;
-use crate::db::schema::{FieldDefinition, SchemaOps};
-use crate::file::{collection::CollectionFileOps, types::Operation};
+use crate::{
+    collection::{Collection, CollectionFileOps, Operation},
+    document::DocId,
+    schema::{FieldDefinition, FieldType, IdType, SchemaOps},
+};
 
 /// A trait for modifying collection schemas.
 ///
@@ -217,7 +218,7 @@ impl CollectionSchemaOps for Collection {
 
         if matches!(
             field_definition.field_type,
-            crate::db::schema::FieldType::IdString | crate::db::schema::FieldType::IdInt
+            FieldType::IdString | FieldType::IdInt
         ) {
             return Err(format!(
                 "Cannot add ID field '{}' because the schema already has an ID field '{}'",
@@ -225,10 +226,7 @@ impl CollectionSchemaOps for Collection {
             ));
         }
 
-        let is_nullable = matches!(
-            field_definition.field_type,
-            crate::db::schema::FieldType::Nullable(_)
-        );
+        let is_nullable = matches!(field_definition.field_type, FieldType::Nullable(_));
         let has_default = field_definition.default_value.is_some();
 
         if is_nullable && !has_default {
@@ -248,10 +246,11 @@ impl CollectionSchemaOps for Collection {
             .insert(field_name.clone(), field_definition.clone());
 
         if field_definition.default_value.is_some()
-            && let Err(e) = self.apply_defaults_to_existing(&field_name, &field_definition) {
-                self.schema.fields.remove(&field_name);
-                return Err(e);
-            }
+            && let Err(e) = self.apply_defaults_to_existing(&field_name, &field_definition)
+        {
+            self.schema.fields.remove(&field_name);
+            return Err(e);
+        }
 
         Ok(())
     }
@@ -268,13 +267,13 @@ impl CollectionSchemaOps for Collection {
         self.schema.fields.remove(field_name);
 
         if is_id_field {
-            let new_id_definition = FieldDefinition::new(crate::db::schema::FieldType::IdInt);
+            let new_id_definition = FieldDefinition::new(FieldType::IdInt);
             self.schema
                 .fields
                 .insert("id".to_string(), new_id_definition);
 
             self.id_field = "id".to_string();
-            self.id_type = crate::db::schema::IdType::Int;
+            self.id_type = IdType::Int;
             self.inserts = 0;
 
             self.add_ids_to_all_documents(field_name, "id")?;
@@ -299,10 +298,7 @@ impl CollectionSchemaOps for Collection {
 
         let original_definition = self.schema.fields.get(field_name).unwrap().clone();
 
-        let is_nullable = matches!(
-            new_definition.field_type,
-            crate::db::schema::FieldType::Nullable(_)
-        );
+        let is_nullable = matches!(new_definition.field_type, FieldType::Nullable(_));
         let has_default = new_definition.default_value.is_some();
 
         if is_nullable && !has_default {
@@ -319,12 +315,12 @@ impl CollectionSchemaOps for Collection {
 
         let original_is_id = matches!(
             original_definition.field_type,
-            crate::db::schema::FieldType::IdString | crate::db::schema::FieldType::IdInt
+            FieldType::IdString | FieldType::IdInt
         );
 
         let new_is_id = matches!(
             new_definition.field_type,
-            crate::db::schema::FieldType::IdString | crate::db::schema::FieldType::IdInt
+            FieldType::IdString | FieldType::IdInt
         );
 
         if !original_is_id && new_is_id {
@@ -340,20 +336,20 @@ impl CollectionSchemaOps for Collection {
 
         if original_is_id && new_is_id {
             self.id_type = match new_definition.field_type {
-                crate::db::schema::FieldType::IdString => crate::db::schema::IdType::String,
-                crate::db::schema::FieldType::IdInt => crate::db::schema::IdType::Int,
+                FieldType::IdString => IdType::String,
+                FieldType::IdInt => IdType::Int,
                 _ => unreachable!(),
             };
 
             self.add_ids_to_all_documents(field_name, field_name)?;
         } else if original_is_id && !new_is_id {
-            let new_id_definition = FieldDefinition::new(crate::db::schema::FieldType::IdInt);
+            let new_id_definition = FieldDefinition::new(FieldType::IdInt);
             self.schema
                 .fields
                 .insert("id".to_string(), new_id_definition);
 
             self.id_field = "id".to_string();
-            self.id_type = crate::db::schema::IdType::Int;
+            self.id_type = IdType::Int;
 
             if !self.document_indices.is_empty() && new_definition.default_value.is_some() {
                 self.add_ids_to_all_documents(field_name, "id")?;
@@ -431,23 +427,24 @@ impl CollectionSchemaOps for Collection {
 
         for doc_id in document_ids {
             if let Some(document) = self.get_document(doc_id.clone())
-                && document.data.contains_key(field_name) {
-                    let mut cleaned_doc = document.data.clone();
-                    cleaned_doc.remove(field_name);
+                && document.data.contains_key(field_name)
+            {
+                let mut cleaned_doc = document.data.clone();
+                cleaned_doc.remove(field_name);
 
-                    match self.append_to_log(&Operation::Update, &cleaned_doc) {
-                        Ok(new_offset) => {
-                            self.document_indices.insert(doc_id.clone(), new_offset);
-                            updated_document_ids.push(doc_id);
-                        }
-                        Err(e) => {
-                            return Err(format!(
-                                "Failed to write cleaned document {:?} to log: {}",
-                                doc_id, e
-                            ));
-                        }
+                match self.append_to_log(&Operation::Update, &cleaned_doc) {
+                    Ok(new_offset) => {
+                        self.document_indices.insert(doc_id.clone(), new_offset);
+                        updated_document_ids.push(doc_id);
+                    }
+                    Err(e) => {
+                        return Err(format!(
+                            "Failed to write cleaned document {:?} to log: {}",
+                            doc_id, e
+                        ));
                     }
                 }
+            }
         }
 
         Ok(updated_document_ids)
@@ -463,24 +460,25 @@ impl CollectionSchemaOps for Collection {
 
         for doc_id in document_ids {
             if let Some(document) = self.get_document(doc_id.clone())
-                && let Some(field_value) = document.data.get(old_field_name) {
-                    let mut updated_doc = document.data.clone();
-                    updated_doc.remove(old_field_name);
-                    updated_doc.insert(new_field_name, field_value.clone());
+                && let Some(field_value) = document.data.get(old_field_name)
+            {
+                let mut updated_doc = document.data.clone();
+                updated_doc.remove(old_field_name);
+                updated_doc.insert(new_field_name, field_value.clone());
 
-                    match self.append_to_log(&Operation::Update, &updated_doc) {
-                        Ok(new_offset) => {
-                            self.document_indices.insert(doc_id.clone(), new_offset);
-                            updated_document_ids.push(doc_id);
-                        }
-                        Err(e) => {
-                            return Err(format!(
-                                "Failed to write renamed document {:?} to log: {}",
-                                doc_id, e
-                            ));
-                        }
+                match self.append_to_log(&Operation::Update, &updated_doc) {
+                    Ok(new_offset) => {
+                        self.document_indices.insert(doc_id.clone(), new_offset);
+                        updated_document_ids.push(doc_id);
+                    }
+                    Err(e) => {
+                        return Err(format!(
+                            "Failed to write renamed document {:?} to log: {}",
+                            doc_id, e
+                        ));
                     }
                 }
+            }
         }
 
         Ok(updated_document_ids)

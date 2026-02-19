@@ -1,8 +1,10 @@
-use crate::db::collection::Collection;
-use crate::db::schema::Schema;
-use crate::file::collection::CollectionFileOps;
-use std::collections::HashMap;
-use std::path::PathBuf;
+pub mod file;
+
+use crate::{
+    collection::{Collection, file::CollectionFileOps},
+    schema::Schema,
+};
+use std::{collections::HashMap, path::PathBuf};
 
 /// Represents a database containing multiple collections.
 ///

@@ -3,30 +3,34 @@
 //! This crate provides the core functionality for the Fhedb database.
 
 /// The database module - contains the core database structures.
-pub mod db;
+pub mod database;
 
 /// The file module - contains the file operations for the database.
-pub mod file;
+pub mod collection;
+
+pub mod document;
+pub mod reference_utils;
+pub mod schema;
 
 /// The query module - contains query execution utilities.
 pub mod query;
 
-/// Re-exports commonly used types for easy access.
+// Re-exports commonly used types for easy access.
 pub mod prelude {
-    pub use crate::db::collection::Collection;
-    pub use crate::db::collection_schema_ops::CollectionSchemaOps;
-    pub use crate::db::database::Database;
-    pub use crate::db::document::{DocId, Document};
-    pub use crate::db::reference_utils::{ReferenceChecker, SchemaReferenceValidator};
-    pub use crate::db::schema::{
-        FieldDefinition, FieldType, IdType, Schema, SchemaOps, schema_from_document,
-        schema_to_document, validate_bson_type,
+    pub use crate::collection::{
+        Collection,
+        data::CollectionSchemaOps,
+        file::{CollectionFileOps, LogEntry, Operation},
     };
-    pub use crate::file::collection::CollectionFileOps;
-    pub use crate::file::database::DatabaseFileOps;
-    pub use crate::file::types::{LogEntry, Operation};
+    pub use crate::database::{Database, file::DatabaseFileOps};
+    pub use crate::document::{DocId, Document};
     pub use crate::query::{
         BsonComparable, ConditionEvaluable, DocumentPreparable, FieldSelectable, Filterable,
         ReferenceResolvable, Unescapable, ValueParseable,
+    };
+    pub use crate::reference_utils::{ReferenceChecker, SchemaReferenceValidator};
+    pub use crate::schema::{
+        FieldDefinition, FieldType, IdType, Schema, SchemaOps, schema_from_document,
+        schema_to_document, validate_bson_type,
     };
 }

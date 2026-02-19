@@ -5,8 +5,7 @@
 use bson::{Bson, Document as BsonDocument};
 use fhedb_types::{FieldCondition, FieldType, QueryOperator, Schema};
 
-use super::compare::BsonComparable;
-use crate::query::value::ValueParseable;
+use crate::query::{comparison::compare::BsonComparable, value::ValueParseable};
 
 /// Trait for evaluating conditions against documents.
 pub trait ConditionEvaluable {
@@ -74,8 +73,9 @@ impl ConditionEvaluable for BsonDocument {
 /// Returns the type to use for parsing the condition value.
 fn get_parse_type<'a>(field_type: &'a FieldType, operator: &QueryOperator) -> &'a FieldType {
     if *operator == QueryOperator::Similar
-        && let FieldType::Array(inner) = field_type {
-            return inner.as_ref();
-        }
+        && let FieldType::Array(inner) = field_type
+    {
+        return inner.as_ref();
+    }
     field_type
 }

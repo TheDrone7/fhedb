@@ -1,8 +1,8 @@
-use crate::db::{collection::Collection, database::Database};
-use crate::file::collection::CollectionFileOps;
-use std::fs;
-use std::io;
-use std::path::PathBuf;
+use crate::{
+    collection::{Collection, file::CollectionFileOps},
+    database::Database,
+};
+use std::{fs, io, path::PathBuf};
 
 /// Trait for file operations on databases.
 ///
@@ -55,12 +55,13 @@ impl DatabaseFileOps for Database {
             let path = entry.path();
 
             if path.is_dir()
-                && let Some(collection_name) = path.file_name().and_then(|n| n.to_str()) {
-                    let collection = Collection::from_files(&database.base_path, collection_name)?;
-                    database
-                        .collections
-                        .insert(collection_name.to_string(), collection);
-                }
+                && let Some(collection_name) = path.file_name().and_then(|n| n.to_str())
+            {
+                let collection = Collection::from_files(&database.base_path, collection_name)?;
+                database
+                    .collections
+                    .insert(collection_name.to_string(), collection);
+            }
         }
 
         Ok(database)

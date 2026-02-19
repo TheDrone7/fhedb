@@ -2,10 +2,9 @@
 //!
 //! Provides utilities for parsing string values into BSON.
 
+use crate::schema::validate_bson_type;
 use bson::Bson;
 use fhedb_types::FieldType;
-
-use crate::db::schema::validate_bson_type;
 
 /// Trait for parsing string values into BSON.
 pub trait ValueParseable {

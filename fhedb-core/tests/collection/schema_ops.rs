@@ -1,7 +1,5 @@
 use bson::{Bson, doc};
-use fhedb_core::db::collection::Collection;
-use fhedb_core::db::collection_schema_ops::CollectionSchemaOps;
-use fhedb_core::db::schema::{FieldDefinition, FieldType};
+use fhedb_core::prelude::*;
 use tempfile::TempDir;
 
 use crate::common;

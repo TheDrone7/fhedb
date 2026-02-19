@@ -3,7 +3,7 @@
 //! This module provides parsing functionality for collection-level FHEDB queries.
 
 use chumsky::{extra, input::ValueInput, prelude::*};
-use fhedb_core::db::schema::{FieldDefinition, FieldType, Schema, validate_bson_type};
+use fhedb_core::schema::{FieldDefinition, FieldType, Schema, validate_bson_type};
 
 use crate::lexer::{Span, Token};
 use fhedb_types::{CollectionQuery, FieldModification};

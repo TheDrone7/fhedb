@@ -2,9 +2,8 @@
 //!
 //! Provides utilities for inspecting and validating schema references.
 
+use crate::database::Database;
 use fhedb_types::{FieldType, Schema};
-
-use super::database::Database;
 
 /// Extension trait for [`FieldType`] reference utilities.
 pub trait ReferenceChecker {

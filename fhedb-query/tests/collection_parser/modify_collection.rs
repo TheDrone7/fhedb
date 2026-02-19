@@ -1,4 +1,4 @@
-use fhedb_core::db::schema::{FieldDefinition, FieldType};
+use fhedb_core::schema::{FieldDefinition, FieldType};
 use fhedb_query::prelude::parse_contextual_query;
 use fhedb_types::{CollectionQuery, ContextualQuery, FieldModification};
 

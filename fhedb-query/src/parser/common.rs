@@ -4,7 +4,7 @@
 
 use bson::Bson;
 use chumsky::{extra, input::ValueInput, prelude::*};
-use fhedb_core::db::schema::FieldType;
+use fhedb_core::schema::FieldType;
 
 use crate::error::ParserError;
 use crate::lexer::{Span, Token, lexer};
