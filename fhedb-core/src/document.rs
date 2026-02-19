@@ -1,11 +1,13 @@
+//! # Document
+//!
+//! Provides the [`DocId`] and [`Document`] types for document storage.
+
 use std::fmt;
 
 use bson::Document as BsonDocument;
 use uuid::Uuid;
 
-/// A unique identifier for a document in the database.
-///
-/// This type can represent either a string identifier (defaulting to UUIDs) or a u64 integer identifier.
+/// A unique document identifier, either a string (UUID) or a [`u64`].
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DocId {
     /// A string-based identifier (UUIDs or arbitrary strings).
@@ -15,59 +17,39 @@ pub enum DocId {
 }
 
 impl DocId {
-    /// Creates a new document ID with a randomly generated UUID.
-    ///
-    /// ## Returns
-    ///
-    /// A new [`DocId`] with a random UUID.
+    /// Creates a new [`DocId`] with a randomly generated UUID.
     pub fn new() -> Self {
         Self::String(Uuid::new_v4().to_string())
     }
 
-    /// Creates a new document ID with a u64 value.
+    /// Creates a new [`DocId`] with a [`u64`] value.
     ///
     /// ## Arguments
     ///
-    /// * `value` - The u64 value to use as the ID.
-    ///
-    /// ## Returns
-    ///
-    /// A new [`DocId`] with the specified u64 value.
+    /// * `value` - The [`u64`] value to use as the ID.
     pub fn from_u64(value: u64) -> Self {
         Self::U64(value)
     }
 
-    /// Creates a new document ID with a UUID.
+    /// Creates a new [`DocId`] with a [`Uuid`].
     ///
     /// ## Arguments
     ///
-    /// * `uuid` - The UUID to use as the ID.
-    ///
-    /// ## Returns
-    ///
-    /// A new [`DocId`] with the specified UUID.
+    /// * `uuid` - The [`Uuid`] to use as the ID.
     pub fn from_uuid(uuid: Uuid) -> Self {
         Self::String(uuid.to_string())
     }
 
-    /// Creates a new document ID with an arbitrary string.
+    /// Creates a new [`DocId`] with an arbitrary string.
     ///
     /// ## Arguments
     ///
     /// * `value` - The string value to use as the ID.
-    ///
-    /// ## Returns
-    ///
-    /// A new [`DocId`] with the specified string value.
     pub fn from_string(value: String) -> Self {
         Self::String(value)
     }
 
-    /// Converts the document ID to a BSON value.
-    ///
-    /// ## Returns
-    ///
-    /// A BSON value representation of the document ID.
+    /// Converts the document ID to a [`Bson`](bson::Bson) value.
     pub fn to_bson(&self) -> bson::Bson {
         match self {
             DocId::String(s) => bson::Bson::String(s.clone()),
@@ -124,10 +106,7 @@ impl From<DocId> for u64 {
     }
 }
 
-/// A document in the database containing data and metadata.
-///
-/// Documents are the primary storage unit in the database. Each document
-/// has a unique identifier and contains the actual data as a BSON document.
+/// A document with a unique [`DocId`] and [`BsonDocument`] data.
 #[derive(Debug, Clone)]
 pub struct Document {
     /// The unique identifier for this document.
@@ -137,29 +116,21 @@ pub struct Document {
 }
 
 impl Document {
-    /// Creates a new document with the specified ID and data.
+    /// Creates a new [`Document`] with the specified ID and data.
     ///
     /// ## Arguments
     ///
-    /// * `id` - The [document ID](DocId) to use.
-    /// * `data` - The [BSON document](BsonDocument) containing the document data.
-    ///
-    /// ## Returns
-    ///
-    /// A new [`Document`] with the specified ID and data.
+    /// * `id` - The [`DocId`] to use.
+    /// * `data` - The [`BsonDocument`] containing the document data.
     pub fn new(id: DocId, data: BsonDocument) -> Self {
         Self { id, data }
     }
 
-    /// Creates a new document with a randomly generated ID and the provided data.
+    /// Creates a new [`Document`] with a randomly generated ID.
     ///
     /// ## Arguments
     ///
-    /// * `data` - The [BSON document](BsonDocument) containing the document data.
-    ///
-    /// ## Returns
-    ///
-    /// A new [`Document`] with a random ID and the provided data.
+    /// * `data` - The [`BsonDocument`] containing the document data.
     pub fn with_random_id(data: BsonDocument) -> Self {
         Self {
             id: DocId::new(),
@@ -167,42 +138,21 @@ impl Document {
         }
     }
 
-    /// Consumes the document and returns its components.
-    ///
-    /// ## Returns
-    ///
-    /// A tuple containing the [document ID](DocId) and the [BSON document](BsonDocument) data.
+    /// Consumes the document and returns its ([`DocId`], [`BsonDocument`]) components.
     pub fn into_parts(self) -> (DocId, BsonDocument) {
         (self.id, self.data)
     }
 }
 
 impl From<BsonDocument> for Document {
-    /// Creates a new document with a randomly generated ID and the provided data.
-    ///
-    /// ## Arguments
-    ///
-    /// * `data` - The [BSON document](BsonDocument) containing the document data.
-    ///
-    /// ## Returns
-    ///
-    /// A new [`Document`] with a random ID and the provided data.
+    /// Creates a new [`Document`] with a randomly generated ID.
     fn from(data: BsonDocument) -> Self {
         Self::with_random_id(data)
     }
 }
 
 impl From<(DocId, BsonDocument)> for Document {
-    /// Creates a new document with the specified ID and data.
-    ///
-    /// ## Arguments
-    ///
-    /// * `id` - The [document ID](DocId) to use.
-    /// * `data` - The [BSON document](BsonDocument) containing the document data.
-    ///
-    /// ## Returns
-    ///
-    /// A new [`Document`] with the specified ID and data.
+    /// Creates a new [`Document`] from a ([`DocId`], [`BsonDocument`]) tuple.
     fn from((id, data): (DocId, BsonDocument)) -> Self {
         Self::new(id, data)
     }

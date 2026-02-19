@@ -8,7 +8,7 @@ use crate::{
 };
 use fhedb_types::FieldType;
 
-/// Implement functionality for resolving document references across collections.
+/// Reference resolution operations for cross-collection lookups.
 impl Database {
     /// Resolves a reference value to a document in the specified collection.
     ///

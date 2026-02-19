@@ -39,17 +39,14 @@ impl BsonComparable for Bson {
     }
 }
 
-/// Compares two values implementing PartialOrd using the given operator.
+/// Compares two values implementing [`PartialOrd`] using the given operator.
+/// Non-comparison operators return false.
 ///
 /// ## Arguments
 ///
 /// * `a` - First value.
 /// * `b` - Second value.
 /// * `op` - The comparison operator.
-///
-/// ## Returns
-///
-/// Returns the comparison result. Non-comparison operators return false.
 fn compare_ord<T: PartialOrd>(a: &T, b: &T, op: &QueryOperator) -> bool {
     match op {
         QueryOperator::GreaterThan => a > b,

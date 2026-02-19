@@ -6,7 +6,7 @@ use fhedb_types::FieldCondition;
 
 use crate::{collection::Collection, document::Document, query::comparison::ConditionEvaluable};
 
-/// Implement functionality for filtering documents from a collection.
+/// Document filtering operations for query execution.
 impl Collection {
     /// Filters documents based on conditions.
     ///

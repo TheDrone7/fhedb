@@ -1,3 +1,7 @@
+//! # Collection
+//!
+//! Provides the core [`Collection`] type and its document management operations.
+
 pub mod data;
 pub mod file;
 
@@ -9,9 +13,7 @@ use file::Operation;
 use std::{collections::HashMap, path::PathBuf};
 use uuid::Uuid;
 
-/// Describes a collection of documents in the database.
-///
-/// Each collection has a unique name and an associated [`Schema`].
+/// A collection of documents with a shared [`Schema`].
 #[derive(Debug, Clone)]
 pub struct Collection {
     /// The name of the collection.
@@ -36,11 +38,13 @@ impl Collection {
     /// ## Arguments
     ///
     /// * `name` - The name of the collection.
-    /// * `schema` - The [`Schema`] describing the structure of documents in this collection.
+    /// * `schema` - The [`Schema`] describing document structure.
+    /// * `base_path` - The base directory path for collection storage.
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok`]\([`Collection`]) if collection was created successfully, or [`Err`]\([`String`]) otherwise.
+    /// Returns [`Ok`]\([`Collection`]) if created successfully,
+    /// or [`Err`]\([`String`]) if the schema is invalid.
     pub fn new(
         name: impl Into<String>,
         mut schema: Schema,
@@ -70,7 +74,8 @@ impl Collection {
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok`]\([`DocId`]) if the document is valid and added, or [`Err`]\([`Vec<String>`]) with validation errors. Returns an error if the schema does not have an ID field.
+    /// Returns [`Ok`]\([`DocId`]) of the added document,
+    /// or [`Err`]\([`Vec<String>`]) with validation errors.
     pub fn add_document(&mut self, mut doc: bson::Document) -> Result<DocId, Vec<String>> {
         self.schema.apply_defaults(&mut doc);
 
@@ -110,13 +115,6 @@ impl Collection {
     }
 
     /// Generates a new document ID based on the collection's ID type.
-    ///
-    /// For u64 IDs, uses the current inserts counter value.
-    /// For String IDs, generates a random UUID.
-    ///
-    /// ## Returns
-    ///
-    /// A new [`DocId`] with the appropriate type and value.
     pub(crate) fn generate_id(&self) -> DocId {
         match self.id_type {
             IdType::String => DocId::from_uuid(Uuid::new_v4()),
@@ -126,17 +124,14 @@ impl Collection {
 
     /// Extracts the document ID from a BSON document.
     ///
-    /// This method retrieves the ID field from the document and converts it to a [`DocId`].
-    /// If the ID field is not present or is of an unsupported type, it returns `None`.
-    ///
     /// ## Arguments
     ///
-    /// * `doc` - A reference to the [`bson::Document`] from which to extract the ID.
+    /// * `doc` - The [`bson::Document`] to extract the ID from.
     ///
     /// ## Returns
     ///
-    /// Returns [`Some`]\([`DocId`]) if the ID was successfully extracted,
-    /// or [`None`] if the ID field is missing or of an unsupported type.
+    /// Returns [`Some`]\([`DocId`]) if the ID field is present,
+    /// or [`None`] if missing or of an unsupported type.
     pub(crate) fn get_doc_id_from_bson(&self, doc: &bson::Document) -> Option<DocId> {
         let id_field = &self.id_field;
         match doc.get(id_field) {
@@ -149,7 +144,6 @@ impl Collection {
 
     /// Updates a document in the collection by its ID.
     ///
-    /// This method updates an existing document with the provided fields.
     /// Only the fields present in the update document will be modified.
     ///
     /// ## Arguments
@@ -159,8 +153,8 @@ impl Collection {
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok`]\([`Document`]) with the updated document if successful,
-    /// or [`Err`]\([`Vec<String>`]) with validation or other errors.
+    /// Returns [`Ok`]\([`Document`]) with the updated document,
+    /// or [`Err`]\([`Vec<String>`]) with validation errors.
     pub fn update_document(
         &mut self,
         id: DocId,
@@ -208,7 +202,7 @@ impl Collection {
     ///
     /// ## Returns
     ///
-    /// Returns [`Some`]\([`Document`]) if the document was present and removed, or [`None`] if not found.
+    /// Returns [`Some`]\([`Document`]) if removed, or [`None`] if not found.
     pub fn remove_document(&mut self, id: DocId) -> Option<Document> {
         if let Some(offset) = self.document_indices.remove(&id)
             && let Ok(log_entry) = self.read_log_entry_at_offset(offset)
@@ -220,7 +214,7 @@ impl Collection {
         None
     }
 
-    /// Retrieves a reference to a document by its ID.
+    /// Retrieves a document by its ID.
     ///
     /// ## Arguments
     ///
@@ -238,11 +232,7 @@ impl Collection {
         None
     }
 
-    /// Retrieves all documents in the collection.
-    ///
-    /// ## Returns
-    ///
-    /// Returns a [`Vec`] containing references to all [`Document`]s in the collection.
+    /// Returns all documents in the collection.
     pub fn get_documents(&self) -> Vec<Document> {
         let mut entries = Vec::new();
         for (id, offset) in &self.document_indices {
@@ -253,47 +243,27 @@ impl Collection {
         entries
     }
 
-    /// Gets the schema of this collection.
-    ///
-    /// ## Returns
-    ///
-    /// A reference to the collection's [`Schema`].
+    /// Returns the schema of this collection.
     pub fn schema(&self) -> &Schema {
         &self.schema
     }
 
-    /// Gets the number of inserts performed on this collection.
-    ///
-    /// ## Returns
-    ///
-    /// The number of inserts as a `u64`.
+    /// Returns the number of inserts performed on this collection.
     pub fn inserts(&self) -> u64 {
         self.inserts
     }
 
-    /// Gets the base path of this collection.
-    ///
-    /// ## Returns
-    ///
-    /// The base path as a [`PathBuf`].
+    /// Returns the base path of this collection.
     pub fn base_path(&self) -> &PathBuf {
         &self.base_path
     }
 
-    /// Gets the name of the ID field for this collection.
-    ///
-    /// ## Returns
-    ///
-    /// The name of the ID field as a [`String`].
+    /// Returns the name of the ID field for this collection.
     pub fn id_field_name(&self) -> &str {
         &self.id_field
     }
 
-    /// Gets the document indices map containing DocId to log offset mappings.
-    ///
-    /// ## Returns
-    ///
-    /// A reference to the document indices [`HashMap`].
+    /// Returns the document indices map containing [`DocId`] to log offset mappings.
     pub fn document_indices(&self) -> &HashMap<DocId, usize> {
         &self.document_indices
     }

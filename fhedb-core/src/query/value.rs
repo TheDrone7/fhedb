@@ -146,10 +146,6 @@ pub trait Unescapable {
     /// Unescapes this string, processing escape sequences.
     ///
     /// Handles `\n`, `\t`, `\r`, `\0`, `\\`, `\"`, and `\'` sequences.
-    ///
-    /// ## Returns
-    ///
-    /// Returns the unescaped string.
     fn unescape(&self) -> String;
 }
 

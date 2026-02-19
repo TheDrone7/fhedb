@@ -28,7 +28,7 @@ pub trait ReferenceChecker {
     ///
     /// ## Returns
     ///
-    /// Returns [`Some`] with the invalid collection name, or [`None`] if all references are valid.
+    /// Returns [`Some`] with the invalid collection name, or [`None`] if all are valid.
     fn find_invalid_reference(
         &self,
         db: &Database,
@@ -116,16 +116,11 @@ impl SchemaReferenceValidator for Schema {
 
 impl Database {
     /// Finds all collections that reference the specified collection.
-    ///
-    /// Self-references are excluded from the results.
+    /// Self-references are excluded.
     ///
     /// ## Arguments
     ///
     /// * `target_collection` - The name of the collection to find references to.
-    ///
-    /// ## Returns
-    ///
-    /// A vector of collection names that reference the target collection.
     pub fn find_referencing_collections(&self, target_collection: &str) -> Vec<String> {
         let mut referencing = Vec::new();
 

@@ -6,9 +6,9 @@ use bson::{Bson, Document};
 
 pub use fhedb_types::{FieldDefinition, FieldType, IdType, Schema};
 
-/// Extension trait for Schema with validation and serialization methods.
+/// Extension trait for [`Schema`] with validation and default application methods.
 pub trait SchemaOps {
-    /// Validates a BSON document against this schema.
+    /// Validates a [`Document`] against this schema.
     ///
     /// ## Arguments
     ///
@@ -16,27 +16,23 @@ pub trait SchemaOps {
     ///
     /// ## Returns
     ///
-    /// [`Ok(())`](Result::Ok) if valid, or [`Err`]\([`Vec<String>`]) with validation errors.
+    /// Returns [`Ok`]\(()) if valid, or [`Err`]\([`Vec<String>`]) with validation errors.
     fn validate_document(&self, doc: &Document) -> Result<(), Vec<String>>;
 
     /// Ensures the schema has exactly one Id field.
-    ///
-    /// If no Id field exists, adds a default `id` field with type [`FieldType::IdInt`].
+    /// Adds a default `id` field with type [`FieldType::IdInt`] if none exists.
     ///
     /// ## Returns
     ///
-    /// [`Ok`]\((field_name, [`IdType`])) on success, or [`Err`]\([`String`]) if multiple Id fields exist.
+    /// Returns [`Ok`]\((field_name, [`IdType`])) on success,
+    /// or [`Err`]\([`String`]) if multiple Id fields exist.
     fn ensure_id(&mut self) -> Result<(String, IdType), String>;
 
-    /// Applies default values to a document for any missing fields that have defaults.
+    /// Applies default values to a [`Document`] for any missing fields that have defaults.
     ///
     /// ## Arguments
     ///
     /// * `doc` - The [`Document`] to apply defaults to.
-    ///
-    /// ## Returns
-    ///
-    /// The number of fields that had defaults applied.
     fn apply_defaults(&self, doc: &mut Document) -> usize;
 }
 
@@ -115,15 +111,11 @@ impl SchemaOps for Schema {
     }
 }
 
-/// Converts a BSON document to a [`Schema`].
+/// Converts a [`Document`] to a [`Schema`].
 ///
 /// ## Arguments
 ///
 /// * `doc` - The [`Document`] containing schema field definitions.
-///
-/// ## Returns
-///
-/// A new [`Schema`] with parsed field definitions.
 pub fn schema_from_document(doc: Document) -> Schema {
     let mut schema = Schema::new();
 
@@ -136,15 +128,11 @@ pub fn schema_from_document(doc: Document) -> Schema {
     schema
 }
 
-/// Converts a [`Schema`] to a BSON document.
+/// Converts a [`Schema`] to a [`Document`].
 ///
 /// ## Arguments
 ///
 /// * `schema` - The [`Schema`] to convert.
-///
-/// ## Returns
-///
-/// A [`Document`] representing the schema.
 pub fn schema_to_document(schema: Schema) -> Document {
     let mut doc = Document::new();
 
@@ -155,7 +143,7 @@ pub fn schema_to_document(schema: Schema) -> Document {
     doc
 }
 
-/// Parses a BSON value into a [`FieldDefinition`].
+/// Parses a [`Bson`] value into a [`FieldDefinition`].
 ///
 /// ## Arguments
 ///
@@ -163,7 +151,7 @@ pub fn schema_to_document(schema: Schema) -> Document {
 ///
 /// ## Returns
 ///
-/// [`Some`]\([`FieldDefinition`]) if valid, or [`None`] if not recognized.
+/// Returns [`Some`]\([`FieldDefinition`]) if valid, or [`None`] if not recognized.
 fn parse_field_definition(value: &Bson) -> Option<FieldDefinition> {
     match value {
         Bson::String(_) => parse_field_type(value).map(|field_type| FieldDefinition {
@@ -189,7 +177,7 @@ fn parse_field_definition(value: &Bson) -> Option<FieldDefinition> {
     }
 }
 
-/// Parses a BSON value into a [`FieldType`].
+/// Parses a [`Bson`] value into a [`FieldType`].
 ///
 /// ## Arguments
 ///
@@ -197,7 +185,7 @@ fn parse_field_definition(value: &Bson) -> Option<FieldDefinition> {
 ///
 /// ## Returns
 ///
-/// [`Some`]\([`FieldType`]) if valid, or [`None`] if not recognized.
+/// Returns [`Some`]\([`FieldType`]) if valid, or [`None`] if not recognized.
 fn parse_field_type(value: &Bson) -> Option<FieldType> {
     match value {
         Bson::String(s) => match s.as_str() {
@@ -229,10 +217,6 @@ fn parse_field_type(value: &Bson) -> Option<FieldType> {
 /// ## Arguments
 ///
 /// * `field_type` - The [`FieldType`] to convert.
-///
-/// ## Returns
-///
-/// A [`Bson`] value representing the field type.
 fn field_type_to_bson(field_type: FieldType) -> Bson {
     match field_type {
         FieldType::Int => Bson::String("int".to_string()),
@@ -264,10 +248,6 @@ fn field_type_to_bson(field_type: FieldType) -> Bson {
 /// ## Arguments
 ///
 /// * `field_def` - The [`FieldDefinition`] to convert.
-///
-/// ## Returns
-///
-/// A [`Bson`] value representing the field definition.
 fn field_definition_to_bson(field_def: FieldDefinition) -> Bson {
     match field_def.default_value {
         None => field_type_to_bson(field_def.field_type),
@@ -280,7 +260,7 @@ fn field_definition_to_bson(field_def: FieldDefinition) -> Bson {
     }
 }
 
-/// Checks whether a BSON value matches the expected field type.
+/// Checks whether a [`Bson`] value matches the expected [`FieldType`].
 ///
 /// ## Arguments
 ///
@@ -289,7 +269,7 @@ fn field_definition_to_bson(field_def: FieldDefinition) -> Bson {
 ///
 /// ## Returns
 ///
-/// [`Ok(())`](Result::Ok) if the value matches, or [`Err`]\([`String`]) with an error message.
+/// Returns [`Ok`]\(()) if the value matches, or [`Err`]\([`String`]) with an error message.
 pub fn validate_bson_type(value: &Bson, field_type: &FieldType) -> Result<(), String> {
     match field_type {
         FieldType::Int => match value {

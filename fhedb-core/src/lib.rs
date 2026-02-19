@@ -5,17 +5,22 @@
 /// The database module - contains the core database structures.
 pub mod database;
 
-/// The file module - contains the file operations for the database.
+/// The collection module - contains the collection structures and operations.
 pub mod collection;
 
+/// The document module - contains the document and ID types.
 pub mod document;
+
+/// The reference utilities module - contains reference validation utilities.
 pub mod reference_utils;
+
+/// The schema module - contains schema definitions and validation logic.
 pub mod schema;
 
 /// The query module - contains query execution utilities.
 pub mod query;
 
-// Re-exports commonly used types for easy access.
+/// Commonly used types re-exported for easy access.
 pub mod prelude {
     pub use crate::collection::{
         Collection,

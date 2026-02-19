@@ -1,13 +1,13 @@
+//! # Database File Operations
+//!
+//! Provides file I/O operations for loading databases from disk.
+
 use crate::{collection::Collection, database::Database};
 use std::{fs, io, path::PathBuf};
 
-/// Implement functionality for loading databases and collections from disk.
+/// File I/O operations for database persistence.
 impl Database {
-    /// Loads a database from existing files on disk.
-    ///
-    /// This method creates a new database instance and loads all collections
-    /// from subdirectories found in the database's directory. Each subdirectory
-    /// is treated as a collection and loaded using the collection's `from_files` method.
+    /// Loads a [`Database`] from existing files on disk.
     ///
     /// ## Arguments
     ///
@@ -16,8 +16,8 @@ impl Database {
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok`]\([`Database`]) if the database was loaded successfully,
-    /// or [`Err`]\([`std::io::Error`]) if the database could not be loaded.
+    /// Returns [`Ok`]\([`Database`]) if loaded successfully,
+    /// or [`Err`]\([`io::Error`]) if the load failed.
     pub fn from_files(
         name: impl Into<String>,
         base_path: impl Into<PathBuf>,
