@@ -327,10 +327,10 @@ pub fn schema_from_document(doc: Document) -> Schema {
 /// ## Arguments
 ///
 /// * `schema` - The [`Schema`] to convert.
-pub fn schema_to_document(schema: Schema) -> Document {
+pub fn schema_to_document(schema: &Schema) -> Document {
     let mut doc = Document::new();
 
-    for (field_name, field_def) in schema.fields {
+    for (field_name, field_def) in &schema.fields {
         doc.insert(field_name, field_definition_to_bson(field_def));
     }
 
@@ -411,8 +411,8 @@ fn parse_field_type(value: &Bson) -> Option<FieldType> {
 /// ## Arguments
 ///
 /// * `field_type` - The [`FieldType`] to convert.
-fn field_type_to_bson(field_type: FieldType) -> Bson {
-    match field_type {
+fn field_type_to_bson(field_type: &FieldType) -> Bson {
+    match &field_type {
         FieldType::Int => Bson::String("int".to_string()),
         FieldType::Float => Bson::String("float".to_string()),
         FieldType::Boolean => Bson::String("boolean".to_string()),
@@ -421,17 +421,17 @@ fn field_type_to_bson(field_type: FieldType) -> Bson {
         FieldType::IdInt => Bson::String("id_int".to_string()),
         FieldType::Array(inner_type) => {
             let mut doc = Document::new();
-            doc.insert("array", field_type_to_bson(*inner_type));
+            doc.insert("array", field_type_to_bson(inner_type));
             Bson::Document(doc)
         }
         FieldType::Reference(collection_name) => {
             let mut doc = Document::new();
-            doc.insert("reference", Bson::String(collection_name));
+            doc.insert("reference", Bson::String(collection_name.to_string()));
             Bson::Document(doc)
         }
         FieldType::Nullable(inner_type) => {
             let mut doc = Document::new();
-            doc.insert("nullable", field_type_to_bson(*inner_type));
+            doc.insert("nullable", field_type_to_bson(inner_type));
             Bson::Document(doc)
         }
     }
@@ -442,12 +442,12 @@ fn field_type_to_bson(field_type: FieldType) -> Bson {
 /// ## Arguments
 ///
 /// * `field_def` - The [`FieldDefinition`] to convert.
-fn field_definition_to_bson(field_def: FieldDefinition) -> Bson {
-    match field_def.default_value {
-        None => field_type_to_bson(field_def.field_type),
+fn field_definition_to_bson(field_def: &FieldDefinition) -> Bson {
+    match &field_def.default_value {
+        None => field_type_to_bson(&field_def.field_type),
         Some(default) => {
             let mut doc = Document::new();
-            doc.insert("type", field_type_to_bson(field_def.field_type));
+            doc.insert("type", field_type_to_bson(&field_def.field_type));
             doc.insert("default", default);
             Bson::Document(doc)
         }

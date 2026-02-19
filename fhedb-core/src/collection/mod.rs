@@ -53,7 +53,7 @@ impl Collection {
         let (id_field, id_type) = schema.ensure_id()?;
         let name = name.into();
         let temp_path = base_path.into();
-        let base_path = temp_path.join(name.clone());
+        let base_path = temp_path.join(&name);
 
         Ok(Self {
             name,
@@ -97,9 +97,7 @@ impl Collection {
             )]);
         }
 
-        let db_doc = Document::new(doc_id.clone(), doc);
-
-        match self.append_to_log(&Operation::Insert, &db_doc.data) {
+        match self.append_to_log(&Operation::Insert, &doc) {
             Ok(offset) => {
                 self.document_indices.insert(doc_id.clone(), offset);
             }
@@ -209,7 +207,7 @@ impl Collection {
         {
             self.append_to_log(&Operation::Delete, &log_entry.document)
                 .ok();
-            return Some(Document::new(id.clone(), log_entry.document));
+            return Some(Document::new(id, log_entry.document));
         }
         None
     }
@@ -227,7 +225,7 @@ impl Collection {
         if let Some(&offset) = self.document_indices.get(&id)
             && let Ok(log_entry) = self.read_log_entry_at_offset(offset)
         {
-            return Some(Document::new(id.clone(), log_entry.document));
+            return Some(Document::new(id, log_entry.document));
         }
         None
     }

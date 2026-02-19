@@ -12,7 +12,7 @@ use std::{
     fmt,
     fs::{self, OpenOptions},
     io::{self, Seek, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
     str::FromStr,
 };
 
@@ -111,7 +111,7 @@ impl Collection {
 
     /// Ensures the collection's directory exists.
     pub fn ensure_collection_dir(&self) -> io::Result<()> {
-        fs::create_dir_all(self.base_path.clone())
+        fs::create_dir_all(&self.base_path)
     }
 
     /// Appends a document operation to the collection's logfile.
@@ -332,8 +332,7 @@ impl Collection {
             let document = log_entry.document;
             let operation = log_entry.operation;
 
-            let id_field = self.id_field.clone();
-            let doc_id = match document.get(id_field) {
+            let doc_id = match document.get(&self.id_field) {
                 Some(bson::Bson::String(s)) => s.clone(),
                 Some(bson::Bson::Int32(i)) => i.to_string(),
                 Some(bson::Bson::Int64(i)) => i.to_string(),
@@ -408,12 +407,9 @@ impl Collection {
             .open(metadata_path)?;
 
         let mut metadata = BsonDocument::new();
-        metadata.insert("name", Bson::String(self.name.clone()));
+        metadata.insert("name", Bson::String(self.name.to_string()));
         metadata.insert("inserts", Bson::Int64(self.inserts as i64));
-        metadata.insert(
-            "schema",
-            Bson::Document(schema_to_document(self.schema.clone())),
-        );
+        metadata.insert("schema", Bson::Document(schema_to_document(&self.schema)));
 
         let bson_bytes = metadata
             .to_vec()
@@ -434,9 +430,8 @@ impl Collection {
     ///
     /// Returns [`Ok`]\([`Collection`]) if successful,
     /// or [`Err`]\([`io::Error`]) if the read failed.
-    pub fn read_metadata(base_path: impl Into<PathBuf>, name: &str) -> io::Result<Collection> {
-        let base_path: PathBuf = base_path.into();
-        let collection_dir = base_path.join(name);
+    pub fn read_metadata(base_path: impl AsRef<Path>, name: &str) -> io::Result<Collection> {
+        let collection_dir = base_path.as_ref().join(name);
         let metadata_path = collection_dir.join("metadata.bin");
 
         if !metadata_path.exists() {
@@ -456,9 +451,10 @@ impl Collection {
         let schema =
             schema_from_document(metadata.get_document("schema").cloned().unwrap_or_default());
 
-        let mut collection = Collection::new(stored_name, schema, &base_path).map_err(|e| {
-            io::Error::new(io::ErrorKind::InvalidData, format!("Invalid schema: {}", e))
-        })?;
+        let mut collection =
+            Collection::new(stored_name, schema, base_path.as_ref()).map_err(|e| {
+                io::Error::new(io::ErrorKind::InvalidData, format!("Invalid schema: {}", e))
+            })?;
         collection.inserts = inserts;
         Ok(collection)
     }
@@ -474,8 +470,8 @@ impl Collection {
     ///
     /// Returns [`Ok`]\([`Collection`]) if successful,
     /// or [`Err`]\([`io::Error`]) if the load failed.
-    pub fn from_files(base_path: impl Into<PathBuf>, name: &str) -> io::Result<Collection> {
-        let mut collection = Self::read_metadata(base_path, name)?;
+    pub fn from_files(base_path: impl AsRef<Path>, name: &str) -> io::Result<Collection> {
+        let mut collection = Self::read_metadata(base_path.as_ref(), name)?;
         collection.compact_logfile()?;
         let log_entries = collection.read_log_entries()?;
 
