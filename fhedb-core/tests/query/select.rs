@@ -1,5 +1,5 @@
 use bson::{Bson, doc};
-use fhedb_core::prelude::{FieldDefinition, FieldSelectable, FieldType, Schema};
+use fhedb_core::prelude::{FieldDefinition, FieldType, Schema, SchemaOps};
 use fhedb_types::FieldSelector;
 use std::collections::HashMap;
 
@@ -37,7 +37,7 @@ fn empty_content() -> fhedb_types::ParsedDocContent {
 #[test]
 fn empty_selectors_returns_empty() {
     let doc = doc! { "id": 1_i64, "name": "Alice", "age": 30_i64, "active": true };
-    let result = doc.select_fields(&[], &test_schema());
+    let result = test_schema().select_fields(&doc, &[]);
     assert!(result.is_ok());
     let selected = result.unwrap();
     assert!(selected.is_empty());
@@ -47,7 +47,7 @@ fn empty_selectors_returns_empty() {
 fn select_single_field() {
     let doc = doc! { "id": 1_i64, "name": "Alice", "age": 30_i64, "active": true };
     let selectors = vec![FieldSelector::Field("name".to_string())];
-    let result = doc.select_fields(&selectors, &test_schema());
+    let result = test_schema().select_fields(&doc, &selectors);
     assert!(result.is_ok());
     let selected = result.unwrap();
 
@@ -68,7 +68,7 @@ fn select_multiple_fields() {
         FieldSelector::Field("name".to_string()),
         FieldSelector::Field("age".to_string()),
     ];
-    let result = doc.select_fields(&selectors, &test_schema());
+    let result = test_schema().select_fields(&doc, &selectors);
     assert!(result.is_ok());
     let selected = result.unwrap();
 
@@ -86,7 +86,7 @@ fn select_multiple_fields() {
 fn select_all_fields() {
     let doc = doc! { "id": 1_i64, "name": "Alice", "age": 30_i64, "active": true };
     let selectors = vec![FieldSelector::AllFields];
-    let result = doc.select_fields(&selectors, &test_schema());
+    let result = test_schema().select_fields(&doc, &selectors);
     assert!(result.is_ok());
     let selected = result.unwrap();
 
@@ -104,7 +104,7 @@ fn select_all_fields() {
 fn select_unknown_field_error() {
     let doc = doc! { "id": 1_i64, "name": "Alice", "age": 30_i64, "active": true };
     let selectors = vec![FieldSelector::Field("unknown".to_string())];
-    let result = doc.select_fields(&selectors, &test_schema());
+    let result = test_schema().select_fields(&doc, &selectors);
 
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Unknown field"));
@@ -114,7 +114,7 @@ fn select_unknown_field_error() {
 fn select_with_null_value() {
     let doc = doc! { "id": 1_i64, "name": Bson::Null, "age": 30_i64, "active": true };
     let selectors = vec![FieldSelector::Field("name".to_string())];
-    let result = doc.select_fields(&selectors, &test_schema());
+    let result = test_schema().select_fields(&doc, &selectors);
     assert!(result.is_ok());
     let selected = result.unwrap();
 
@@ -129,7 +129,7 @@ fn duplicate_selectors() {
         FieldSelector::Field("name".to_string()),
         FieldSelector::Field("name".to_string()),
     ];
-    let result = doc.select_fields(&selectors, &test_schema());
+    let result = test_schema().select_fields(&doc, &selectors);
     assert!(result.is_ok());
     let selected = result.unwrap();
 
@@ -147,7 +147,7 @@ fn subdocument_with_value() {
         field_name: "manager".to_string(),
         content: empty_content(),
     }];
-    let result = doc.select_fields(&selectors, &schema_with_reference());
+    let result = schema_with_reference().select_fields(&doc, &selectors);
     assert!(result.is_ok());
     let selected = result.unwrap();
 
@@ -165,7 +165,7 @@ fn subdocument_defaults_to_null() {
         field_name: "manager".to_string(),
         content: empty_content(),
     }];
-    let result = doc.select_fields(&selectors, &schema_with_reference());
+    let result = schema_with_reference().select_fields(&doc, &selectors);
     assert!(result.is_ok());
     let selected = result.unwrap();
 
@@ -180,7 +180,7 @@ fn subdocument_unknown_field_error() {
         field_name: "unknown".to_string(),
         content: empty_content(),
     }];
-    let result = doc.select_fields(&selectors, &schema_with_reference());
+    let result = schema_with_reference().select_fields(&doc, &selectors);
 
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Unknown field"));

@@ -2,9 +2,13 @@
 //!
 //! Schema definitions and validation logic for FHEDB collections.
 
+use crate::query::{BsonComparable, ValueParseable};
 use bson::{Bson, Document};
+use std::collections::HashMap;
 
-pub use fhedb_types::{FieldDefinition, FieldType, IdType, Schema};
+pub use fhedb_types::{
+    FieldCondition, FieldDefinition, FieldSelector, FieldType, IdType, QueryOperator, Schema,
+};
 
 /// Extension trait for [`Schema`] with validation and default application methods.
 pub trait SchemaOps {
@@ -34,6 +38,52 @@ pub trait SchemaOps {
     ///
     /// * `doc` - The [`Document`] to apply defaults to.
     fn apply_defaults(&self, doc: &mut Document) -> usize;
+
+    /// Prepares a document for insertion by parsing field values and applying defaults.
+    ///
+    /// ## Arguments
+    ///
+    /// * `fields` - A mapping of field names to their string representations.
+    ///
+    /// ## Returns
+    ///
+    /// Returns a [`Document`] with parsed values and defaults applied,
+    /// or [`Err`]\([`String`]) if a field is unknown or cannot be parsed.
+    fn prepare_document(&self, fields: &HashMap<String, String>) -> Result<Document, String>;
+
+    /// Evaluates a condition against a document.
+    ///
+    /// ## Arguments
+    ///
+    /// * `doc` - The [`Document`] to evaluate against.
+    /// * `condition` - The condition to check.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`bool`]) indicating whether the condition matches,
+    /// or [`Err`]\([`String`]) if the field is unknown.
+    fn evaluate_condition(
+        &self,
+        doc: &Document,
+        condition: &FieldCondition,
+    ) -> Result<bool, String>;
+
+    /// Selects fields from a document based on selectors.
+    ///
+    /// ## Arguments
+    ///
+    /// * `doc` - The [`Document`] to select fields from.
+    /// * `selectors` - The field selectors to apply.
+    ///
+    /// ## Returns
+    ///
+    /// Returns a new [`Document`] containing only selected fields,
+    /// or [`Err`]\([`String`]) if a selector references an unknown field.
+    fn select_fields(
+        &self,
+        doc: &Document,
+        selectors: &[FieldSelector],
+    ) -> Result<Document, String>;
 }
 
 impl SchemaOps for Schema {
@@ -109,6 +159,150 @@ impl SchemaOps for Schema {
 
         applied_count
     }
+
+    fn prepare_document(&self, fields: &HashMap<String, String>) -> Result<Document, String> {
+        let mut doc = Document::new();
+
+        for (field_name, value_str) in fields {
+            let field_def = self
+                .fields
+                .get(field_name)
+                .ok_or_else(|| format!("Unknown field '{}'.", field_name))?;
+            doc.insert(
+                field_name.clone(),
+                value_str.parse_as_bson(&field_def.field_type)?,
+            );
+        }
+
+        for (field_name, field_def) in &self.fields {
+            if doc.contains_key(field_name) {
+                continue;
+            }
+            match &field_def.field_type {
+                FieldType::IdString | FieldType::IdInt => continue,
+                FieldType::Nullable(_) => {
+                    doc.insert(
+                        field_name.clone(),
+                        field_def.default_value.clone().unwrap_or(Bson::Null),
+                    );
+                }
+                FieldType::Array(_) => {
+                    doc.insert(
+                        field_name.clone(),
+                        field_def
+                            .default_value
+                            .clone()
+                            .unwrap_or(Bson::Array(vec![])),
+                    );
+                }
+                FieldType::Reference(_) => {
+                    doc.insert(
+                        field_name.clone(),
+                        field_def.default_value.clone().unwrap_or(Bson::Null),
+                    );
+                }
+                _ => {
+                    if let Some(default) = &field_def.default_value {
+                        doc.insert(field_name.clone(), default.clone());
+                    } else {
+                        return Err(format!("Missing required field '{}'.", field_name));
+                    }
+                }
+            }
+        }
+        Ok(doc)
+    }
+
+    fn evaluate_condition(
+        &self,
+        doc: &Document,
+        condition: &FieldCondition,
+    ) -> Result<bool, String> {
+        let field_def = self
+            .fields
+            .get(&condition.field_name)
+            .ok_or_else(|| format!("Unknown field '{}'.", condition.field_name))?;
+
+        let parse_type = get_parse_type(&field_def.field_type, &condition.operator);
+        let condition_value = condition.value.parse_as_bson(parse_type)?;
+
+        match doc.get(&condition.field_name) {
+            None => Ok(false),
+            Some(Bson::Null) => Ok(match condition.operator {
+                QueryOperator::Equal => condition_value == Bson::Null,
+                QueryOperator::NotEqual => condition_value != Bson::Null,
+                _ => false,
+            }),
+            Some(doc_val) => match &condition.operator {
+                QueryOperator::Equal => Ok(doc_val == &condition_value),
+                QueryOperator::NotEqual => Ok(doc_val != &condition_value),
+                QueryOperator::GreaterThan
+                | QueryOperator::GreaterThanOrEqual
+                | QueryOperator::LessThan
+                | QueryOperator::LessThanOrEqual => {
+                    doc_val.compare_to(&condition_value, &condition.operator)
+                }
+                QueryOperator::Similar => Ok(match (doc_val, &condition_value) {
+                    (Bson::String(s), Bson::String(p)) => s.contains(p.as_str()),
+                    (Bson::Array(arr), _) => arr.contains(&condition_value),
+                    _ => false,
+                }),
+            },
+        }
+    }
+
+    fn select_fields(
+        &self,
+        doc: &Document,
+        selectors: &[FieldSelector],
+    ) -> Result<Document, String> {
+        if selectors.is_empty() {
+            return Ok(Document::new());
+        }
+
+        let mut result = Document::new();
+        for selector in selectors {
+            match selector {
+                FieldSelector::Field(name) => {
+                    if !self.fields.contains_key(name) {
+                        return Err(format!("Unknown field '{}'.", name));
+                    }
+                    if let Some(value) = doc.get(name) {
+                        result.insert(name.clone(), value.clone());
+                    }
+                }
+                FieldSelector::AllFields | FieldSelector::AllFieldsRecursive => {
+                    for (key, value) in doc {
+                        result.insert(key.clone(), value.clone());
+                    }
+                }
+                FieldSelector::SubDocument { field_name, .. } => {
+                    if !self.fields.contains_key(field_name) {
+                        return Err(format!("Unknown field '{}'.", field_name));
+                    }
+                    let value = doc.get(field_name).cloned().unwrap_or(Bson::Null);
+                    result.insert(field_name.clone(), value);
+                }
+            }
+        }
+        Ok(result)
+    }
+}
+
+/// Determines the parse type for the condition value.
+/// For [`QueryOperator::Similar`] on arrays, returns the element type instead.
+///
+/// ## Arguments
+///
+/// * `field_type` - The field's declared type.
+/// * `operator` - The query operator.
+fn get_parse_type<'a>(field_type: &'a FieldType, operator: &QueryOperator) -> &'a FieldType {
+    if *operator == QueryOperator::Similar
+        && let FieldType::Array(inner) = field_type
+    {
+        return inner.as_ref();
+    }
+    field_type
 }
 
 /// Converts a [`Document`] to a [`Schema`].

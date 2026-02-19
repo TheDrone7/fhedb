@@ -28,10 +28,7 @@ pub mod prelude {
     };
     pub use crate::database::Database;
     pub use crate::document::{DocId, Document};
-    pub use crate::query::{
-        BsonComparable, ConditionEvaluable, DocumentPreparable, FieldSelectable, Unescapable,
-        ValueParseable,
-    };
+    pub use crate::query::{BsonComparable, Unescapable, ValueParseable};
     pub use crate::reference_utils::{ReferenceChecker, SchemaReferenceValidator};
     pub use crate::schema::{
         FieldDefinition, FieldType, IdType, Schema, SchemaOps, schema_from_document,

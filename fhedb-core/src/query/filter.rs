@@ -2,9 +2,8 @@
 //!
 //! Provides document filtering utilities for query operations.
 
+use crate::{collection::Collection, document::Document, schema::SchemaOps};
 use fhedb_types::FieldCondition;
-
-use crate::{collection::Collection, document::Document, query::comparison::ConditionEvaluable};
 
 /// Document filtering operations for query execution.
 impl Collection {
@@ -26,7 +25,9 @@ impl Collection {
         let mut filtered = Vec::new();
         for doc in all_docs {
             let matches = conditions.iter().try_fold(true, |acc, c| {
-                doc.data.matches(c, self.schema()).map(|m| acc && m)
+                self.schema()
+                    .evaluate_condition(&doc.data, c)
+                    .map(|m| acc && m)
             })?;
             if matches {
                 filtered.push(doc);

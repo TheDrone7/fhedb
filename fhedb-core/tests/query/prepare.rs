@@ -1,5 +1,5 @@
 use bson::Bson;
-use fhedb_core::prelude::{DocumentPreparable, FieldDefinition, FieldType, Schema};
+use fhedb_core::prelude::{FieldDefinition, FieldType, Schema, SchemaOps};
 use std::collections::HashMap;
 
 fn test_schema() -> Schema {
@@ -64,7 +64,7 @@ fn all_fields_provided() {
     assignments.insert("age".to_string(), "30".to_string());
     assignments.insert("active".to_string(), "true".to_string());
 
-    let result = assignments.prepare_document(&test_schema());
+    let result = test_schema().prepare_document(&assignments);
     assert!(result.is_ok());
     let doc = result.unwrap();
 
@@ -78,7 +78,7 @@ fn missing_required_field_error() {
     let mut assignments = HashMap::new();
     assignments.insert("name".to_string(), "\"Alice\"".to_string());
 
-    let result = assignments.prepare_document(&test_schema());
+    let result = test_schema().prepare_document(&assignments);
 
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -91,7 +91,7 @@ fn nullable_defaults_to_null() {
     let mut assignments = HashMap::new();
     assignments.insert("name".to_string(), "\"Alice\"".to_string());
 
-    let result = assignments.prepare_document(&nullable_schema());
+    let result = nullable_schema().prepare_document(&assignments);
     assert!(result.is_ok());
     let doc = result.unwrap();
 
@@ -104,7 +104,7 @@ fn array_defaults_to_empty() {
     let mut assignments = HashMap::new();
     assignments.insert("name".to_string(), "\"Alice\"".to_string());
 
-    let result = assignments.prepare_document(&array_schema());
+    let result = array_schema().prepare_document(&assignments);
     assert!(result.is_ok());
     let doc = result.unwrap();
 
@@ -117,7 +117,7 @@ fn reference_defaults_to_null() {
     let mut assignments = HashMap::new();
     assignments.insert("name".to_string(), "\"Alice\"".to_string());
 
-    let result = assignments.prepare_document(&reference_schema());
+    let result = reference_schema().prepare_document(&assignments);
     assert!(result.is_ok());
     let doc = result.unwrap();
 
@@ -130,7 +130,7 @@ fn use_schema_default() {
     let mut assignments = HashMap::new();
     assignments.insert("name".to_string(), "\"Alice\"".to_string());
 
-    let result = assignments.prepare_document(&default_schema());
+    let result = default_schema().prepare_document(&assignments);
     assert!(result.is_ok());
     let doc = result.unwrap();
 
@@ -144,7 +144,7 @@ fn unknown_field_error() {
     assignments.insert("name".to_string(), "\"Alice\"".to_string());
     assignments.insert("nonexistent".to_string(), "\"value\"".to_string());
 
-    let result = assignments.prepare_document(&test_schema());
+    let result = test_schema().prepare_document(&assignments);
 
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -159,7 +159,7 @@ fn parsing_error() {
     assignments.insert("age".to_string(), "not_a_number".to_string());
     assignments.insert("active".to_string(), "true".to_string());
 
-    let result = assignments.prepare_document(&test_schema());
+    let result = test_schema().prepare_document(&assignments);
 
     assert!(result.is_err());
 }
@@ -171,7 +171,7 @@ fn id_field_excluded() {
     assignments.insert("age".to_string(), "30".to_string());
     assignments.insert("active".to_string(), "true".to_string());
 
-    let result = assignments.prepare_document(&test_schema());
+    let result = test_schema().prepare_document(&assignments);
     assert!(result.is_ok());
     let doc = result.unwrap();
 
@@ -191,7 +191,7 @@ fn nullable_uses_schema_default() {
     let mut assignments = HashMap::new();
     assignments.insert("name".to_string(), "\"Alice\"".to_string());
 
-    let result = assignments.prepare_document(&schema);
+    let result = schema.prepare_document(&assignments);
     assert!(result.is_ok());
     let doc = result.unwrap();
 
@@ -211,7 +211,7 @@ fn array_uses_schema_default() {
     let mut assignments = HashMap::new();
     assignments.insert("name".to_string(), "\"Alice\"".to_string());
 
-    let result = assignments.prepare_document(&schema);
+    let result = schema.prepare_document(&assignments);
     assert!(result.is_ok());
     let doc = result.unwrap();
 
@@ -234,7 +234,7 @@ fn reference_uses_schema_default() {
     let mut assignments = HashMap::new();
     assignments.insert("name".to_string(), "\"Alice\"".to_string());
 
-    let result = assignments.prepare_document(&schema);
+    let result = schema.prepare_document(&assignments);
     assert!(result.is_ok());
     let doc = result.unwrap();
 

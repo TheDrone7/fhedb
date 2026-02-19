@@ -6,8 +6,7 @@ use std::collections::HashMap;
 
 use bson::{Bson, Document as BsonDocument};
 use fhedb_core::prelude::{
-    Collection, ConditionEvaluable, Database, DocumentPreparable, FieldSelectable, FieldType,
-    ReferenceChecker, Schema, ValueParseable,
+    Collection, Database, FieldType, ReferenceChecker, Schema, SchemaOps, ValueParseable,
 };
 use fhedb_types::{DocumentQuery, FieldCondition, FieldSelector};
 use serde_json::{Value as JsonValue, json};
@@ -87,7 +86,7 @@ fn execute_insert(
         .get_collection_mut(&collection_name)
         .ok_or_else(|| format!("Collection '{}' not found.", collection_name))?;
 
-    let doc = fields.prepare_document(collection.schema())?;
+    let doc = collection.schema().prepare_document(&fields)?;
     let doc_id = collection.add_document(doc).map_err(|e| e.join("; "))?;
     let inserted = collection
         .get_document(doc_id)
@@ -306,7 +305,7 @@ fn select_fields(
         return Ok(json!({}));
     }
 
-    let selected = doc.select_fields(selectors, collection.schema())?;
+    let selected = collection.schema().select_fields(doc, selectors)?;
     let mut result: serde_json::Map<String, JsonValue> =
         serde_json::from_value(serde_json::to_value(&selected).map_err(|e| e.to_string())?)
             .map_err(|e| e.to_string())?;
@@ -407,7 +406,10 @@ fn resolve_reference(
                 };
 
                 for condition in conditions {
-                    if !ref_doc.data.matches(condition, ref_collection.schema())? {
+                    if !ref_collection
+                        .schema()
+                        .evaluate_condition(&ref_doc.data, condition)?
+                    {
                         return Ok(JsonValue::Null);
                     }
                 }
