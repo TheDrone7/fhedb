@@ -1,14 +1,13 @@
 //! # Document Query Handlers
 //!
-//! This module handles document operations within a database context,
-//! including INSERT, GET, UPDATE, and DELETE operations.
+//! Handles document operations (INSERT, GET, UPDATE, DELETE) within a database context.
 
 use std::collections::HashMap;
 
 use bson::{Bson, Document as BsonDocument};
 use fhedb_core::prelude::{
     Collection, ConditionEvaluable, Database, DocumentPreparable, FieldSelectable, FieldType,
-    Schema, ValueParseable,
+    ReferenceChecker, Schema, ValueParseable,
 };
 use fhedb_types::{DocumentQuery, FieldCondition, FieldSelector};
 use serde_json::{Value as JsonValue, json};
@@ -322,7 +321,7 @@ fn select_fields(
                         .get(key)
                         .ok_or_else(|| format!("Unknown field '{}'.", key))?;
 
-                    let resolved = if contains_reference(&field_def.field_type) {
+                    let resolved = if field_def.field_type.contains_reference() {
                         resolve_reference(
                             value,
                             &field_def.field_type,
@@ -447,24 +446,5 @@ fn resolve_reference(
             _ => Ok(JsonValue::Array(vec![])),
         },
         _ => Err(format!("Field '{}' is not a reference type.", field_name)),
-    }
-}
-
-/// Checks if a field type contains or is a reference type.
-///
-/// Recursively inspects `Nullable` and `Array` wrappers to find nested references.
-///
-/// ## Arguments
-///
-/// * `field_type` - The [`FieldType`] to check.
-///
-/// ## Returns
-///
-/// Returns `true` if the field type is or contains a [`FieldType::Reference`].
-fn contains_reference(field_type: &FieldType) -> bool {
-    match field_type {
-        FieldType::Reference(_) => true,
-        FieldType::Nullable(inner) | FieldType::Array(inner) => contains_reference(inner),
-        _ => false,
     }
 }

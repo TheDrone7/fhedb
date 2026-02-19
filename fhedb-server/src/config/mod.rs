@@ -1,13 +1,12 @@
-//! The configuration module for the fhedb server.
+//! # Configuration
 //!
-//! This module provides the configuration for the fhedb server.
-//! It includes the logging configuration, server configuration, and storage configuration.
+//! Server, logging, and storage configuration for the fhedb server.
 
-/// The core configuration for the fhedb server.
+/// Core configuration combining server, logging, and storage.
 pub mod core;
-/// The logging configuration for the fhedb server.
+/// Logging configuration.
 pub(crate) mod logging;
-/// The server configuration for the fhedb server.
+/// Server configuration.
 pub(crate) mod server;
-/// The storage configuration for the fhedb server.
+/// Storage configuration.
 pub(crate) mod storage;

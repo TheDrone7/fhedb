@@ -1,7 +1,6 @@
 //! # Request Handlers
 //!
-//! This module provides the HTTP request handlers for database and contextual operations.
-//! It routes incoming requests to the appropriate sub-handlers based on [`ParsedQuery`] type.
+//! HTTP request handlers for database and contextual operations.
 
 mod base;
 pub(crate) mod collection;

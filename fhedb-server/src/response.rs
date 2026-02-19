@@ -1,7 +1,6 @@
 //! # Response Types
 //!
-//! This module provides a unified response system for the fhedb server.
-//! Successful responses return JSON, while error responses return plaintext.
+//! Unified response types for the fhedb server. Success responses return JSON, errors return plaintext.
 
 use axum::{
     body::Body,
@@ -9,10 +8,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-/// Represents an API response that can be either a success or an error.
-///
-/// Successful responses return JSON with the data payload.
-/// Error responses return plaintext containing only the error message.
+/// An API response, either success (JSON) or error (plaintext).
 #[derive(Debug)]
 pub enum ApiResponse {
     /// A successful response with a JSON data payload.
@@ -48,10 +44,6 @@ impl IntoResponse for ApiResponse {
 /// ## Arguments
 ///
 /// * `data` - Any serializable value to include in the response.
-///
-/// ## Returns
-///
-/// Returns an [`ApiResponse::Success`] variant.
 #[macro_export]
 macro_rules! success {
     ($data:expr) => {{

@@ -1,13 +1,13 @@
-//! The server configuration for the fhedb server.
+//! # Server Configuration
 
 use serde::{Deserialize, Serialize};
 
-/// The fhedb server's configuration.
+/// Server host and port configuration.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ServerConfig {
-    /// The host address of the fhedb server.
+    /// The host address.
     host: String,
-    /// The port number of the fhedb server.
+    /// The port number.
     port: u32,
 }
 
@@ -21,12 +21,12 @@ impl Default for ServerConfig {
 }
 
 impl ServerConfig {
-    /// Returns the host address of the fhedb server.
+    /// Returns the host address.
     pub fn host(&self) -> &str {
         &self.host
     }
 
-    /// Returns the port number of the fhedb server.
+    /// Returns the port number.
     pub fn port(&self) -> u32 {
         self.port
     }

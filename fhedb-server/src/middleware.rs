@@ -1,7 +1,6 @@
 //! # Request Middleware
 //!
-//! This module provides middleware functions for request processing,
-//! such as validating database existence before handling requests.
+//! Middleware for request processing, such as validating database existence.
 
 use axum::{
     extract::{Path, Request, State},
@@ -14,11 +13,8 @@ use log::{debug, error};
 
 use crate::{error as api_error, internal_error, state::ServerState};
 
-/// Middleware that checks if a database exists before processing the request.
-///
-/// Validates that the requested database exists either in memory or on disk
-/// before allowing the request to proceed to the handler. If the database
-/// exists on disk but not in memory, it will be loaded into the server state.
+/// Middleware that validates the requested database exists before processing the request.
+/// Loads the database from disk into memory if needed.
 ///
 /// ## Arguments
 ///

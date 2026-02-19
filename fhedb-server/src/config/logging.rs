@@ -1,7 +1,6 @@
-//! The logging configuration for the fhedb server.
+//! # Logging Configuration
 //!
-//! This module provides the logging configuration for the fhedb server.
-//! It includes the log level and the directory where the logs will be stored.
+//! Log level and output directory settings.
 
 use chrono;
 use dirs::data_local_dir;
@@ -44,13 +43,13 @@ mod log_level_serde {
     }
 }
 
-/// The logging configuration for the fhedb server.
+/// Logging configuration for the fhedb server.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LoggingConfig {
-    /// The log level for the fhedb server.
+    /// The minimum log level to output.
     #[serde(with = "log_level_serde")]
     level: LevelFilter,
-    /// The directory where the logs will be stored.
+    /// The directory for log files.
     dir: Option<PathBuf>,
 }
 
@@ -67,7 +66,7 @@ impl Default for LoggingConfig {
 }
 
 impl LoggingConfig {
-    /// Returns the log level for the fhedb server.
+    /// Returns the log level.
     pub fn level(&self) -> LevelFilter {
         self.level
     }
@@ -81,8 +80,7 @@ impl LoggingConfig {
         }
     }
 
-    /// Returns the log file path for the fhedb server.
-    /// Based on current time in the logs directory.
+    /// Returns the log file path based on current time.
     pub fn file(&self) -> Option<PathBuf> {
         if let Some(mut file) = self.dir.clone() {
             file.push(

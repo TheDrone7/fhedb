@@ -1,7 +1,6 @@
 //! # Server State
 //!
-//! This module provides the shared server state that is passed to all request handlers.
-//! It maintains a thread-safe cache of loaded databases and the base data directory path.
+//! Shared state passed to all request handlers, including database cache and data directory.
 
 use fhedb_core::prelude::Database;
 use std::{
@@ -10,10 +9,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-/// The shared state for the fhedb server.
-///
-/// This struct is cloned and passed to all request handlers via Axum's state mechanism.
-/// It contains thread-safe references to loaded databases and configuration paths.
+/// Shared state for the fhedb server, cloned into each handler via Axum state.
 #[derive(Debug, Clone)]
 pub struct ServerState {
     /// Thread-safe cache of loaded databases, keyed by database name.

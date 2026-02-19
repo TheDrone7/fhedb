@@ -1,7 +1,6 @@
 //! # Logging Setup
 //!
-//! This module provides the logging initialization function that configures
-//! log formatting, filtering, and output destinations.
+//! Logging initialization with configurable level and output destinations.
 
 use fern;
 use log::LevelFilter;

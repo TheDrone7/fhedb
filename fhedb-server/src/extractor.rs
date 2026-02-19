@@ -1,7 +1,6 @@
 //! # Query Extractors
 //!
-//! This module provides Axum extractors for parsing incoming query requests
-//! from HTTP request bodies into structured query types.
+//! Axum extractors for parsing incoming query requests into structured types.
 
 use axum::{
     RequestExt,
@@ -68,10 +67,6 @@ where
 ///
 /// * `query` - The original query string that failed to parse.
 /// * `errs` - The list of [`ParserError`]s to format.
-///
-/// ## Returns
-///
-/// Returns a [`Response`] with status `BAD_REQUEST` containing the formatted errors.
 fn handle_errs(query: &str, errs: Vec<ParserError>) -> Response {
     let errors = errs
         .iter()

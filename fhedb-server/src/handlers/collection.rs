@@ -44,10 +44,6 @@ impl From<&FieldDefinition> for JsonFieldDefinition {
 /// ## Arguments
 ///
 /// * `ft` - The [`FieldType`] to extract information from.
-///
-/// ## Returns
-///
-/// A tuple of (type_string, is_nullable).
 fn extract_type_info(ft: &FieldType) -> (String, bool) {
     match ft {
         FieldType::Nullable(inner) => {
@@ -63,10 +59,6 @@ fn extract_type_info(ft: &FieldType) -> (String, bool) {
 /// ## Arguments
 ///
 /// * `ft` - The [`FieldType`] to format.
-///
-/// ## Returns
-///
-/// A human-readable string representation of the field type.
 fn format_field_type(ft: &FieldType) -> String {
     match ft {
         FieldType::Int => "int".to_string(),

@@ -1,10 +1,10 @@
-//! The storage configuration for the fhedb server.
+//! # Storage Configuration
 
 use dirs::data_local_dir;
 use serde::{Deserialize, Serialize};
 use std::{fs::create_dir_all, path::PathBuf};
 
-/// The fhedb server's storage configuration.
+/// Data storage path configuration.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StorageConfig {
     base_dir: PathBuf,

@@ -18,13 +18,15 @@ pub mod response;
 /// Server state management.
 pub mod state;
 
-/// Re-exports commonly used types for easy access.
+/// Commonly used types re-exported for easy access.
 pub mod prelude {
-    pub use crate::config::core::CoreConfig;
-    pub use crate::handlers::*;
-    pub use crate::logger::setup_logger;
-    pub use crate::middleware::check_database;
-    pub use crate::response::ApiResponse;
-    pub use crate::state::ServerState;
-    pub use crate::{error, internal_error, success};
+    pub use crate::{
+        config::core::CoreConfig,
+        handlers::*,
+        logger::setup_logger,
+        middleware::check_database,
+        response::ApiResponse,
+        state::ServerState,
+        {error, internal_error, success},
+    };
 }
