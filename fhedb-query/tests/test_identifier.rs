@@ -3,10 +3,10 @@ use fhedb_query::lexer::{Token, lexer};
 
 fn parse_identifier(input: &str) -> Option<String> {
     let tokens = lexer().parse(input).into_result().ok()?;
-    if tokens.len() == 1 {
-        if let Token::Ident(s) = &tokens[0].0 {
-            return Some(s.clone());
-        }
+    if tokens.len() == 1
+        && let Token::Ident(s) = &tokens[0].0
+    {
+        return Some(s.clone());
     }
     None
 }
