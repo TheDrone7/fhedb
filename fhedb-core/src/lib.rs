@@ -31,6 +31,11 @@ pub mod prelude {
     };
     pub use crate::database::Database;
     pub use crate::document::{DocId, Document};
+    pub use crate::index::{
+        node::{InternalCell, LeafCell, Node, NodeHeader, NodeType, SLOT_SIZE},
+        pager::{PAGE_SIZE, Page, Pager},
+        tree::BPlusTree,
+    };
     pub use crate::query::{BsonComparable, Unescapable, ValueParseable};
     pub use crate::reference_utils::{ReferenceChecker, SchemaReferenceValidator};
     pub use crate::schema::{

@@ -205,7 +205,7 @@ impl Pager {
     /// Returns [`Ok`]\([`u32`]) with the new page number,
     /// or [`Err`]\([`io::Error`]) if the allocation failed.
     pub fn allocate_page(&mut self) -> io::Result<u32> {
-        if self.root_page_num != 0 {
+        if self.free_page_num != 0 {
             let reused_page_num = self.free_page_num;
             let page = self.read_page(reused_page_num)?;
             self.free_page_num = u32::from_le_bytes(page[0..4].try_into().unwrap());
