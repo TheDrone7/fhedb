@@ -9,7 +9,6 @@ use std::{
 };
 
 /// The size of a page in bytes.
-/// TODO: Make this configurable with server config.
 pub const PAGE_SIZE: usize = 4096;
 
 /// A fixed-size block of data representing a page on the disk.
@@ -22,6 +21,10 @@ pub struct Pager {
     file: File,
     /// The total number of pages in the file.
     total_pages: u32,
+    /// The page number of the first (root) page in the file.
+    root_page_num: u32,
+    /// The page number of the first free page in the file.
+    free_page_num: u32,
 }
 
 impl Pager {
@@ -54,7 +57,87 @@ impl Pager {
 
         let total_pages = (len / PAGE_SIZE as u64) as u32;
 
-        Ok(Self { file, total_pages })
+        let pager = if total_pages == 0 {
+            let mut temp = Self {
+                file,
+                total_pages: 1,
+                root_page_num: 0,
+                free_page_num: 0,
+            };
+            temp.save_metadata()?;
+            temp
+        } else {
+            let mut temp = Self {
+                file,
+                total_pages,
+                root_page_num: 0,
+                free_page_num: 0,
+            };
+            temp.load_metadata()?;
+            temp
+        };
+
+        Ok(pager)
+    }
+
+    /// Creates a new empty page filled with zeroes.
+    pub fn new_page(&self) -> Page {
+        [0u8; PAGE_SIZE]
+    }
+
+    /// Returns the page number of the root node.
+    pub fn root_page_num(&self) -> u32 {
+        self.root_page_num
+    }
+
+    /// Returns the page number of the first free page.
+    pub fn free_page_num(&self) -> u32 {
+        self.free_page_num
+    }
+
+    /// Sets the root page number and persists the metadata.
+    ///
+    /// ## Arguments
+    ///
+    /// * `page_num` - The page number to set as the root.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful,
+    /// or [`Err`]\([`io::Error`]) if the metadata could not be written.
+    pub fn set_root(&mut self, page_num: u32) -> io::Result<()> {
+        self.root_page_num = page_num;
+        self.save_metadata()
+    }
+
+    /// Loads the pager metadata (root and free page numbers) from page 0.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\((`root_page_num`, `free_page_num`)) if successful,
+    /// or [`Err`]\([`io::Error`]) if the metadata page could not be read.
+    pub fn load_metadata(&mut self) -> io::Result<(u32, u32)> {
+        let metadata_page = self.read_page(0)?;
+        let root_page_num = u32::from_le_bytes(metadata_page[0..4].try_into().unwrap());
+        let free_page_num = u32::from_le_bytes(metadata_page[4..8].try_into().unwrap());
+        self.root_page_num = root_page_num;
+        self.free_page_num = free_page_num;
+
+        Ok((root_page_num, free_page_num))
+    }
+
+    /// Writes the current pager metadata (root and free page numbers) to page 0.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful,
+    /// or [`Err`]\([`io::Error`]) if the metadata page could not be written.
+    pub fn save_metadata(&mut self) -> io::Result<()> {
+        let mut metadata_page = self.new_page();
+        metadata_page[0..4].copy_from_slice(&self.root_page_num.to_le_bytes());
+        metadata_page[4..8].copy_from_slice(&self.free_page_num.to_le_bytes());
+
+        self.write_page(0, &metadata_page)
     }
 
     /// Reads a specific page from the file.
@@ -78,7 +161,7 @@ impl Pager {
             ));
         }
 
-        let mut page = [0u8; PAGE_SIZE];
+        let mut page = self.new_page();
         self.file
             .seek(SeekFrom::Start(page_num as u64 * PAGE_SIZE as u64))?;
         self.file.read_exact(&mut page)?;
@@ -122,8 +205,18 @@ impl Pager {
     /// Returns [`Ok`]\([`u32`]) with the new page number,
     /// or [`Err`]\([`io::Error`]) if the allocation failed.
     pub fn allocate_page(&mut self) -> io::Result<u32> {
+        if self.root_page_num != 0 {
+            let reused_page_num = self.free_page_num;
+            let page = self.read_page(reused_page_num)?;
+            self.free_page_num = u32::from_le_bytes(page[0..4].try_into().unwrap());
+            self.save_metadata()?;
+
+            self.write_page(reused_page_num, &self.new_page())?;
+            return Ok(reused_page_num);
+        }
+
         let page_num = self.total_pages;
-        let empty_page = [0u8; PAGE_SIZE];
+        let empty_page = self.new_page();
 
         self.file
             .seek(SeekFrom::Start(page_num as u64 * PAGE_SIZE as u64))?;
@@ -131,6 +224,31 @@ impl Pager {
         self.total_pages += 1;
 
         Ok(page_num)
+    }
+
+    /// Frees a page by adding it to the free page list.
+    ///
+    /// ## Arguments
+    ///
+    /// * `page_num` - The page number to free.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful,
+    /// or [`Err`]\([`io::Error`]) if the page number is invalid or the write failed.
+    pub fn free_page(&mut self, page_num: u32) -> io::Result<()> {
+        if page_num == 0 || page_num >= self.total_pages {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Invalid page number to free.",
+            ));
+        }
+
+        let mut page = self.new_page();
+        page[0..4].copy_from_slice(&self.free_page_num.to_le_bytes());
+        self.write_page(page_num, &page)?;
+        self.free_page_num = page_num;
+        self.save_metadata()
     }
 
     /// Returns the total number of pages in the file.
