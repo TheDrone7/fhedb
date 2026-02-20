@@ -100,8 +100,8 @@ pub struct NodeHeader {
     pub node_type: NodeType,
     /// The number of keys currently stored in the node.
     pub keys_count: u16,
-    /// The offset in bytes to the start of the free space in the node.
-    pub free_space: u16,
+    /// The offset in bytes to the start of the free heap space in the node.
+    pub heap_pointer: u16,
     /// The page number of the parent node. If 0, there is no parent (root node).
     pub parent_page: u32,
     /// The page number of the next leaf node (only for leaf nodes). If 0, there is no next page.
@@ -123,7 +123,7 @@ impl NodeHeader {
         Self {
             node_type: NodeType::from(bytes[0]),
             keys_count: u16::from_le_bytes(bytes[1..3].try_into().unwrap()),
-            free_space: u16::from_le_bytes(bytes[3..5].try_into().unwrap()),
+            heap_pointer: u16::from_le_bytes(bytes[3..5].try_into().unwrap()),
             parent_page: u32::from_le_bytes(bytes[5..9].try_into().unwrap()),
             next_page: u32::from_le_bytes(bytes[9..13].try_into().unwrap()),
             first_child: u32::from_le_bytes(bytes[13..17].try_into().unwrap()),
@@ -136,7 +136,7 @@ impl NodeHeader {
 
         bytes[0] = self.node_type as u8;
         bytes[1..3].copy_from_slice(&self.keys_count.to_le_bytes());
-        bytes[3..5].copy_from_slice(&self.free_space.to_le_bytes());
+        bytes[3..5].copy_from_slice(&self.heap_pointer.to_le_bytes());
         bytes[5..9].copy_from_slice(&self.parent_page.to_le_bytes());
         bytes[9..13].copy_from_slice(&self.next_page.to_le_bytes());
         bytes[13..17].copy_from_slice(&self.first_child.to_le_bytes());
@@ -173,7 +173,7 @@ impl<'a> Node<'a> {
         let header = NodeHeader {
             node_type,
             keys_count: 0,
-            free_space: PAGE_SIZE as u16,
+            heap_pointer: PAGE_SIZE as u16,
             parent_page,
             next_page: 0,
             first_child: 0,
@@ -232,11 +232,11 @@ impl<'a> Node<'a> {
         let data_length = data.len() as u16;
 
         let ptr_array_end = NodeHeader::SIZE + ((header.keys_count + 1) as usize * SLOT_SIZE);
-        if ptr_array_end > (header.free_space - data_length) as usize {
+        if ptr_array_end > (header.heap_pointer - data_length) as usize {
             return Err("Node overflow: insufficient space for new cell");
         }
 
-        let new_data_offset = header.free_space - data_length;
+        let new_data_offset = header.heap_pointer - data_length;
         self.0[new_data_offset as usize..(new_data_offset + data_length) as usize]
             .copy_from_slice(data);
 
@@ -255,7 +255,7 @@ impl<'a> Node<'a> {
             .copy_from_slice(&data_length.to_le_bytes());
 
         header.keys_count += 1;
-        header.free_space = new_data_offset;
+        header.heap_pointer = new_data_offset;
         self.set_header(header);
         Ok(())
     }
@@ -325,7 +325,7 @@ impl<'a> Node<'a> {
             self.0.copy_within(shift_start..shift_end, slot_offset);
         }
 
-        let move_start = header.free_space as usize;
+        let move_start = header.heap_pointer as usize;
         let move_end = cell_offset as usize;
         let move_dest = move_start + cell_length as usize;
 
@@ -347,7 +347,40 @@ impl<'a> Node<'a> {
         }
 
         header.keys_count -= 1;
-        header.free_space += cell_length;
+        header.heap_pointer += cell_length;
         self.set_header(header);
+    }
+
+    /// Updates the value of a cell in the node.
+    ///
+    /// ## Arguments
+    ///
+    /// * `idx` - The index of the cell to be updated.
+    /// * `new_value` - The new value to be stored for the cell.
+    pub fn update_leaf_value(&mut self, idx: u16, new_value: &[u8; 16]) {
+        let header = self.get_header();
+        if idx >= header.keys_count {
+            return;
+        }
+
+        let slot_offset = NodeHeader::SIZE + (idx as usize * SLOT_SIZE);
+        let cell_offset =
+            u16::from_le_bytes(self.0[slot_offset..slot_offset + 2].try_into().unwrap()) as usize;
+        let cell_length =
+            u16::from_le_bytes(self.0[slot_offset + 2..slot_offset + 4].try_into().unwrap())
+                as usize;
+        let value_offset = cell_offset + cell_length - 16;
+
+        self.0[value_offset..value_offset + 16].copy_from_slice(new_value);
+    }
+
+    /// Returns the amount of space in the node currently in use.
+    /// The amount is in bytes and excludes the node header.
+    pub fn used_space(&self) -> usize {
+        let header = self.get_header();
+        let slot_space = (header.keys_count as usize) * SLOT_SIZE;
+        let heap_space = PAGE_SIZE - (header.heap_pointer as usize);
+
+        slot_space + heap_space
     }
 }
