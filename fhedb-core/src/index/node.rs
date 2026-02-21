@@ -232,7 +232,7 @@ impl<'a> Node<'a> {
         let data_length = data.len() as u16;
 
         let ptr_array_end = NodeHeader::SIZE + ((header.keys_count + 1) as usize * SLOT_SIZE);
-        if ptr_array_end > (header.heap_pointer - data_length) as usize {
+        if ptr_array_end + data_length as usize > header.heap_pointer as usize {
             return Err("Node overflow: insufficient space for new cell");
         }
 
