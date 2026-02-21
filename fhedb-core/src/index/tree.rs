@@ -665,7 +665,7 @@ impl BPlusTree {
         self.pager.free_page(right_page_num)?;
         self.delete_internal(parent_page_num, remove_idx)?;
 
-        Ok(false)
+        Ok(true)
     }
 
     /// Removes a separator key from an internal node after a leaf merge.
@@ -687,6 +687,7 @@ impl BPlusTree {
         if parent_page_num == self.pager.root_page_num() && header.keys_count == 0 {
             self.pager.set_root(header.first_child)?;
             self.pager.free_page(parent_page_num)?;
+            self.update_parent(header.first_child, 0)?;
         } else {
             self.pager.write_page(parent_page_num, &page)?;
         }
@@ -695,7 +696,7 @@ impl BPlusTree {
     }
 
     /// Returns a reference to the underlying pager.
-    pub fn pager(&self) -> &Pager {
-        &self.pager
+    pub fn pager(&mut self) -> &mut Pager {
+        &mut self.pager
     }
 }
