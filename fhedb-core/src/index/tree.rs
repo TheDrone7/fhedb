@@ -454,43 +454,59 @@ impl BPlusTree {
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok`]\([`Vec<[u8; 16]>`]) with matching values,
+    /// Returns [`Ok`]\([`Iterator`]) containing matching values,
     /// or [`Err`]\([`io::Error`]) on I/O failure.
-    pub fn scan(&mut self, start_key: &[u8], end_key: &[u8]) -> io::Result<Vec<[u8; 16]>> {
-        let mut results = Vec::new();
-        let mut page_num = self.find_leaf(start_key)?;
-        let mut is_first_page = true;
+    pub fn scan<'a>(
+        &'a mut self,
+        start_key: &[u8],
+        end_key: &[u8],
+    ) -> io::Result<impl Iterator<Item = io::Result<(Vec<u8>, [u8; 16])>> + 'a> {
+        let page_num = self.find_leaf(start_key)?;
 
-        loop {
-            if page_num == 0 {
-                break;
-            }
-
+        let start_idx = {
             let mut page = self.pager.read_page(page_num)?;
             let node = Node::new(&mut page);
-            let header = node.get_header();
-            let (start, _) = if is_first_page {
-                is_first_page = false;
-                node.binary_search(start_key)
-            } else {
-                (0, false)
-            };
+            let (idx, _) = node.binary_search(start_key);
+            idx
+        };
 
-            for i in start..header.keys_count {
-                let cell_data = node.get_cell_data(i);
-                let cell = LeafCell::from_bytes(cell_data);
+        let mut current_page_num = page_num;
+        let mut current_idx = start_idx;
+        let end_key_owned = end_key.to_vec();
 
-                if cell.key > end_key {
-                    return Ok(results);
+        Ok(std::iter::from_fn(move || {
+            loop {
+                if current_page_num == 0 {
+                    return None;
                 }
 
-                results.push(*cell.value);
+                let mut page = match self.pager.read_page(current_page_num) {
+                    Ok(p) => p,
+                    Err(e) => return Some(Err(e)),
+                };
+
+                let node = Node::new(&mut page);
+                let header = node.get_header();
+                if current_idx >= header.keys_count {
+                    current_page_num = header.next_page;
+                    current_idx = 0;
+                    continue;
+                }
+
+                let cell_data = node.get_cell_data(current_idx);
+                let cell = LeafCell::from_bytes(cell_data);
+
+                if cell.key > end_key_owned.as_slice() {
+                    current_page_num = 0;
+                    return None;
+                }
+
+                let result = (cell.key.to_vec(), *cell.value);
+                current_idx += 1;
+
+                return Some(Ok(result));
             }
-
-            page_num = header.next_page;
-        }
-
-        Ok(results)
+        }))
     }
 
     /// Deletes a key and its associated value from the tree.

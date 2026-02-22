@@ -409,12 +409,20 @@ fn scan_range() {
         .unwrap();
     }
 
-    let results = tree.scan(b"key_003", b"key_006").unwrap();
-    assert_eq!(results.len(), 4);
-    for (j, i) in (3u32..=6).enumerate() {
-        let expected: [u8; 16] = i.to_le_bytes().repeat(4).try_into().unwrap();
-        assert_eq!(results[j], expected);
+    let results = tree.scan(b"key_003", b"key_006");
+    assert!(results.is_ok());
+
+    let mut iter = results.unwrap();
+    for i in 3u32..=6 {
+        let entry = iter.next();
+        assert!(entry.is_some());
+        let (key, value) = entry.unwrap().unwrap();
+        let expected_key = format!("key_{:03}", i);
+        let expected_val: [u8; 16] = i.to_le_bytes().repeat(4).try_into().unwrap();
+        assert_eq!(key, expected_key.as_bytes());
+        assert_eq!(value, expected_val);
     }
+    assert!(iter.next().is_none());
 }
 
 #[test]
@@ -434,8 +442,8 @@ fn scan_empty_range() {
         .unwrap();
     }
 
-    let results = tree.scan(b"zzz_start", b"zzz_end").unwrap();
-    assert!(results.is_empty());
+    let mut iter = tree.scan(b"zzz_start", b"zzz_end").unwrap();
+    assert!(iter.next().is_none());
 }
 
 #[test]
@@ -460,10 +468,15 @@ fn scan_across_leaves() {
 
     let start = format!("key_{:0>200}", 5u32);
     let end = format!("key_{:0>200}", 18u32);
-    let results = tree.scan(start.as_bytes(), end.as_bytes()).unwrap();
-    assert_eq!(results.len(), 14);
-    for (j, i) in (5u32..=18).enumerate() {
-        let expected: [u8; 16] = i.to_le_bytes().repeat(4).try_into().unwrap();
-        assert_eq!(results[j], expected);
+    let mut iter = tree.scan(start.as_bytes(), end.as_bytes()).unwrap();
+    for i in 5u32..=18 {
+        let entry = iter.next();
+        assert!(entry.is_some());
+        let (key, value) = entry.unwrap().unwrap();
+        let expected_key = format!("key_{:0>200}", i);
+        let expected_val: [u8; 16] = i.to_le_bytes().repeat(4).try_into().unwrap();
+        assert_eq!(key, expected_key.as_bytes());
+        assert_eq!(value, expected_val);
     }
+    assert!(iter.next().is_none());
 }
