@@ -458,21 +458,36 @@ impl BPlusTree {
     /// or [`Err`]\([`io::Error`]) on I/O failure.
     pub fn scan<'a>(
         &'a mut self,
-        start_key: &[u8],
-        end_key: &[u8],
+        start_key: Option<&[u8]>,
+        end_key: Option<&[u8]>,
     ) -> io::Result<impl Iterator<Item = io::Result<(Vec<u8>, [u8; 16])>> + 'a> {
-        let page_num = self.find_leaf(start_key)?;
+        let (mut current_page_num, mut current_idx) = if let Some(key) = start_key {
+            let page_num = self.find_leaf(key)?;
+            let start_idx = {
+                let mut page = self.pager.read_page(page_num)?;
+                let node = Node::new(&mut page);
+                let (idx, _) = node.binary_search(key);
+                idx
+            };
+            (page_num, start_idx)
+        } else {
+            let mut page_num = self.pager.root_page_num();
+            loop {
+                let mut page = self.pager.read_page(page_num)?;
+                let node = Node::new(&mut page);
+                let header = node.get_header();
 
-        let start_idx = {
-            let mut page = self.pager.read_page(page_num)?;
-            let node = Node::new(&mut page);
-            let (idx, _) = node.binary_search(start_key);
-            idx
+                if header.node_type == NodeType::Leaf {
+                    break;
+                }
+
+                page_num = header.first_child;
+            }
+
+            (page_num, 0)
         };
 
-        let mut current_page_num = page_num;
-        let mut current_idx = start_idx;
-        let end_key_owned = end_key.to_vec();
+        let end_key_owned = end_key.map(|k| k.to_vec());
 
         Ok(std::iter::from_fn(move || {
             loop {
@@ -496,7 +511,9 @@ impl BPlusTree {
                 let cell_data = node.get_cell_data(current_idx);
                 let cell = LeafCell::from_bytes(cell_data);
 
-                if cell.key > end_key_owned.as_slice() {
+                if let Some(ref end) = end_key_owned
+                    && cell.key > end.as_slice()
+                {
                     current_page_num = 0;
                     return None;
                 }

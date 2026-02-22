@@ -409,7 +409,7 @@ fn scan_range() {
         .unwrap();
     }
 
-    let results = tree.scan(b"key_003", b"key_006");
+    let results = tree.scan(Some(b"key_003"), Some(b"key_006"));
     assert!(results.is_ok());
 
     let mut iter = results.unwrap();
@@ -442,7 +442,7 @@ fn scan_empty_range() {
         .unwrap();
     }
 
-    let mut iter = tree.scan(b"zzz_start", b"zzz_end").unwrap();
+    let mut iter = tree.scan(Some(b"zzz_start"), Some(b"zzz_end")).unwrap();
     assert!(iter.next().is_none());
 }
 
@@ -468,8 +468,111 @@ fn scan_across_leaves() {
 
     let start = format!("key_{:0>200}", 5u32);
     let end = format!("key_{:0>200}", 18u32);
-    let mut iter = tree.scan(start.as_bytes(), end.as_bytes()).unwrap();
+    let mut iter = tree
+        .scan(Some(start.as_bytes()), Some(end.as_bytes()))
+        .unwrap();
     for i in 5u32..=18 {
+        let entry = iter.next();
+        assert!(entry.is_some());
+        let (key, value) = entry.unwrap().unwrap();
+        let expected_key = format!("key_{:0>200}", i);
+        let expected_val: [u8; 16] = i.to_le_bytes().repeat(4).try_into().unwrap();
+        assert_eq!(key, expected_key.as_bytes());
+        assert_eq!(value, expected_val);
+    }
+    assert!(iter.next().is_none());
+}
+
+#[test]
+fn scan_no_start() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("test.idx");
+
+    let pager = Pager::new(&path).unwrap();
+    let mut tree = BPlusTree::open(pager).unwrap();
+
+    for i in 0..20u32 {
+        let key = format!("key_{:0>200}", i);
+        tree.insert(
+            key.as_bytes(),
+            &i.to_le_bytes().repeat(4).try_into().unwrap(),
+        )
+        .unwrap();
+    }
+
+    let root_after = tree.pager().root_page_num();
+    assert_ne!(root_after, 1);
+
+    let end = format!("key_{:0>200}", 10u32);
+    let mut iter = tree.scan(None, Some(end.as_bytes())).unwrap();
+    for i in 0u32..=10 {
+        let entry = iter.next();
+        assert!(entry.is_some());
+        let (key, value) = entry.unwrap().unwrap();
+        let expected_key = format!("key_{:0>200}", i);
+        let expected_val: [u8; 16] = i.to_le_bytes().repeat(4).try_into().unwrap();
+        assert_eq!(key, expected_key.as_bytes());
+        assert_eq!(value, expected_val);
+    }
+    assert!(iter.next().is_none());
+}
+
+#[test]
+fn scan_no_end() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("test.idx");
+
+    let pager = Pager::new(&path).unwrap();
+    let mut tree = BPlusTree::open(pager).unwrap();
+
+    for i in 0..20u32 {
+        let key = format!("key_{:0>200}", i);
+        tree.insert(
+            key.as_bytes(),
+            &i.to_le_bytes().repeat(4).try_into().unwrap(),
+        )
+        .unwrap();
+    }
+
+    let root_after = tree.pager().root_page_num();
+    assert_ne!(root_after, 1);
+
+    let start = format!("key_{:0>200}", 12u32);
+    let mut iter = tree.scan(Some(start.as_bytes()), None).unwrap();
+    for i in 12u32..=19 {
+        let entry = iter.next();
+        assert!(entry.is_some());
+        let (key, value) = entry.unwrap().unwrap();
+        let expected_key = format!("key_{:0>200}", i);
+        let expected_val: [u8; 16] = i.to_le_bytes().repeat(4).try_into().unwrap();
+        assert_eq!(key, expected_key.as_bytes());
+        assert_eq!(value, expected_val);
+    }
+    assert!(iter.next().is_none());
+}
+
+#[test]
+fn scan_all() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("test.idx");
+
+    let pager = Pager::new(&path).unwrap();
+    let mut tree = BPlusTree::open(pager).unwrap();
+
+    for i in 0..20u32 {
+        let key = format!("key_{:0>200}", i);
+        tree.insert(
+            key.as_bytes(),
+            &i.to_le_bytes().repeat(4).try_into().unwrap(),
+        )
+        .unwrap();
+    }
+
+    let root_after = tree.pager().root_page_num();
+    assert_ne!(root_after, 1);
+
+    let mut iter = tree.scan(None, None).unwrap();
+    for i in 0u32..20 {
         let entry = iter.next();
         assert!(entry.is_some());
         let (key, value) = entry.unwrap().unwrap();
