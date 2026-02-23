@@ -56,6 +56,38 @@ impl DocId {
             DocId::U64(value) => bson::Bson::Int64(*value as i64),
         }
     }
+
+    /// Converts the document ID to a byte vector.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let bytes = match self {
+            Self::String(s) => s.as_bytes(),
+            Self::U64(v) => &v.to_be_bytes(),
+        };
+        let mut result = Vec::with_capacity(bytes.len());
+        result.push(match self {
+            Self::String(_) => 0u8,
+            Self::U64(_) => 1u8,
+        });
+        result.extend_from_slice(bytes);
+        result
+    }
+
+    /// Creates a [`DocId`] from a byte slice.
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        match bytes.first() {
+            Some(0u8) => bytes[1..]
+                .iter()
+                .map(|&b| b as char)
+                .collect::<String>()
+                .into(),
+            Some(1u8) => bytes[1..]
+                .try_into()
+                .map(u64::from_be_bytes)
+                .map(Self::from_u64)
+                .expect("Invalid bytes for u64 DocId"),
+            _ => panic!("Invalid bytes for DocId"),
+        }
+    }
 }
 
 impl Default for DocId {
