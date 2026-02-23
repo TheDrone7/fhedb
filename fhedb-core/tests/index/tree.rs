@@ -19,15 +19,15 @@ fn reopen_existing_tree() {
 
     let pager = Pager::new(&path).unwrap();
     let mut tree = BPlusTree::open(pager).unwrap();
-    tree.insert(b"alpha", &[1u8; 16]).unwrap();
-    tree.insert(b"beta", &[2u8; 16]).unwrap();
-    tree.insert(b"gamma", &[3u8; 16]).unwrap();
+    tree.insert(b"alpha", &[1u8; 8]).unwrap();
+    tree.insert(b"beta", &[2u8; 8]).unwrap();
+    tree.insert(b"gamma", &[3u8; 8]).unwrap();
 
     let pager = Pager::new(&path).unwrap();
     let mut tree = BPlusTree::open(pager).unwrap();
-    assert_eq!(tree.get(b"alpha").unwrap(), Some([1u8; 16]));
-    assert_eq!(tree.get(b"beta").unwrap(), Some([2u8; 16]));
-    assert_eq!(tree.get(b"gamma").unwrap(), Some([3u8; 16]));
+    assert_eq!(tree.get(b"alpha").unwrap(), Some([1u8; 8]));
+    assert_eq!(tree.get(b"beta").unwrap(), Some([2u8; 8]));
+    assert_eq!(tree.get(b"gamma").unwrap(), Some([3u8; 8]));
     assert!(tree.get(b"delta").unwrap().is_none());
 }
 
@@ -38,9 +38,9 @@ fn insert_duplicate_key_error() {
 
     let pager = Pager::new(&path).unwrap();
     let mut tree = BPlusTree::open(pager).unwrap();
-    tree.insert(b"key1", &[1u8; 16]).unwrap();
+    tree.insert(b"key1", &[1u8; 8]).unwrap();
 
-    let result = tree.insert(b"key1", &[2u8; 16]);
+    let result = tree.insert(b"key1", &[2u8; 8]);
     assert!(result.is_err());
     assert_eq!(
         result.unwrap_err().kind(),
@@ -49,7 +49,7 @@ fn insert_duplicate_key_error() {
 
     let pager = Pager::new(&path).unwrap();
     let mut tree = BPlusTree::open(pager).unwrap();
-    assert_eq!(tree.get(b"key1").unwrap(), Some([1u8; 16]));
+    assert_eq!(tree.get(b"key1").unwrap(), Some([1u8; 8]));
 }
 
 #[test]
@@ -61,7 +61,7 @@ fn insert_key_too_large() {
     let mut tree = BPlusTree::open(pager).unwrap();
 
     let big_key = [0xFFu8; 4096];
-    let result = tree.insert(&big_key, &[1u8; 16]);
+    let result = tree.insert(&big_key, &[1u8; 8]);
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().kind(), std::io::ErrorKind::InvalidInput);
 
@@ -83,31 +83,23 @@ fn insert_triggers_splits() {
 
     let initial_root = tree.pager().root_page_num();
 
-    for i in 0..20u32 {
+    for i in 0..20u64 {
         let key = format!("key_{:0>200}", i);
-        tree.insert(
-            key.as_bytes(),
-            &i.to_le_bytes().repeat(4).try_into().unwrap(),
-        )
-        .unwrap();
+        tree.insert(key.as_bytes(), &i.to_le_bytes()).unwrap();
     }
 
     let root_after_leaf_splits = tree.pager().root_page_num();
     assert_ne!(root_after_leaf_splits, initial_root);
 
-    for i in 20..300u32 {
+    for i in 20..300u64 {
         let key = format!("key_{:0>200}", i);
-        tree.insert(
-            key.as_bytes(),
-            &i.to_le_bytes().repeat(4).try_into().unwrap(),
-        )
-        .unwrap();
+        tree.insert(key.as_bytes(), &i.to_le_bytes()).unwrap();
     }
 
     let root_after_internal_splits = tree.pager().root_page_num();
     assert_ne!(root_after_internal_splits, root_after_leaf_splits);
 
-    for i in 0..300u32 {
+    for i in 0..300u64 {
         let key = format!("key_{:0>200}", i);
         assert!(tree.get(key.as_bytes()).unwrap().is_some());
     }
@@ -129,7 +121,7 @@ fn split_leaf_distributes_cells() {
     for (i, key) in keys.iter().enumerate() {
         let cell = LeafCell {
             key,
-            value: &[i as u8; 16],
+            value: &[i as u8; 8],
         };
         left.insert_cell(i as u16, &cell.to_bytes()).unwrap();
     }
@@ -215,15 +207,15 @@ fn update_existing_key() {
 
     let pager = Pager::new(&path).unwrap();
     let mut tree = BPlusTree::open(pager).unwrap();
-    tree.insert(b"key1", &[1u8; 16]).unwrap();
+    tree.insert(b"key1", &[1u8; 8]).unwrap();
 
     let page_count_before = tree.pager().page_count();
-    assert_eq!(tree.get(b"key1").unwrap(), Some([1u8; 16]));
+    assert_eq!(tree.get(b"key1").unwrap(), Some([1u8; 8]));
 
-    tree.update(b"key1", &[9u8; 16]).unwrap();
+    tree.update(b"key1", &[9u8; 8]).unwrap();
 
     assert_eq!(tree.pager().page_count(), page_count_before);
-    assert_eq!(tree.get(b"key1").unwrap(), Some([9u8; 16]));
+    assert_eq!(tree.get(b"key1").unwrap(), Some([9u8; 8]));
 }
 
 #[test]
@@ -235,7 +227,7 @@ fn update_nonexistent_key_error() {
     let mut tree = BPlusTree::open(pager).unwrap();
 
     let page_count_before = tree.pager().page_count();
-    let result = tree.update(b"missing", &[1u8; 16]);
+    let result = tree.update(b"missing", &[1u8; 8]);
     assert!(result.is_err());
     assert_eq!(result.unwrap_err().kind(), std::io::ErrorKind::NotFound);
     assert_eq!(tree.pager().page_count(), page_count_before);
@@ -248,8 +240,8 @@ fn delete_existing_key() {
 
     let pager = Pager::new(&path).unwrap();
     let mut tree = BPlusTree::open(pager).unwrap();
-    tree.insert(b"key1", &[1u8; 16]).unwrap();
-    tree.insert(b"key2", &[2u8; 16]).unwrap();
+    tree.insert(b"key1", &[1u8; 8]).unwrap();
+    tree.insert(b"key2", &[2u8; 8]).unwrap();
 
     let root = tree.pager().root_page_num();
     let mut root_page = tree.pager().read_page(root).unwrap();
@@ -262,7 +254,7 @@ fn delete_existing_key() {
     assert_eq!(Node::new(&mut root_page).get_header().keys_count, 1);
 
     assert!(tree.get(b"key1").unwrap().is_none());
-    assert_eq!(tree.get(b"key2").unwrap(), Some([2u8; 16]));
+    assert_eq!(tree.get(b"key2").unwrap(), Some([2u8; 8]));
     assert_eq!(tree.pager().page_count(), page_count_before);
 }
 
@@ -273,12 +265,12 @@ fn delete_nonexistent_key() {
 
     let pager = Pager::new(&path).unwrap();
     let mut tree = BPlusTree::open(pager).unwrap();
-    tree.insert(b"key1", &[1u8; 16]).unwrap();
+    tree.insert(b"key1", &[1u8; 8]).unwrap();
 
     let page_count_before = tree.pager().page_count();
     tree.delete(b"missing").unwrap();
 
-    assert_eq!(tree.get(b"key1").unwrap(), Some([1u8; 16]));
+    assert_eq!(tree.get(b"key1").unwrap(), Some([1u8; 8]));
     assert_eq!(tree.pager().page_count(), page_count_before);
 }
 
@@ -290,25 +282,21 @@ fn delete_triggers_merge() {
     let pager = Pager::new(&path).unwrap();
     let mut tree = BPlusTree::open(pager).unwrap();
 
-    for i in 0..20u32 {
+    for i in 0..20u64 {
         let key = format!("key_{:0>200}", i);
-        tree.insert(
-            key.as_bytes(),
-            &i.to_le_bytes().repeat(4).try_into().unwrap(),
-        )
-        .unwrap();
+        tree.insert(key.as_bytes(), &i.to_le_bytes()).unwrap();
     }
 
     assert_eq!(tree.pager().free_page_num(), 0);
 
-    for i in 0..15u32 {
+    for i in 0..15u64 {
         let key = format!("key_{:0>200}", i);
         tree.delete(key.as_bytes()).unwrap();
     }
 
     assert_ne!(tree.pager().free_page_num(), 0);
 
-    for i in 15..20u32 {
+    for i in 15..20u64 {
         let key = format!("key_{:0>200}", i);
         assert!(tree.get(key.as_bytes()).unwrap().is_some());
     }
@@ -334,11 +322,11 @@ fn merge_leaves_combines_nodes() {
     left.set_header(lh);
     let cell_a = LeafCell {
         key: b"aaa",
-        value: &[1u8; 16],
+        value: &[1u8; 8],
     };
     let cell_b = LeafCell {
         key: b"bbb",
-        value: &[2u8; 16],
+        value: &[2u8; 8],
     };
     left.insert_cell(0, &cell_a.to_bytes()).unwrap();
     left.insert_cell(1, &cell_b.to_bytes()).unwrap();
@@ -349,11 +337,11 @@ fn merge_leaves_combines_nodes() {
     right.init(NodeType::Leaf, parent_page_num);
     let cell_c = LeafCell {
         key: b"ccc",
-        value: &[3u8; 16],
+        value: &[3u8; 8],
     };
     let cell_d = LeafCell {
         key: b"ddd",
-        value: &[4u8; 16],
+        value: &[4u8; 8],
     };
     right.insert_cell(0, &cell_c.to_bytes()).unwrap();
     right.insert_cell(1, &cell_d.to_bytes()).unwrap();
@@ -400,25 +388,21 @@ fn scan_range() {
     let pager = Pager::new(&path).unwrap();
     let mut tree = BPlusTree::open(pager).unwrap();
 
-    for i in 0..10u32 {
+    for i in 0..10u64 {
         let key = format!("key_{:03}", i);
-        tree.insert(
-            key.as_bytes(),
-            &i.to_le_bytes().repeat(4).try_into().unwrap(),
-        )
-        .unwrap();
+        tree.insert(key.as_bytes(), &i.to_le_bytes()).unwrap();
     }
 
     let results = tree.scan(Some(b"key_003"), Some(b"key_006"));
     assert!(results.is_ok());
 
     let mut iter = results.unwrap();
-    for i in 3u32..=6 {
+    for i in 3u64..=6 {
         let entry = iter.next();
         assert!(entry.is_some());
         let (key, value) = entry.unwrap().unwrap();
         let expected_key = format!("key_{:03}", i);
-        let expected_val: [u8; 16] = i.to_le_bytes().repeat(4).try_into().unwrap();
+        let expected_val: [u8; 8] = i.to_le_bytes();
         assert_eq!(key, expected_key.as_bytes());
         assert_eq!(value, expected_val);
     }
@@ -433,13 +417,9 @@ fn scan_empty_range() {
     let pager = Pager::new(&path).unwrap();
     let mut tree = BPlusTree::open(pager).unwrap();
 
-    for i in 0..5u32 {
+    for i in 0..5u64 {
         let key = format!("key_{:03}", i);
-        tree.insert(
-            key.as_bytes(),
-            &i.to_le_bytes().repeat(4).try_into().unwrap(),
-        )
-        .unwrap();
+        tree.insert(key.as_bytes(), &i.to_le_bytes()).unwrap();
     }
 
     let mut iter = tree.scan(Some(b"zzz_start"), Some(b"zzz_end")).unwrap();
@@ -454,29 +434,25 @@ fn scan_across_leaves() {
     let pager = Pager::new(&path).unwrap();
     let mut tree = BPlusTree::open(pager).unwrap();
 
-    for i in 0..20u32 {
+    for i in 0..20u64 {
         let key = format!("key_{:0>200}", i);
-        tree.insert(
-            key.as_bytes(),
-            &i.to_le_bytes().repeat(4).try_into().unwrap(),
-        )
-        .unwrap();
+        tree.insert(key.as_bytes(), &i.to_le_bytes()).unwrap();
     }
 
     let root_after = tree.pager().root_page_num();
     assert_ne!(root_after, 1);
 
-    let start = format!("key_{:0>200}", 5u32);
-    let end = format!("key_{:0>200}", 18u32);
+    let start = format!("key_{:0>200}", 5u64);
+    let end = format!("key_{:0>200}", 18u64);
     let mut iter = tree
         .scan(Some(start.as_bytes()), Some(end.as_bytes()))
         .unwrap();
-    for i in 5u32..=18 {
+    for i in 5u64..=18 {
         let entry = iter.next();
         assert!(entry.is_some());
         let (key, value) = entry.unwrap().unwrap();
         let expected_key = format!("key_{:0>200}", i);
-        let expected_val: [u8; 16] = i.to_le_bytes().repeat(4).try_into().unwrap();
+        let expected_val: [u8; 8] = i.to_le_bytes();
         assert_eq!(key, expected_key.as_bytes());
         assert_eq!(value, expected_val);
     }
@@ -491,26 +467,22 @@ fn scan_no_start() {
     let pager = Pager::new(&path).unwrap();
     let mut tree = BPlusTree::open(pager).unwrap();
 
-    for i in 0..20u32 {
+    for i in 0..20u64 {
         let key = format!("key_{:0>200}", i);
-        tree.insert(
-            key.as_bytes(),
-            &i.to_le_bytes().repeat(4).try_into().unwrap(),
-        )
-        .unwrap();
+        tree.insert(key.as_bytes(), &i.to_le_bytes()).unwrap();
     }
 
     let root_after = tree.pager().root_page_num();
     assert_ne!(root_after, 1);
 
-    let end = format!("key_{:0>200}", 10u32);
+    let end = format!("key_{:0>200}", 10u64);
     let mut iter = tree.scan(None, Some(end.as_bytes())).unwrap();
-    for i in 0u32..=10 {
+    for i in 0u64..=10 {
         let entry = iter.next();
         assert!(entry.is_some());
         let (key, value) = entry.unwrap().unwrap();
         let expected_key = format!("key_{:0>200}", i);
-        let expected_val: [u8; 16] = i.to_le_bytes().repeat(4).try_into().unwrap();
+        let expected_val: [u8; 8] = i.to_le_bytes();
         assert_eq!(key, expected_key.as_bytes());
         assert_eq!(value, expected_val);
     }
@@ -525,26 +497,22 @@ fn scan_no_end() {
     let pager = Pager::new(&path).unwrap();
     let mut tree = BPlusTree::open(pager).unwrap();
 
-    for i in 0..20u32 {
+    for i in 0..20u64 {
         let key = format!("key_{:0>200}", i);
-        tree.insert(
-            key.as_bytes(),
-            &i.to_le_bytes().repeat(4).try_into().unwrap(),
-        )
-        .unwrap();
+        tree.insert(key.as_bytes(), &i.to_le_bytes()).unwrap();
     }
 
     let root_after = tree.pager().root_page_num();
     assert_ne!(root_after, 1);
 
-    let start = format!("key_{:0>200}", 12u32);
+    let start = format!("key_{:0>200}", 12u64);
     let mut iter = tree.scan(Some(start.as_bytes()), None).unwrap();
-    for i in 12u32..=19 {
+    for i in 12u64..=19 {
         let entry = iter.next();
         assert!(entry.is_some());
         let (key, value) = entry.unwrap().unwrap();
         let expected_key = format!("key_{:0>200}", i);
-        let expected_val: [u8; 16] = i.to_le_bytes().repeat(4).try_into().unwrap();
+        let expected_val: [u8; 8] = i.to_le_bytes();
         assert_eq!(key, expected_key.as_bytes());
         assert_eq!(value, expected_val);
     }
@@ -559,25 +527,21 @@ fn scan_all() {
     let pager = Pager::new(&path).unwrap();
     let mut tree = BPlusTree::open(pager).unwrap();
 
-    for i in 0..20u32 {
+    for i in 0..20u64 {
         let key = format!("key_{:0>200}", i);
-        tree.insert(
-            key.as_bytes(),
-            &i.to_le_bytes().repeat(4).try_into().unwrap(),
-        )
-        .unwrap();
+        tree.insert(key.as_bytes(), &i.to_le_bytes()).unwrap();
     }
 
     let root_after = tree.pager().root_page_num();
     assert_ne!(root_after, 1);
 
     let mut iter = tree.scan(None, None).unwrap();
-    for i in 0u32..20 {
+    for i in 0u64..20 {
         let entry = iter.next();
         assert!(entry.is_some());
         let (key, value) = entry.unwrap().unwrap();
         let expected_key = format!("key_{:0>200}", i);
-        let expected_val: [u8; 16] = i.to_le_bytes().repeat(4).try_into().unwrap();
+        let expected_val: [u8; 8] = i.to_le_bytes();
         assert_eq!(key, expected_key.as_bytes());
         assert_eq!(value, expected_val);
     }

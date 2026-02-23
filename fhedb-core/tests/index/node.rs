@@ -25,14 +25,14 @@ fn header_bytes_round_trip() {
 #[test]
 fn leaf_cell_bytes_round_trip() {
     let key = b"hello";
-    let value = &[0x2Bu8; 16];
+    let value = &[0x2Bu8; 8];
     let cell = LeafCell { key, value };
 
     let bytes = cell.to_bytes();
     let restored = LeafCell::from_bytes(&bytes);
 
     assert_eq!(restored.key, b"hello");
-    assert_eq!(restored.value, &[0x2Bu8; 16]);
+    assert_eq!(restored.value, &[0x2Bu8; 8]);
 }
 
 #[test]
@@ -78,7 +78,7 @@ fn insert_single_cell() {
 
     let cell = LeafCell {
         key: b"abc",
-        value: &[1u8; 16],
+        value: &[1u8; 8],
     };
     node.insert_cell(0, &cell.to_bytes()).unwrap();
 
@@ -96,7 +96,7 @@ fn insert_multiple_cells_in_order() {
     for (i, key) in keys.iter().enumerate() {
         let cell = LeafCell {
             key,
-            value: &[i as u8; 16],
+            value: &[i as u8; 8],
         };
         node.insert_cell(i as u16, &cell.to_bytes()).unwrap();
     }
@@ -115,13 +115,13 @@ fn insert_cell_at_beginning() {
 
     let cell_b = LeafCell {
         key: b"bbb",
-        value: &[2u8; 16],
+        value: &[2u8; 8],
     };
     node.insert_cell(0, &cell_b.to_bytes()).unwrap();
 
     let cell_a = LeafCell {
         key: b"aaa",
-        value: &[1u8; 16],
+        value: &[1u8; 8],
     };
     node.insert_cell(0, &cell_a.to_bytes()).unwrap();
 
@@ -138,18 +138,18 @@ fn insert_cell_at_middle() {
 
     let cell_a = LeafCell {
         key: b"aaa",
-        value: &[1u8; 16],
+        value: &[1u8; 8],
     };
     let cell_c = LeafCell {
         key: b"ccc",
-        value: &[3u8; 16],
+        value: &[3u8; 8],
     };
     node.insert_cell(0, &cell_a.to_bytes()).unwrap();
     node.insert_cell(1, &cell_c.to_bytes()).unwrap();
 
     let cell_b = LeafCell {
         key: b"bbb",
-        value: &[2u8; 16],
+        value: &[2u8; 8],
     };
     node.insert_cell(1, &cell_b.to_bytes()).unwrap();
 
@@ -168,7 +168,7 @@ fn insert_cell_overflow() {
     let big_key = [0xFFu8; 2500];
     let cell = LeafCell {
         key: &big_key,
-        value: &[0u8; 16],
+        value: &[0u8; 8],
     };
     let bytes = cell.to_bytes();
     node.insert_cell(0, &bytes).unwrap();
@@ -176,7 +176,7 @@ fn insert_cell_overflow() {
     let big_key2 = [0xAFu8; 2500];
     let cell2 = LeafCell {
         key: &big_key2,
-        value: &[1u8; 16],
+        value: &[1u8; 8],
     };
     let result = node.insert_cell(1, &cell2.to_bytes());
     assert!(result.is_err());
@@ -193,7 +193,7 @@ fn binary_search_existing() {
     for (i, key) in keys.iter().enumerate() {
         let cell = LeafCell {
             key,
-            value: &[i as u8; 16],
+            value: &[i as u8; 8],
         };
         node.insert_cell(i as u16, &cell.to_bytes()).unwrap();
     }
@@ -214,7 +214,7 @@ fn binary_search_insert_position() {
     for (i, key) in keys.iter().enumerate() {
         let cell = LeafCell {
             key,
-            value: &[i as u8; 16],
+            value: &[i as u8; 8],
         };
         node.insert_cell(i as u16, &cell.to_bytes()).unwrap();
     }
@@ -244,7 +244,7 @@ fn delete_cell_end() {
     for (i, key) in keys.iter().enumerate() {
         let cell = LeafCell {
             key,
-            value: &[i as u8; 16],
+            value: &[i as u8; 8],
         };
         node.insert_cell(i as u16, &cell.to_bytes()).unwrap();
     }
@@ -266,7 +266,7 @@ fn delete_cell_beginning() {
     for (i, key) in keys.iter().enumerate() {
         let cell = LeafCell {
             key,
-            value: &[i as u8; 16],
+            value: &[i as u8; 8],
         };
         node.insert_cell(i as u16, &cell.to_bytes()).unwrap();
     }
@@ -288,7 +288,7 @@ fn delete_cell_middle() {
     for (i, key) in keys.iter().enumerate() {
         let cell = LeafCell {
             key,
-            value: &[i as u8; 16],
+            value: &[i as u8; 8],
         };
         node.insert_cell(i as u16, &cell.to_bytes()).unwrap();
     }
@@ -308,7 +308,7 @@ fn delete_cell_out_of_bounds() {
 
     let cell = LeafCell {
         key: b"aaa",
-        value: &[1u8; 16],
+        value: &[1u8; 8],
     };
     node.insert_cell(0, &cell.to_bytes()).unwrap();
 
@@ -326,22 +326,22 @@ fn update_leaf_value() {
 
     let cell = LeafCell {
         key: b"key",
-        value: &[1u8; 16],
+        value: &[1u8; 8],
     };
     node.insert_cell(0, &cell.to_bytes()).unwrap();
 
     let data = node.get_cell_data(0);
     let restored = LeafCell::from_bytes(data);
     assert_eq!(restored.key, b"key");
-    assert_eq!(restored.value, &[1u8; 16]);
+    assert_eq!(restored.value, &[1u8; 8]);
 
-    let new_value = [9u8; 16];
+    let new_value = [9u8; 8];
     node.update_leaf_value(0, &new_value);
 
     let data = node.get_cell_data(0);
     let restored = LeafCell::from_bytes(data);
     assert_eq!(restored.key, b"key");
-    assert_eq!(restored.value, &[9u8; 16]);
+    assert_eq!(restored.value, &[9u8; 8]);
 }
 
 #[test]
@@ -352,15 +352,15 @@ fn update_leaf_value_out_of_bounds() {
 
     let cell = LeafCell {
         key: b"key",
-        value: &[1u8; 16],
+        value: &[1u8; 8],
     };
     node.insert_cell(0, &cell.to_bytes()).unwrap();
 
-    node.update_leaf_value(5, &[9u8; 16]);
+    node.update_leaf_value(5, &[9u8; 8]);
 
     let data = node.get_cell_data(0);
     let restored = LeafCell::from_bytes(data);
-    assert_eq!(restored.value, &[1u8; 16]);
+    assert_eq!(restored.value, &[1u8; 8]);
 }
 
 #[test]
@@ -380,16 +380,16 @@ fn used_space_after_inserts() {
 
     let cell_a = LeafCell {
         key: b"aaa",
-        value: &[1u8; 16],
+        value: &[1u8; 8],
     };
     let cell_b = LeafCell {
         key: b"bbb",
-        value: &[2u8; 16],
+        value: &[2u8; 8],
     };
     node.insert_cell(0, &cell_a.to_bytes()).unwrap();
     node.insert_cell(1, &cell_b.to_bytes()).unwrap();
 
-    let cell_size = 2 + 3 + 16;
+    let cell_size = 2 + 3 + 8;
     let expected = 2 * SLOT_SIZE + 2 * cell_size;
     assert_eq!(node.used_space(), expected);
 }
@@ -402,11 +402,11 @@ fn used_space_after_delete() {
 
     let cell_a = LeafCell {
         key: b"aaa",
-        value: &[1u8; 16],
+        value: &[1u8; 8],
     };
     let cell_b = LeafCell {
         key: b"bbb",
-        value: &[2u8; 16],
+        value: &[2u8; 8],
     };
     node.insert_cell(0, &cell_a.to_bytes()).unwrap();
     node.insert_cell(1, &cell_b.to_bytes()).unwrap();
@@ -415,6 +415,6 @@ fn used_space_after_delete() {
     node.delete_cell(0);
     let after = node.used_space();
 
-    let cell_size = 2 + 3 + 16;
+    let cell_size = 2 + 3 + 8;
     assert_eq!(before - after, SLOT_SIZE + cell_size);
 }

@@ -91,13 +91,13 @@ impl BPlusTree {
     /// ## Arguments
     ///
     /// * `key` - The key bytes to insert.
-    /// * `value` - The 16-byte value to associate with the key.
+    /// * `value` - The 8-byte value to associate with the key.
     ///
     /// ## Returns
     ///
     /// Returns [`Ok`]\(()) if successful,
     /// or [`Err`]\([`io::Error`]) if the key already exists or the payload is too large.
-    pub fn insert(&mut self, key: &[u8], value: &[u8; 16]) -> io::Result<()> {
+    pub fn insert(&mut self, key: &[u8], value: &[u8; 8]) -> io::Result<()> {
         let cell = LeafCell { key, value };
         let cell_bytes = cell.to_bytes();
 
@@ -390,13 +390,13 @@ impl BPlusTree {
     /// ## Arguments
     ///
     /// * `key` - The key bytes to look up.
-    /// * `new_value` - The new 16-byte value to store.
+    /// * `new_value` - The new 8-byte value to store.
     ///
     /// ## Returns
     ///
     /// Returns [`Ok`]\(()) if successful,
     /// or [`Err`]\([`io::Error`]) if the key was not found.
-    pub fn update(&mut self, key: &[u8], new_value: &[u8; 16]) -> io::Result<()> {
+    pub fn update(&mut self, key: &[u8], new_value: &[u8; 8]) -> io::Result<()> {
         let page_num = self.find_leaf(key)?;
         let mut page = self.pager.read_page(page_num)?;
 
@@ -425,10 +425,10 @@ impl BPlusTree {
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok`]\([`Some`]\([`[u8; 16]`])) if found,
+    /// Returns [`Ok`]\([`Some`]\([`[u8; 8]`])) if found,
     /// [`Ok`]\([`None`]) if the key does not exist,
     /// or [`Err`]\([`io::Error`]) on I/O failure.
-    pub fn get(&mut self, key: &[u8]) -> io::Result<Option<[u8; 16]>> {
+    pub fn get(&mut self, key: &[u8]) -> io::Result<Option<[u8; 8]>> {
         let page_num = self.find_leaf(key)?;
         let mut page = self.pager.read_page(page_num)?;
 
@@ -460,7 +460,7 @@ impl BPlusTree {
         &'a mut self,
         start_key: Option<&[u8]>,
         end_key: Option<&[u8]>,
-    ) -> io::Result<impl Iterator<Item = io::Result<(Vec<u8>, [u8; 16])>> + 'a> {
+    ) -> io::Result<impl Iterator<Item = io::Result<(Vec<u8>, [u8; 8])>> + 'a> {
         let (mut current_page_num, mut current_idx) = if let Some(key) = start_key {
             let page_num = self.find_leaf(key)?;
             let start_idx = {

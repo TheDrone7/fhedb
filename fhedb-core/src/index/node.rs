@@ -5,12 +5,12 @@
 use crate::index::pager::{PAGE_SIZE, Page};
 use std::{cmp::Ordering, convert::TryInto};
 
-/// A cell within a leaf node, containing a key and a 16-byte record pointer.
+/// A cell within a leaf node, containing a key and a 8-byte record pointer.
 pub struct LeafCell<'a> {
     /// The key bytes for this cell.
     pub key: &'a [u8],
-    /// The 16-byte value (record pointer) associated with the key.
-    pub value: &'a [u8; 16],
+    /// The 8-byte value (record pointer) associated with the key.
+    pub value: &'a [u8; 8],
 }
 
 impl<'a> LeafCell<'a> {
@@ -22,7 +22,7 @@ impl<'a> LeafCell<'a> {
     pub fn from_bytes(bytes: &'a [u8]) -> Self {
         let key_length = u16::from_le_bytes(bytes[0..2].try_into().unwrap()) as usize;
         let key = &bytes[2..2 + key_length];
-        let value = bytes[2 + key_length..2 + key_length + 16]
+        let value = bytes[2 + key_length..2 + key_length + 8]
             .try_into()
             .unwrap();
         Self { key, value }
@@ -30,7 +30,7 @@ impl<'a> LeafCell<'a> {
 
     /// Converts the leaf cell to a byte array for storage.
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(2 + self.key.len() + 16);
+        let mut bytes = Vec::with_capacity(2 + self.key.len() + 8);
         bytes.extend_from_slice(&(self.key.len() as u16).to_le_bytes());
         bytes.extend_from_slice(self.key);
         bytes.extend_from_slice(self.value);
@@ -357,7 +357,7 @@ impl<'a> Node<'a> {
     ///
     /// * `idx` - The index of the cell to be updated.
     /// * `new_value` - The new value to be stored for the cell.
-    pub fn update_leaf_value(&mut self, idx: u16, new_value: &[u8; 16]) {
+    pub fn update_leaf_value(&mut self, idx: u16, new_value: &[u8; 8]) {
         let header = self.get_header();
         if idx >= header.keys_count {
             return;
@@ -369,9 +369,9 @@ impl<'a> Node<'a> {
         let cell_length =
             u16::from_le_bytes(self.0[slot_offset + 2..slot_offset + 4].try_into().unwrap())
                 as usize;
-        let value_offset = cell_offset + cell_length - 16;
+        let value_offset = cell_offset + cell_length - 8;
 
-        self.0[value_offset..value_offset + 16].copy_from_slice(new_value);
+        self.0[value_offset..value_offset + 8].copy_from_slice(new_value);
     }
 
     /// Returns the amount of space in the node currently in use.
