@@ -109,6 +109,7 @@ impl ParserError {
                 RichPattern::Identifier(s) => s.clone(),
                 RichPattern::Any => "any token".to_string(),
                 RichPattern::SomethingElse => "something else".to_string(),
+                _ => "unknown".to_string(),
             })
             .collect();
 
@@ -121,6 +122,7 @@ impl ParserError {
                 RichPattern::Identifier(s) => s.clone(),
                 RichPattern::Any => "any token".to_string(),
                 RichPattern::SomethingElse => "something else".to_string(),
+                _ => "unknown".to_string(),
             })
             .collect();
 
@@ -187,6 +189,7 @@ impl ParserError {
                 RichPattern::Identifier(s) => s.clone(),
                 RichPattern::Any => "any character".to_string(),
                 RichPattern::SomethingElse => "something else".to_string(),
+                _ => "unknown".to_string(),
             })
             .collect();
 
@@ -199,6 +202,7 @@ impl ParserError {
                 RichPattern::Identifier(s) => s.clone(),
                 RichPattern::Any => "any character".to_string(),
                 RichPattern::SomethingElse => "something else".to_string(),
+                _ => "unknown".to_string(),
             })
             .collect();
 

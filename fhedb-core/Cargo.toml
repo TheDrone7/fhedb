@@ -5,9 +5,9 @@ edition = "2024"
 
 [dependencies]
 fhedb-types = { path = "../fhedb-types" }
-bson = { version = "3.0.0", features = ["serde"] }
-uuid = "1.18.1"
-chrono = "0.4.42"
+bson = { version = "3.1.0", features = ["serde"] }
+uuid = "1.21.0"
+chrono = "0.4.44"
 
 [dev-dependencies]
-tempfile = "3.22.0"
+tempfile = "3.26.0"

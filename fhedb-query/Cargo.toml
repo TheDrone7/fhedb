@@ -6,6 +6,6 @@ edition = "2024"
 [dependencies]
 fhedb-core = { path = "../fhedb-core" }
 fhedb-types = { path = "../fhedb-types" }
-bson = "3.0.0"
-chumsky = "0.11.2"
+bson = "3.1.0"
+chumsky = "0.12.0"
 ariadne = "0.6.0"
