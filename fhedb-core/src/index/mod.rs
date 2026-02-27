@@ -10,3 +10,171 @@ pub mod node;
 
 /// The tree module - contains the B+ tree structure and operations for managing the index.
 pub mod tree;
+
+use crate::document::DocId;
+use std::{io, path::Path};
+use tree::BPlusTree;
+
+/// A B+ tree backed index for a single field in a collection.
+#[derive(Debug)]
+pub struct CollectionIndex {
+    /// The name of the indexed field.
+    field_name: String,
+    /// The B+ tree structure for this index.
+    tree: BPlusTree,
+}
+
+impl CollectionIndex {
+    /// Creates a new [`CollectionIndex`] for the specified field.
+    ///
+    /// ## Arguments
+    ///
+    /// * `field_name` - The name of the field being indexed.
+    /// * `base_path` - The base directory path for collection storage.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`CollectionIndex`]) if created successfully,
+    /// or [`Err`]\([`io::Error`]) if the index could not be created.
+    pub fn new(field_name: impl Into<String>, base_path: &Path) -> io::Result<Self> {
+        let field_name = field_name.into();
+        let path = base_path.join(format!("{}.idx", &field_name));
+        let pager = pager::Pager::new(path)?;
+        let tree = BPlusTree::open(pager)?;
+        Ok(Self { field_name, tree })
+    }
+
+    /// Checks if the index contains the specified document ID.
+    ///
+    /// ## Arguments
+    ///
+    /// * `id` - The document ID to check for in the index.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`bool`]) indicating whether the ID exists,
+    /// or [`Err`]\([`io::Error`]) if the lookup failed.
+    pub fn contains_id(&mut self, id: &DocId) -> io::Result<bool> {
+        let result = self.tree.get(&id.to_bytes())?;
+        Ok(result.is_some())
+    }
+
+    /// Inserts a new document ID and its offset into the index.
+    ///
+    /// ## Arguments
+    ///
+    /// * `id` - The document ID to insert into the index.
+    /// * `offset` - The offset in the log file for the respective entry.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful,
+    /// or [`Err`]\([`io::Error`]) if the insertion failed.
+    pub fn insert(&mut self, id: &DocId, offset: u64) -> io::Result<()> {
+        self.tree.insert(&id.to_bytes(), &offset.to_le_bytes())
+    }
+
+    /// Retrieves the offset for a given document ID from the index.
+    ///
+    /// ## Arguments
+    ///
+    /// * `id` - The document ID to look up in the index.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`Some`]\([`u64`])) with the offset if found,
+    /// [`Ok`]\([`None`]) if the ID does not exist,
+    /// or [`Err`]\([`io::Error`]) on I/O failure.
+    pub fn get(&mut self, id: &DocId) -> io::Result<Option<u64>> {
+        let result = self.tree.get(&id.to_bytes())?;
+        Ok(result.map(u64::from_le_bytes))
+    }
+
+    /// Removes a document ID and its offset from the index.
+    ///
+    /// ## Arguments
+    ///
+    /// * `id` - The document ID to remove from the index.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`Some`]\([`u64`])) with the removed offset if found,
+    /// [`Ok`]\([`None`]) if the ID did not exist,
+    /// or [`Err`]\([`io::Error`]) on I/O failure.
+    pub fn remove(&mut self, id: &DocId) -> io::Result<Option<u64>> {
+        let offset = self.tree.get(&id.to_bytes())?;
+        self.tree.delete(&id.to_bytes())?;
+        Ok(offset.map(u64::from_le_bytes))
+    }
+
+    /// Updates the offset for a given document ID in the index.
+    ///
+    /// ## Arguments
+    ///
+    /// * `id` - The document ID to update in the index.
+    /// * `new_offset` - The new offset in the log file for the ID.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful,
+    /// or [`Err`]\([`io::Error`]) if the key was not found or the update failed.
+    pub fn update(&mut self, id: &DocId, new_offset: u64) -> io::Result<()> {
+        self.tree.update(&id.to_bytes(), &new_offset.to_le_bytes())
+    }
+
+    /// Returns all document IDs currently stored in the index.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`Vec<DocId>`]) containing all indexed IDs,
+    /// or [`Err`]\([`io::Error`]) on I/O failure.
+    pub fn all_ids(&mut self) -> io::Result<Vec<DocId>> {
+        let result = self.tree.scan(None, None)?;
+        Ok(result.map(|v| DocId::from_bytes(&v.unwrap().0)).collect())
+    }
+
+    /// Returns all document IDs and their offsets currently stored in the index.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`Vec<(DocId, u64)>`]) containing all indexed entries,
+    /// or [`Err`]\([`io::Error`]) on I/O failure.
+    pub fn all_entries(&mut self) -> io::Result<Vec<(DocId, u64)>> {
+        let result = self.tree.scan(None, None)?;
+        Ok(result
+            .map(|v| {
+                let v = v.unwrap();
+                let id = DocId::from_bytes(&v.0);
+                let offset = u64::from_le_bytes(v.1);
+                (id, offset)
+            })
+            .collect())
+    }
+
+    /// Checks if the index is empty (contains no entries).
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`bool`]) indicating whether the index is empty,
+    /// or [`Err`]\([`io::Error`]) on I/O failure.
+    pub fn is_empty(&mut self) -> io::Result<bool> {
+        let mut result = self.tree.scan(None, None)?;
+        Ok(result.next().is_none())
+    }
+
+    /// Returns the number of entries currently stored in the index.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`usize`]) with the entry count,
+    /// or [`Err`]\([`io::Error`]) on I/O failure.
+    pub fn len(&mut self) -> io::Result<usize> {
+        let result = self.tree.scan(None, None)?;
+        Ok(result.count())
+    }
+
+    /// Returns the field name that this index is built on.
+    pub fn field_name(&self) -> &str {
+        &self.field_name
+    }
+}

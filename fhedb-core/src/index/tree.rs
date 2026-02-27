@@ -9,6 +9,7 @@ use crate::index::{
 use std::io;
 
 /// A disk-backed B+ tree index structure.
+#[derive(Debug)]
 pub struct BPlusTree {
     /// The pager responsible for page-level file I/O.
     pager: Pager,
@@ -425,7 +426,7 @@ impl BPlusTree {
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok`]\([`Some`]\([`[u8; 8]`])) if found,
+    /// Returns [`Ok`]\([`Some`]\([`[u8; 16]`])) if found,
     /// [`Ok`]\([`None`]) if the key does not exist,
     /// or [`Err`]\([`io::Error`]) on I/O failure.
     pub fn get(&mut self, key: &[u8]) -> io::Result<Option<[u8; 8]>> {
