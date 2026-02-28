@@ -11,11 +11,11 @@ fn from_files_empty_collection() {
 
     let original_collection = Collection::new("test_collection", schema, temp_dir.path()).unwrap();
     original_collection.write_metadata().unwrap();
-    let loaded_collection = Collection::from_files(temp_dir.path(), "test_collection").unwrap();
+    let mut loaded_collection = Collection::from_files(temp_dir.path(), "test_collection").unwrap();
 
     assert_eq!(loaded_collection.name, "test_collection");
     assert_eq!(loaded_collection.inserts(), 0);
-    assert_eq!(loaded_collection.document_indices().len(), 0);
+    assert_eq!(loaded_collection.primary_index().len().ok().unwrap(), 0);
     assert_eq!(loaded_collection.id_field_name(), "id");
 }
 
@@ -51,11 +51,11 @@ fn from_files_with_documents() {
     let id3 = original_collection.add_document(doc3).unwrap();
 
     original_collection.write_metadata().unwrap();
-    let loaded_collection = Collection::from_files(temp_dir.path(), "test_collection").unwrap();
+    let mut loaded_collection = Collection::from_files(temp_dir.path(), "test_collection").unwrap();
 
     assert_eq!(loaded_collection.name, "test_collection");
     assert_eq!(loaded_collection.inserts(), 3);
-    assert_eq!(loaded_collection.document_indices().len(), 3);
+    assert_eq!(loaded_collection.primary_index().len().ok().unwrap(), 3);
 
     let retrieved_doc1 = loaded_collection.get_document(id1).unwrap();
     let retrieved_doc2 = loaded_collection.get_document(id2).unwrap();
@@ -102,11 +102,11 @@ fn from_files_with_deleted_documents() {
 
     original_collection.remove_document(id2.clone());
     original_collection.write_metadata().unwrap();
-    let loaded_collection = Collection::from_files(temp_dir.path(), "test_collection").unwrap();
+    let mut loaded_collection = Collection::from_files(temp_dir.path(), "test_collection").unwrap();
 
     assert_eq!(loaded_collection.name, "test_collection");
     assert_eq!(loaded_collection.inserts(), 3);
-    assert_eq!(loaded_collection.document_indices().len(), 2);
+    assert_eq!(loaded_collection.primary_index().len().ok().unwrap(), 2);
 
     assert!(loaded_collection.get_document(id1).is_some());
     assert!(loaded_collection.get_document(id2).is_none());
@@ -202,9 +202,9 @@ fn from_files_complex_operations() {
     let id3 = original_collection.add_document(doc3).unwrap();
     original_collection.write_metadata().unwrap();
 
-    let loaded_collection = Collection::from_files(temp_dir.path(), "test_collection").unwrap();
+    let mut loaded_collection = Collection::from_files(temp_dir.path(), "test_collection").unwrap();
     assert_eq!(loaded_collection.inserts(), 3);
-    assert_eq!(loaded_collection.document_indices().len(), 2);
+    assert_eq!(loaded_collection.primary_index().len().ok().unwrap(), 2);
 
     assert!(loaded_collection.get_document(id1).is_none());
     assert!(loaded_collection.get_document(id2).is_some());

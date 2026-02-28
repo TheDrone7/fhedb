@@ -49,7 +49,7 @@ fn setup_string_id_collection() -> (TempDir, Database) {
 
 #[test]
 fn resolve_int_id_found() {
-    let (_temp, db) = setup_int_id_collection();
+    let (_temp, mut db) = setup_int_id_collection();
 
     let result = db.resolve_reference("1", "users");
     assert!(result.is_some());
@@ -58,7 +58,7 @@ fn resolve_int_id_found() {
 
 #[test]
 fn resolve_int_id_not_found() {
-    let (_temp, db) = setup_int_id_collection();
+    let (_temp, mut db) = setup_int_id_collection();
 
     let result = db.resolve_reference("999", "users");
     assert!(result.is_none());
@@ -66,7 +66,7 @@ fn resolve_int_id_not_found() {
 
 #[test]
 fn resolve_string_id_found() {
-    let (_temp, db) = setup_string_id_collection();
+    let (_temp, mut db) = setup_string_id_collection();
 
     let result = db.resolve_reference("user-2", "users");
     assert!(result.is_some());
@@ -75,7 +75,7 @@ fn resolve_string_id_found() {
 
 #[test]
 fn resolve_string_id_not_found() {
-    let (_temp, db) = setup_string_id_collection();
+    let (_temp, mut db) = setup_string_id_collection();
 
     let result = db.resolve_reference("nonexistent", "users");
     assert!(result.is_none());
@@ -83,7 +83,7 @@ fn resolve_string_id_not_found() {
 
 #[test]
 fn resolve_collection_not_found() {
-    let (_temp, db) = setup_int_id_collection();
+    let (_temp, mut db) = setup_int_id_collection();
 
     let result = db.resolve_reference("1", "nonexistent_collection");
     assert!(result.is_none());
@@ -91,7 +91,7 @@ fn resolve_collection_not_found() {
 
 #[test]
 fn resolve_int_id_invalid_format() {
-    let (_temp, db) = setup_int_id_collection();
+    let (_temp, mut db) = setup_int_id_collection();
 
     let result = db.resolve_reference("not_a_number", "users");
     assert!(result.is_none());
@@ -99,7 +99,7 @@ fn resolve_int_id_invalid_format() {
 
 #[test]
 fn resolve_empty_ref_value() {
-    let (_temp, db) = setup_int_id_collection();
+    let (_temp, mut db) = setup_int_id_collection();
 
     let result = db.resolve_reference("", "users");
     assert!(result.is_none());
@@ -108,7 +108,7 @@ fn resolve_empty_ref_value() {
 #[test]
 fn resolve_empty_database() {
     let temp_dir = TempDir::new().unwrap();
-    let db = Database::new("empty_db", temp_dir.path());
+    let mut db = Database::new("empty_db", temp_dir.path());
 
     let result = db.resolve_reference("1", "users");
     assert!(result.is_none());

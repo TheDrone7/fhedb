@@ -55,8 +55,8 @@ fn setup_collection() -> (TempDir, Database) {
 
 #[test]
 fn empty_conditions_returns_all() {
-    let (_temp, db) = setup_collection();
-    let col = db.get_collection("users").unwrap();
+    let (_temp, mut db) = setup_collection();
+    let col = db.get_collection_mut("users").unwrap();
 
     let result = col.filter(&[]);
     assert!(result.is_ok());
@@ -66,8 +66,8 @@ fn empty_conditions_returns_all() {
 
 #[test]
 fn single_equal_condition() {
-    let (_temp, db) = setup_collection();
-    let col = db.get_collection("users").unwrap();
+    let (_temp, mut db) = setup_collection();
+    let col = db.get_collection_mut("users").unwrap();
 
     let conditions = vec![condition("name", "=", "\"Alice\"")];
     let result = col.filter(&conditions);
@@ -80,8 +80,8 @@ fn single_equal_condition() {
 
 #[test]
 fn single_condition_no_matches() {
-    let (_temp, db) = setup_collection();
-    let col = db.get_collection("users").unwrap();
+    let (_temp, mut db) = setup_collection();
+    let col = db.get_collection_mut("users").unwrap();
 
     let conditions = vec![condition("name", "=", "\"Nonexistent\"")];
     let result = col.filter(&conditions);
@@ -93,8 +93,8 @@ fn single_condition_no_matches() {
 
 #[test]
 fn single_condition_multiple_matches() {
-    let (_temp, db) = setup_collection();
-    let col = db.get_collection("users").unwrap();
+    let (_temp, mut db) = setup_collection();
+    let col = db.get_collection_mut("users").unwrap();
 
     let conditions = vec![condition("active", "=", "true")];
     let result = col.filter(&conditions);
@@ -106,8 +106,8 @@ fn single_condition_multiple_matches() {
 
 #[test]
 fn multiple_conditions_and_logic() {
-    let (_temp, db) = setup_collection();
-    let col = db.get_collection("users").unwrap();
+    let (_temp, mut db) = setup_collection();
+    let col = db.get_collection_mut("users").unwrap();
 
     let conditions = vec![
         condition("active", "=", "true"),
@@ -122,8 +122,8 @@ fn multiple_conditions_and_logic() {
 
 #[test]
 fn multiple_conditions_narrow_to_one() {
-    let (_temp, db) = setup_collection();
-    let col = db.get_collection("users").unwrap();
+    let (_temp, mut db) = setup_collection();
+    let col = db.get_collection_mut("users").unwrap();
 
     let conditions = vec![
         condition("active", "=", "true"),
@@ -139,8 +139,8 @@ fn multiple_conditions_narrow_to_one() {
 
 #[test]
 fn multiple_conditions_no_matches() {
-    let (_temp, db) = setup_collection();
-    let col = db.get_collection("users").unwrap();
+    let (_temp, mut db) = setup_collection();
+    let col = db.get_collection_mut("users").unwrap();
 
     let conditions = vec![
         condition("active", "=", "false"),
@@ -155,8 +155,8 @@ fn multiple_conditions_no_matches() {
 
 #[test]
 fn comparison_operators() {
-    let (_temp, db) = setup_collection();
-    let col = db.get_collection("users").unwrap();
+    let (_temp, mut db) = setup_collection();
+    let col = db.get_collection_mut("users").unwrap();
 
     let lt_result = col.filter(&[condition("age", "<", "28")]);
     assert!(lt_result.is_ok());
@@ -177,8 +177,8 @@ fn comparison_operators() {
 
 #[test]
 fn not_equal_operator() {
-    let (_temp, db) = setup_collection();
-    let col = db.get_collection("users").unwrap();
+    let (_temp, mut db) = setup_collection();
+    let col = db.get_collection_mut("users").unwrap();
 
     let conditions = vec![condition("active", "!=", "true")];
     let result = col.filter(&conditions);
@@ -191,8 +191,8 @@ fn not_equal_operator() {
 
 #[test]
 fn unknown_field_error() {
-    let (_temp, db) = setup_collection();
-    let col = db.get_collection("users").unwrap();
+    let (_temp, mut db) = setup_collection();
+    let col = db.get_collection_mut("users").unwrap();
 
     let conditions = vec![condition("nonexistent_field", "=", "\"value\"")];
     let result = col.filter(&conditions);
@@ -203,8 +203,8 @@ fn unknown_field_error() {
 
 #[test]
 fn parse_error_propagates() {
-    let (_temp, db) = setup_collection();
-    let col = db.get_collection("users").unwrap();
+    let (_temp, mut db) = setup_collection();
+    let col = db.get_collection_mut("users").unwrap();
 
     let conditions = vec![condition("age", "=", "not_a_number")];
     let result = col.filter(&conditions);
@@ -217,7 +217,7 @@ fn empty_collection_returns_empty() {
     let temp_dir = TempDir::new().unwrap();
     let mut db = Database::new("empty_test", temp_dir.path());
     db.create_collection("empty", test_schema()).unwrap();
-    let col = db.get_collection("empty").unwrap();
+    let col = db.get_collection_mut("empty").unwrap();
 
     let result = col.filter(&[condition("name", "=", "\"Alice\"")]);
     assert!(result.is_ok());
@@ -230,7 +230,7 @@ fn empty_collection_empty_conditions() {
     let temp_dir = TempDir::new().unwrap();
     let mut db = Database::new("empty_test2", temp_dir.path());
     db.create_collection("empty", test_schema()).unwrap();
-    let col = db.get_collection("empty").unwrap();
+    let col = db.get_collection_mut("empty").unwrap();
 
     let result = col.filter(&[]);
     assert!(result.is_ok());
@@ -240,8 +240,8 @@ fn empty_collection_empty_conditions() {
 
 #[test]
 fn three_conditions_and_logic() {
-    let (_temp, db) = setup_collection();
-    let col = db.get_collection("users").unwrap();
+    let (_temp, mut db) = setup_collection();
+    let col = db.get_collection_mut("users").unwrap();
 
     let conditions = vec![
         condition("active", "=", "true"),
@@ -257,8 +257,8 @@ fn three_conditions_and_logic() {
 
 #[test]
 fn first_condition_fails_short_circuits() {
-    let (_temp, db) = setup_collection();
-    let col = db.get_collection("users").unwrap();
+    let (_temp, mut db) = setup_collection();
+    let col = db.get_collection_mut("users").unwrap();
 
     let conditions = vec![
         condition("unknown", "=", "\"value\""),

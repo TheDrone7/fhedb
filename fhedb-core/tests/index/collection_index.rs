@@ -304,7 +304,7 @@ fn all_entries_empty_index() {
 }
 
 #[test]
-fn insert_duplicate_id_error() {
+fn insert_duplicate_id_allowed() {
     let dir = tempdir().unwrap();
     let mut index = CollectionIndex::new("id", dir.path()).unwrap();
 
@@ -312,13 +312,8 @@ fn insert_duplicate_id_error() {
     index.insert(&id, 100).unwrap();
 
     let result = index.insert(&id, 200);
-    assert!(result.is_err());
-    assert_eq!(
-        result.unwrap_err().kind(),
-        std::io::ErrorKind::AlreadyExists
-    );
-
-    assert_eq!(index.get(&id).unwrap(), Some(100));
+    assert!(result.is_ok());
+    assert_eq!(index.len().unwrap(), 2);
 }
 
 #[test]
