@@ -16,7 +16,7 @@ impl Collection {
     /// ## Returns
     ///
     /// Returns matching documents. Empty conditions returns all documents.
-    pub fn filter(&self, conditions: &[FieldCondition]) -> Result<Vec<Document>, String> {
+    pub fn filter(&mut self, conditions: &[FieldCondition]) -> Result<Vec<Document>, String> {
         let all_docs = self.get_documents();
         if conditions.is_empty() {
             return Ok(all_docs);

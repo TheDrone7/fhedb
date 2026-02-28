@@ -21,8 +21,12 @@ impl Database {
     ///
     /// Returns [`Some`]\([`Document`]) if found, or [`None`] if the collection
     /// doesn't exist, the ID format is invalid, or no document matches.
-    pub fn resolve_reference(&self, ref_value: &str, collection_name: &str) -> Option<Document> {
-        let collection = self.get_collection(collection_name)?;
+    pub fn resolve_reference(
+        &mut self,
+        ref_value: &str,
+        collection_name: &str,
+    ) -> Option<Document> {
+        let collection = self.get_collection_mut(collection_name)?;
         let id_field_def = collection.schema().fields.get(collection.id_field_name())?;
 
         let doc_id = match &id_field_def.field_type {
