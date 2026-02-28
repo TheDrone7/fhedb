@@ -12,7 +12,7 @@ pub mod node;
 pub mod tree;
 
 use crate::document::DocId;
-use std::{io, path::Path};
+use std::{io, path::PathBuf};
 use tree::BPlusTree;
 
 /// A B+ tree backed index for a single field in a collection.
@@ -20,6 +20,8 @@ use tree::BPlusTree;
 pub struct CollectionIndex {
     /// The name of the indexed field.
     field_name: String,
+    /// The base directory path for collection storage.
+    base_path: PathBuf,
     /// The B+ tree structure for this index.
     tree: BPlusTree,
 }
@@ -36,12 +38,33 @@ impl CollectionIndex {
     ///
     /// Returns [`Ok`]\([`CollectionIndex`]) if created successfully,
     /// or [`Err`]\([`io::Error`]) if the index could not be created.
-    pub fn new(field_name: impl Into<String>, base_path: &Path) -> io::Result<Self> {
+    pub fn new(field_name: impl Into<String>, base_path: impl Into<PathBuf>) -> io::Result<Self> {
         let field_name = field_name.into();
+        let base_path = base_path.into();
         let path = base_path.join(format!("{}.idx", &field_name));
         let pager = pager::Pager::new(path)?;
         let tree = BPlusTree::open(pager)?;
-        Ok(Self { field_name, tree })
+        Ok(Self {
+            field_name,
+            base_path,
+            tree,
+        })
+    }
+
+    /// Clears the index by removing the backing file and reinitializing.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful,
+    /// or [`Err`]\([`io::Error`]) if the reset failed.
+    pub fn clear(&mut self) -> io::Result<()> {
+        let path = self.base_path.join(format!("{}.idx", &self.field_name));
+        if path.exists() {
+            std::fs::remove_file(&path)?;
+        }
+        let pager = pager::Pager::new(path)?;
+        self.tree = BPlusTree::open(pager)?;
+        Ok(())
     }
 
     /// Checks if the index contains the specified document ID.
