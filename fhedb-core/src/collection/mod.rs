@@ -7,21 +7,22 @@ pub mod file;
 
 use crate::{
     document::{DocId, Document},
+    index::CollectionIndex,
     schema::{IdType, Schema, SchemaOps},
 };
 use file::Operation;
-use std::{collections::HashMap, path::PathBuf};
+use std::{fs::create_dir_all, path::PathBuf};
 use uuid::Uuid;
 
 /// A collection of documents with a shared [`Schema`].
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Collection {
     /// The name of the collection.
     pub name: String,
     /// The schema describing the structure of documents in this collection.
     pub(crate) schema: Schema,
-    /// The in-memory storage of document indices, mapping document IDs to log file offsets.
-    pub(crate) document_indices: HashMap<DocId, usize>,
+    /// The primary index for the collection, mapping document IDs to log file offsets.
+    pub(crate) primary_index: CollectionIndex,
     /// The name of the field in the schema with type Id, or "id" if not present in the schema.
     pub(crate) id_field: String,
     /// The type of ID used in this collection (string or integer).
@@ -54,11 +55,14 @@ impl Collection {
         let name = name.into();
         let temp_path = base_path.into();
         let base_path = temp_path.join(&name);
+        create_dir_all(&base_path).map_err(|e| e.to_string())?;
+        let primary_index =
+            CollectionIndex::new(id_field.clone(), &base_path).map_err(|e| e.to_string())?;
 
         Ok(Self {
             name,
             schema,
-            document_indices: HashMap::new(),
+            primary_index,
             id_field,
             id_type,
             inserts: 0,
@@ -90,7 +94,12 @@ impl Collection {
             }
         };
 
-        if self.document_indices.contains_key(&doc_id) {
+        let exists = self
+            .primary_index
+            .contains_id(&doc_id)
+            .map_err(|e| vec![e.to_string()])?;
+
+        if exists {
             return Err(vec![format!(
                 "Document with ID '{}' already exists.",
                 doc_id.to_string()
@@ -99,7 +108,9 @@ impl Collection {
 
         match self.append_to_log(&Operation::Insert, &doc) {
             Ok(offset) => {
-                self.document_indices.insert(doc_id.clone(), offset);
+                self.primary_index
+                    .insert(&doc_id, offset)
+                    .map_err(|e| vec![e.to_string()])?;
             }
             Err(e) => {
                 return Err(vec![e.to_string()]);
@@ -162,8 +173,13 @@ impl Collection {
             return Err(vec![format!("Cannot update ID field '{}'", self.id_field)]);
         }
 
-        let offset = match self.document_indices.get(&id) {
-            Some(&offset) => offset,
+        let offset = self
+            .primary_index
+            .get(&id)
+            .map_err(|e| vec![e.to_string()])?;
+
+        let offset = match offset {
+            Some(offset) => offset,
             None => return Err(vec![format!("Document with ID {:?} not found", id)]),
         };
 
@@ -182,7 +198,9 @@ impl Collection {
 
         match self.append_to_log(&Operation::Update, &updated_doc) {
             Ok(new_offset) => {
-                self.document_indices.insert(id.clone(), new_offset);
+                self.primary_index
+                    .update(&id, new_offset)
+                    .map_err(|e| vec![e.to_string()])?;
                 Ok(Document::new(id, updated_doc))
             }
             Err(e) => Err(vec![format!(
@@ -202,7 +220,9 @@ impl Collection {
     ///
     /// Returns [`Some`]\([`Document`]) if removed, or [`None`] if not found.
     pub fn remove_document(&mut self, id: DocId) -> Option<Document> {
-        if let Some(offset) = self.document_indices.remove(&id)
+        let removed = self.primary_index.remove(&id).ok();
+
+        if let Some(Some(offset)) = removed
             && let Ok(log_entry) = self.read_log_entry_at_offset(offset)
         {
             self.append_to_log(&Operation::Delete, &log_entry.document)
@@ -221,8 +241,8 @@ impl Collection {
     /// ## Returns
     ///
     /// Returns [`Some`]\([`Document`]) if found, or [`None`] if not present.
-    pub fn get_document(&self, id: DocId) -> Option<Document> {
-        if let Some(&offset) = self.document_indices.get(&id)
+    pub fn get_document(&mut self, id: DocId) -> Option<Document> {
+        if let Some(Some(offset)) = self.primary_index.get(&id).ok()
             && let Ok(log_entry) = self.read_log_entry_at_offset(offset)
         {
             return Some(Document::new(id, log_entry.document));
@@ -231,10 +251,11 @@ impl Collection {
     }
 
     /// Returns all documents in the collection.
-    pub fn get_documents(&self) -> Vec<Document> {
+    pub fn get_documents(&mut self) -> Vec<Document> {
         let mut entries = Vec::new();
-        for (id, offset) in &self.document_indices {
-            if let Ok(log_entry) = self.read_log_entry_at_offset(*offset) {
+        let ids = self.primary_index.all_entries().ok().unwrap_or_default();
+        for (id, offset) in ids {
+            if let Ok(log_entry) = self.read_log_entry_at_offset(offset) {
                 entries.push(Document::new(id.clone(), log_entry.document));
             }
         }
@@ -261,8 +282,8 @@ impl Collection {
         &self.id_field
     }
 
-    /// Returns the document indices map containing [`DocId`] to log offset mappings.
-    pub fn document_indices(&self) -> &HashMap<DocId, usize> {
-        &self.document_indices
+    /// Returns the primary document index map containing [`DocId`] to log offset mappings.
+    pub fn primary_index(&mut self) -> &mut CollectionIndex {
+        &mut self.primary_index
     }
 }

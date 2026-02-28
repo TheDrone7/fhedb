@@ -77,11 +77,14 @@ impl Collection {
             field_definition.default_value = Some(bson::Bson::Null);
         }
 
-        if !is_nullable && !has_default && !self.document_indices.is_empty() {
+        if !is_nullable
+            && !has_default
+            && !self.primary_index.is_empty().map_err(|e| e.to_string())?
+        {
             return Err(format!(
                 "Cannot add non-nullable field '{}' without a default value because the collection contains {} existing documents",
                 field_name,
-                self.document_indices.len()
+                self.primary_index.len().map_err(|e| e.to_string())?
             ));
         }
 
@@ -170,11 +173,14 @@ impl Collection {
             new_definition.default_value = Some(bson::Bson::Null);
         }
 
-        if !self.document_indices.is_empty() && !is_nullable && !has_default {
+        if !self.primary_index.is_empty().map_err(|e| e.to_string())?
+            && !is_nullable
+            && !has_default
+        {
             return Err(format!(
                 "Cannot modify field '{}' to non-nullable without a default value because the collection contains {} existing documents",
                 field_name,
-                self.document_indices.len()
+                self.primary_index.len().map_err(|e| e.to_string())?
             ));
         }
 
@@ -216,11 +222,13 @@ impl Collection {
             self.id_field = "id".to_string();
             self.id_type = IdType::Int;
 
-            if !self.document_indices.is_empty() && new_definition.default_value.is_some() {
+            if !self.primary_index.is_empty().map_err(|e| e.to_string())?
+                && new_definition.default_value.is_some()
+            {
                 self.add_ids_to_all_documents(field_name, "id")?;
                 self.apply_defaults_to_existing(field_name, &new_definition)?;
             }
-        } else if !self.document_indices.is_empty() {
+        } else if !self.primary_index.is_empty().map_err(|e| e.to_string())? {
             self.cleanup_removed_field(field_name)?;
 
             if new_definition.default_value.is_some() {
@@ -286,7 +294,7 @@ impl Collection {
             .ok_or_else(|| format!("Field '{}' has no default value", field_name))?;
 
         let mut updated_document_ids = Vec::new();
-        let document_ids: Vec<DocId> = self.document_indices.keys().cloned().collect();
+        let document_ids = self.primary_index.all_ids().map_err(|e| e.to_string())?;
 
         let mut update_doc = bson::Document::new();
         update_doc.insert(field_name, default_value.clone());
@@ -321,7 +329,7 @@ impl Collection {
     /// or [`Err`]\([`String`]) with an error message.
     pub fn cleanup_removed_field(&mut self, field_name: &str) -> Result<Vec<DocId>, String> {
         let mut updated_document_ids = Vec::new();
-        let document_ids: Vec<DocId> = self.document_indices.keys().cloned().collect();
+        let document_ids = self.primary_index.all_ids().map_err(|e| e.to_string())?;
 
         for doc_id in document_ids {
             if let Some(document) = self.get_document(doc_id.clone())
@@ -332,7 +340,9 @@ impl Collection {
 
                 match self.append_to_log(&Operation::Update, &cleaned_doc) {
                     Ok(new_offset) => {
-                        self.document_indices.insert(doc_id.clone(), new_offset);
+                        self.primary_index
+                            .update(&doc_id, new_offset)
+                            .map_err(|e| e.to_string())?;
                         updated_document_ids.push(doc_id);
                     }
                     Err(e) => {
@@ -365,7 +375,7 @@ impl Collection {
         new_field_name: &str,
     ) -> Result<Vec<DocId>, String> {
         let mut updated_document_ids = Vec::new();
-        let document_ids: Vec<DocId> = self.document_indices.keys().cloned().collect();
+        let document_ids = self.primary_index.all_ids().map_err(|e| e.to_string())?;
 
         for doc_id in document_ids {
             if let Some(document) = self.get_document(doc_id.clone())
@@ -377,7 +387,9 @@ impl Collection {
 
                 match self.append_to_log(&Operation::Update, &updated_doc) {
                     Ok(new_offset) => {
-                        self.document_indices.insert(doc_id.clone(), new_offset);
+                        self.primary_index
+                            .update(&doc_id, new_offset)
+                            .map_err(|e| e.to_string())?;
                         updated_document_ids.push(doc_id);
                     }
                     Err(e) => {
@@ -417,7 +429,7 @@ impl Collection {
         self.inserts = 0;
 
         let mut documents_to_readd = Vec::new();
-        let document_ids: Vec<DocId> = self.document_indices.keys().cloned().collect();
+        let document_ids = self.primary_index.all_ids().map_err(|e| e.to_string())?;
         for doc_id in document_ids {
             if let Some(document) = self.remove_document(doc_id) {
                 documents_to_readd.push(document.data);

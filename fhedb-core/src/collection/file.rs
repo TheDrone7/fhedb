@@ -125,11 +125,7 @@ impl Collection {
     ///
     /// Returns [`Ok`]\([`usize`]) with the file offset where the entry was written,
     /// or [`Err`]\([`io::Error`]) if the write failed.
-    pub fn append_to_log(
-        &self,
-        operation: &Operation,
-        document: &BsonDocument,
-    ) -> io::Result<usize> {
+    pub fn append_to_log(&self, operation: &Operation, document: &BsonDocument) -> io::Result<u64> {
         self.ensure_collection_dir()?;
 
         let logfile_path = self.logfile_path();
@@ -152,7 +148,7 @@ impl Collection {
         file.write_all(&bson_bytes)?;
         writeln!(file)?; // Add a newline to separate entries
 
-        let offset = file.stream_position()? as usize - bson_bytes.len() - 1;
+        let offset = file.stream_position()? - bson_bytes.len() as u64 - 1;
 
         Ok(offset)
     }
@@ -163,7 +159,7 @@ impl Collection {
     ///
     /// Returns [`Ok`]\([`Vec`]<\([`LogEntry`], [`usize`])>) with entries and their offsets,
     /// or [`Err`]\([`io::Error`]) if the read failed.
-    pub fn read_log_entries(&self) -> io::Result<Vec<(LogEntry, usize)>> {
+    pub fn read_log_entries(&self) -> io::Result<Vec<(LogEntry, u64)>> {
         let logfile_path = self.logfile_path();
 
         if !logfile_path.exists() {
@@ -171,26 +167,27 @@ impl Collection {
         }
 
         let contents = fs::read(&logfile_path)?;
+        let contents_len = contents.len() as u64;
         let mut entries = Vec::new();
-        let mut offset = 0;
+        let mut offset = 0u64;
 
-        while offset < contents.len() {
-            if offset + 4 >= contents.len() {
+        while offset < contents_len {
+            if offset + 4 >= contents_len as u64 {
                 break;
             }
 
             let length = u32::from_le_bytes([
-                contents[offset],
-                contents[offset + 1],
-                contents[offset + 2],
-                contents[offset + 3],
-            ]) as usize;
+                contents[offset as usize],
+                contents[offset as usize + 1],
+                contents[offset as usize + 2],
+                contents[offset as usize + 3],
+            ]) as u64;
 
-            if offset + length > contents.len() {
+            if offset + length > contents_len {
                 break;
             }
 
-            let entry_bytes = &contents[offset..offset + length];
+            let entry_bytes = &contents[offset as usize..(offset + length) as usize];
             match bson::Document::from_reader(entry_bytes) {
                 Ok(log_doc) => {
                     let timestamp = log_doc
@@ -215,16 +212,16 @@ impl Collection {
                         offset,
                     ));
 
-                    offset += length;
+                    offset += length as u64;
 
-                    if offset < contents.len() && contents[offset] == b'\n' {
+                    if offset < contents_len && contents[offset as usize] == b'\n' {
                         offset += 1;
                     }
                 }
                 Err(_) => {
-                    let newline_pos = contents[offset..].iter().position(|&b| b == b'\n');
+                    let newline_pos = contents[offset as usize..].iter().position(|&b| b == b'\n');
                     if let Some(pos) = newline_pos {
-                        offset += pos + 1;
+                        offset += pos as u64 + 1;
                     } else {
                         break;
                     }
@@ -245,7 +242,7 @@ impl Collection {
     ///
     /// Returns [`Ok`]\([`LogEntry`]) if successful,
     /// or [`Err`]\([`io::Error`]) if the offset is invalid or the read failed.
-    pub fn read_log_entry_at_offset(&self, offset: usize) -> io::Result<LogEntry> {
+    pub fn read_log_entry_at_offset(&self, offset: u64) -> io::Result<LogEntry> {
         let logfile_path = self.logfile_path();
 
         if !logfile_path.exists() {
@@ -256,15 +253,16 @@ impl Collection {
         }
 
         let contents = fs::read(&logfile_path)?;
+        let len = contents.len() as u64;
 
-        if offset >= contents.len() {
+        if offset >= len {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
                 "Offset is beyond end of file",
             ));
         }
 
-        if offset + 4 >= contents.len() {
+        if offset + 4 >= len {
             return Err(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
                 "Not enough bytes for BSON length header",
@@ -272,20 +270,20 @@ impl Collection {
         }
 
         let length = u32::from_le_bytes([
-            contents[offset],
-            contents[offset + 1],
-            contents[offset + 2],
-            contents[offset + 3],
-        ]) as usize;
+            contents[offset as usize],
+            contents[offset as usize + 1],
+            contents[offset as usize + 2],
+            contents[offset as usize + 3],
+        ]) as u64;
 
-        if offset + length > contents.len() {
+        if offset + length > contents.len() as u64 {
             return Err(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
                 "BSON entry extends beyond end of file",
             ));
         }
 
-        let entry_bytes = &contents[offset..offset + length];
+        let entry_bytes = &contents[offset as usize..(offset + length) as usize];
         let log_doc: BsonDocument = bson::Document::from_reader(entry_bytes).map_err(|e| {
             io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -473,6 +471,7 @@ impl Collection {
     pub fn from_files(base_path: impl AsRef<Path>, name: &str) -> io::Result<Collection> {
         let mut collection = Self::read_metadata(base_path.as_ref(), name)?;
         collection.compact_logfile()?;
+        collection.primary_index.clear()?;
         let log_entries = collection.read_log_entries()?;
 
         for (log_entry, log_offset) in log_entries {
@@ -490,10 +489,10 @@ impl Collection {
 
             match log_entry.operation {
                 Operation::Insert | Operation::Update => {
-                    collection.document_indices.insert(doc_id, log_offset);
+                    collection.primary_index.insert(&doc_id, log_offset)?;
                 }
                 Operation::Delete => {
-                    collection.document_indices.remove(&doc_id);
+                    collection.primary_index.remove(&doc_id)?;
                 }
             }
         }
