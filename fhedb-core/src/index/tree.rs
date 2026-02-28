@@ -113,18 +113,11 @@ impl BPlusTree {
         let mut page = self.pager.read_page(current_page_num)?;
 
         loop {
-            let (idx, found, parent_page_num) = {
+            let (idx, _, parent_page_num) = {
                 let node = Node::new(&mut page);
                 let (idx, found) = node.binary_search(key);
                 (idx, found, node.get_header().parent_page)
             };
-
-            if found {
-                return Err(io::Error::new(
-                    io::ErrorKind::AlreadyExists,
-                    "Duplicate key: The key already exists in the index.",
-                ));
-            }
 
             let insert_result = {
                 let mut node = Node::new(&mut page);
