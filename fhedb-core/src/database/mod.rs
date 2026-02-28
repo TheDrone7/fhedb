@@ -8,7 +8,7 @@ use crate::{collection::Collection, schema::Schema};
 use std::{collections::HashMap, path::PathBuf};
 
 /// A named group of [`Collection`]s stored under a shared base path.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Database {
     /// The name of the database.
     pub name: String,
