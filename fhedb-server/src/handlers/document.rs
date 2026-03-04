@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use bson::{Bson, Document as BsonDocument};
 use fhedb_core::prelude::{
-    Collection, Database, FieldType, ReferenceChecker, Schema, SchemaOps, ValueParseable,
+    Database, FieldType, ReferenceChecker, Schema, SchemaOps, ValueParseable,
 };
 use fhedb_types::{DocumentQuery, FieldCondition, FieldSelector};
 use serde_json::{Value as JsonValue, json};
@@ -117,18 +117,19 @@ fn execute_get(
     selectors: Vec<FieldSelector>,
     state: &ServerState,
 ) -> Result<JsonValue, String> {
-    let dbs = state.databases.read().map_err(|e| e.to_string())?;
+    let mut dbs = state.databases.write().map_err(|e| e.to_string())?;
     let db = dbs
-        .get(&db_name)
+        .get_mut(&db_name)
         .ok_or_else(|| format!("Database '{}' not found.", db_name))?;
-    let collection = db
-        .get_collection(&collection_name)
-        .ok_or_else(|| format!("Collection '{}' not found.", collection_name))?;
 
+    let collection = db.get_collection_mut(&collection_name).unwrap();
+    let schema = collection.schema().clone();
     let filtered = collection.filter(&conditions)?;
-    let results: Result<Vec<_>, _> = filtered
+    let doc_data: Vec<BsonDocument> = filtered.iter().map(|doc| doc.data.clone()).collect();
+
+    let results: Result<Vec<_>, _> = doc_data
         .iter()
-        .map(|doc| select_fields(&doc.data, &selectors, collection, db, 1))
+        .map(|data| select_fields(data, &selectors, &schema, db, 1))
         .collect();
 
     Ok(JsonValue::Array(results?))
@@ -161,10 +162,8 @@ fn execute_update(
         .get_mut(&db_name)
         .ok_or_else(|| format!("Database '{}' not found.", db_name))?;
 
-    let collection = db
-        .get_collection(&collection_name)
-        .ok_or_else(|| format!("Collection '{}' not found.", collection_name))?;
-
+    let collection = db.get_collection_mut(&collection_name).unwrap();
+    let schema = collection.schema().clone();
     let matching: Vec<_> = collection.filter(&conditions)?;
     if matching.is_empty() {
         return Ok(json!([]));
@@ -176,13 +175,12 @@ fn execute_update(
         .collect();
     let matching_ids: Vec<_> = matching.into_iter().map(|d| d.id).collect();
 
-    let collection = db.get_collection_mut(&collection_name).unwrap();
-    let update_doc = convert_fields_to_bson(&updates, collection.schema())?;
+    let update_doc = convert_fields_to_bson(&updates, &schema)?;
 
     let mut updated_docs = Vec::new();
     for (idx, id) in matching_ids.iter().enumerate() {
         match collection.update_document(id.clone(), update_doc.clone()) {
-            Ok(doc) => updated_docs.push(doc),
+            Ok(doc) => updated_docs.push(doc.data),
             Err(errors) => {
                 for (orig_id, orig_data) in originals.iter().take(idx) {
                     let _ = collection.update_document(orig_id.clone(), orig_data.clone());
@@ -195,11 +193,9 @@ fn execute_update(
         }
     }
 
-    let db = dbs.get(&db_name).unwrap();
-    let collection = db.get_collection(&collection_name).unwrap();
     let results: Result<Vec<_>, _> = updated_docs
         .iter()
-        .map(|doc| select_fields(&doc.data, &selectors, collection, db, 1))
+        .map(|data| select_fields(data, &selectors, &schema, db, 1))
         .collect();
 
     Ok(JsonValue::Array(results?))
@@ -230,24 +226,26 @@ fn execute_delete(
         .get_mut(&db_name)
         .ok_or_else(|| format!("Database '{}' not found.", db_name))?;
 
-    let collection = db
-        .get_collection(&collection_name)
-        .ok_or_else(|| format!("Collection '{}' not found.", collection_name))?;
-    let matching: Vec<_> = collection.filter(&conditions)?;
+    let collection = db.get_collection_mut(&collection_name).unwrap();
+    let schema = collection.schema().clone();
+    let matching = collection.filter(&conditions)?;
 
     if matching.is_empty() {
         return Ok(json!([]));
     }
 
-    let results: Result<Vec<_>, _> = matching
+    let doc_data: Vec<BsonDocument> = matching.iter().map(|doc| doc.data.clone()).collect();
+    let matching_ids: Vec<_> = matching.into_iter().map(|d| d.id).collect();
+
+    let results: Result<Vec<_>, _> = doc_data
         .iter()
-        .map(|doc| select_fields(&doc.data, &selectors, collection, db, 1))
+        .map(|data| select_fields(data, &selectors, &schema, db, 1))
         .collect();
     let results = results?;
 
     let collection = db.get_collection_mut(&collection_name).unwrap();
-    for doc in matching {
-        collection.remove_document(doc.id);
+    for id in matching_ids {
+        collection.remove_document(id);
     }
 
     Ok(JsonValue::Array(results))
@@ -287,7 +285,7 @@ fn convert_fields_to_bson(
 ///
 /// * `doc` - The BSON document.
 /// * `selectors` - The field selectors.
-/// * `collection` - The source collection.
+/// * `schema` - The collection schema for field type lookups.
 /// * `database` - The database for reference resolution.
 /// * `depth` - Current recursion depth (max 3).
 ///
@@ -297,15 +295,15 @@ fn convert_fields_to_bson(
 fn select_fields(
     doc: &BsonDocument,
     selectors: &[FieldSelector],
-    collection: &Collection,
-    database: &Database,
+    schema: &Schema,
+    database: &mut Database,
     depth: u8,
 ) -> Result<JsonValue, String> {
     if selectors.is_empty() {
         return Ok(json!({}));
     }
 
-    let selected = collection.schema().select_fields(doc, selectors)?;
+    let selected = schema.select_fields(doc, selectors)?;
     let mut result: serde_json::Map<String, JsonValue> =
         serde_json::from_value(serde_json::to_value(&selected).map_err(|e| e.to_string())?)
             .map_err(|e| e.to_string())?;
@@ -314,8 +312,7 @@ fn select_fields(
         match selector {
             FieldSelector::AllFieldsRecursive => {
                 for (key, value) in doc {
-                    let field_def = collection
-                        .schema()
+                    let field_def = schema
                         .fields
                         .get(key)
                         .ok_or_else(|| format!("Unknown field '{}'.", key))?;
@@ -340,8 +337,7 @@ fn select_fields(
                 field_name,
                 content,
             } => {
-                let field_def = collection
-                    .schema()
+                let field_def = schema
                     .fields
                     .get(field_name)
                     .ok_or_else(|| format!("Unknown field '{}'.", field_name))?;
@@ -386,7 +382,7 @@ fn resolve_reference(
     field_name: &str,
     conditions: &[FieldCondition],
     selectors: &[FieldSelector],
-    database: &Database,
+    database: &mut Database,
     depth: u8,
 ) -> Result<JsonValue, String> {
     if depth >= 3 {
@@ -400,27 +396,19 @@ fn resolve_reference(
                     Some(d) => d,
                     None => return Ok(JsonValue::Null),
                 };
-                let ref_collection = match database.get_collection(ref_col) {
-                    Some(c) => c,
+
+                let ref_schema = match database.get_collection(ref_col) {
+                    Some(c) => c.schema().clone(),
                     None => return Ok(JsonValue::Null),
                 };
 
                 for condition in conditions {
-                    if !ref_collection
-                        .schema()
-                        .evaluate_condition(&ref_doc.data, condition)?
-                    {
+                    if !ref_schema.evaluate_condition(&ref_doc.data, condition)? {
                         return Ok(JsonValue::Null);
                     }
                 }
 
-                select_fields(
-                    &ref_doc.data,
-                    selectors,
-                    ref_collection,
-                    database,
-                    depth + 1,
-                )
+                select_fields(&ref_doc.data, selectors, &ref_schema, database, depth + 1)
             }
             Bson::Null => Ok(JsonValue::Null),
             _ => serde_json::to_value(value).map_err(|e| e.to_string()),
