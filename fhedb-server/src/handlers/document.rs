@@ -122,9 +122,12 @@ fn execute_get(
         .get_mut(&db_name)
         .ok_or_else(|| format!("Database '{}' not found.", db_name))?;
 
-    let collection = db.get_collection_mut(&collection_name).unwrap();
+    let collection = db.get_collection(&collection_name).unwrap();
     let schema = collection.schema().clone();
-    let filtered = collection.filter(&conditions)?;
+
+    let filtered = collection
+        .filter_iter(&conditions)
+        .collect::<Result<Vec<_>, _>>()?;
     let doc_data: Vec<BsonDocument> = filtered.iter().map(|doc| doc.data.clone()).collect();
 
     let results: Result<Vec<_>, _> = doc_data
