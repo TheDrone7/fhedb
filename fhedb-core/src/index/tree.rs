@@ -60,7 +60,7 @@ impl BPlusTree {
     ///
     /// Returns [`Ok`]\([`u32`]) with the leaf page number,
     /// or [`Err`]\([`io::Error`]) if a page could not be read.
-    pub fn find_leaf(&mut self, key: &[u8]) -> io::Result<u32> {
+    pub fn find_leaf(&self, key: &[u8]) -> io::Result<u32> {
         let mut current_page_num = self.pager.root_page_num();
 
         loop {
@@ -422,7 +422,7 @@ impl BPlusTree {
     /// Returns [`Ok`]\([`Some`]\([`[u8; 16]`])) if found,
     /// [`Ok`]\([`None`]) if the key does not exist,
     /// or [`Err`]\([`io::Error`]) on I/O failure.
-    pub fn get(&mut self, key: &[u8]) -> io::Result<Option<[u8; 8]>> {
+    pub fn get(&self, key: &[u8]) -> io::Result<Option<[u8; 8]>> {
         let page_num = self.find_leaf(key)?;
         let mut page = self.pager.read_page(page_num)?;
 
@@ -451,7 +451,7 @@ impl BPlusTree {
     /// Returns [`Ok`]\([`Iterator`]) containing matching values,
     /// or [`Err`]\([`io::Error`]) on I/O failure.
     pub fn scan<'a>(
-        &'a mut self,
+        &'a self,
         start_key: Option<&[u8]>,
         end_key: Option<&[u8]>,
     ) -> io::Result<impl Iterator<Item = io::Result<(Vec<u8>, [u8; 8])>> + 'a> {

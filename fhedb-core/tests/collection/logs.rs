@@ -341,7 +341,7 @@ fn collection_from_files_handles_update_operations() {
 
     collection.write_metadata().unwrap();
 
-    let mut loaded_collection = Collection::from_files(temp_dir.path(), "test_updates").unwrap();
+    let loaded_collection = Collection::from_files(temp_dir.path(), "test_updates").unwrap();
 
     let doc_id = DocId::from_u64(1);
     let retrieved_doc = loaded_collection.get_document(doc_id).unwrap();

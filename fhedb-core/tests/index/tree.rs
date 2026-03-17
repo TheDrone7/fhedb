@@ -7,7 +7,7 @@ fn initialize_empty_tree() {
     let path = dir.path().join("test.idx");
 
     let pager = Pager::new(&path).unwrap();
-    let mut tree = BPlusTree::open(pager).unwrap();
+    let tree = BPlusTree::open(pager).unwrap();
 
     assert!(tree.get(b"anything").unwrap().is_none());
 }
@@ -24,7 +24,7 @@ fn reopen_existing_tree() {
     tree.insert(b"gamma", &[3u8; 8]).unwrap();
 
     let pager = Pager::new(&path).unwrap();
-    let mut tree = BPlusTree::open(pager).unwrap();
+    let tree = BPlusTree::open(pager).unwrap();
     assert_eq!(tree.get(b"alpha").unwrap(), Some([1u8; 8]));
     assert_eq!(tree.get(b"beta").unwrap(), Some([2u8; 8]));
     assert_eq!(tree.get(b"gamma").unwrap(), Some([3u8; 8]));
@@ -44,7 +44,7 @@ fn insert_duplicate_key_allowed() {
     assert!(result.is_ok());
 
     let pager = Pager::new(&path).unwrap();
-    let mut tree = BPlusTree::open(pager).unwrap();
+    let tree = BPlusTree::open(pager).unwrap();
     let entries: Vec<_> = tree.scan(None, None).unwrap().collect();
     assert_eq!(entries.len(), 2);
 }

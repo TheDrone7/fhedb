@@ -16,7 +16,8 @@ impl Collection {
     /// ## Returns
     ///
     /// Returns matching documents. Empty conditions returns all documents.
-    pub fn filter(&mut self, conditions: &[FieldCondition]) -> Result<Vec<Document>, String> {
+    /// TODO: replace with iterated variant.
+    pub fn filter(&self, conditions: &[FieldCondition]) -> Result<Vec<Document>, String> {
         let all_docs = self.get_documents();
         if conditions.is_empty() {
             return Ok(all_docs);
@@ -34,5 +35,26 @@ impl Collection {
             }
         }
         Ok(filtered)
+    }
+
+    pub fn filter_iter<'a>(
+        &'a self,
+        conditions: &'a [FieldCondition],
+    ) -> impl Iterator<Item = Result<Document, String>> + 'a {
+        self.iter_documents().filter_map(move |doc| {
+            if conditions.is_empty() {
+                return Some(Ok(doc));
+            }
+
+            match conditions.iter().try_fold(true, |acc, c| {
+                self.schema()
+                    .evaluate_condition(&doc.data, c)
+                    .map(|m| acc && m)
+            }) {
+                Ok(true) => Some(Ok(doc)),
+                Ok(false) => None,
+                Err(e) => Some(Err(e)),
+            }
+        })
     }
 }

@@ -4,7 +4,7 @@
 
 use std::{
     fs::{File, OpenOptions},
-    io::{self, Read, Seek, SeekFrom, Write},
+    io::{self, Seek, SeekFrom, Write},
     path::Path,
 };
 
@@ -150,7 +150,7 @@ impl Pager {
     ///
     /// Returns [`Ok`]\([`Page`]) if successful,
     /// or [`Err`]\([`io::Error`]) if the page number is out of bounds or the read failed.
-    pub fn read_page(&mut self, page_num: u32) -> io::Result<Page> {
+    pub fn read_page(&self, page_num: u32) -> io::Result<Page> {
         if page_num >= self.total_pages {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
@@ -162,10 +162,8 @@ impl Pager {
         }
 
         let mut page = self.new_page();
-        self.file
-            .seek(SeekFrom::Start(page_num as u64 * PAGE_SIZE as u64))?;
-        self.file.read_exact(&mut page)?;
-
+        let offset = page_num as u64 * PAGE_SIZE as u64;
+        pread_exact(&self.file, &mut page, offset)?;
         Ok(page)
     }
 
@@ -254,5 +252,31 @@ impl Pager {
     /// Returns the total number of pages in the file.
     pub fn page_count(&self) -> u32 {
         self.total_pages
+    }
+}
+
+fn pread_exact(file: &File, buf: &mut [u8], offset: u64) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::FileExt;
+        file.read_exact_at(buf, offset)
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::FileExt;
+        let mut pos = 0;
+        while pos < buf.len() {
+            let n = file.seek_read(&mut buf[pos..], offset + pos as u64)?;
+            if n == 0 {
+                return Err(io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    "Failed to fill whole buffer",
+                ));
+            }
+
+            pos += n
+        }
+
+        Ok(())
     }
 }

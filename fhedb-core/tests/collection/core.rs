@@ -20,7 +20,7 @@ fn construction() {
 fn get_documents_empty() {
     let schema = make_string_schema();
     let temp_dir = tempdir().unwrap();
-    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
+    let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
     let documents = collection.get_documents();
     assert_eq!(documents.len(), 0);
 }

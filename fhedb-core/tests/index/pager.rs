@@ -138,7 +138,7 @@ fn read_page_rejects_out_of_bounds() {
     let dir = tempdir().unwrap();
     let path = dir.path().join("test.idx");
 
-    let mut pager = Pager::new(&path).unwrap();
+    let pager = Pager::new(&path).unwrap();
 
     let result = pager.read_page(100);
     assert!(result.is_err());

@@ -77,7 +77,7 @@ impl CollectionIndex {
     ///
     /// Returns [`Ok`]\([`bool`]) indicating whether the ID exists,
     /// or [`Err`]\([`io::Error`]) if the lookup failed.
-    pub fn contains_id(&mut self, id: &DocId) -> io::Result<bool> {
+    pub fn contains_id(&self, id: &DocId) -> io::Result<bool> {
         let result = self.tree.get(&id.to_bytes())?;
         Ok(result.is_some())
     }
@@ -108,7 +108,7 @@ impl CollectionIndex {
     /// Returns [`Ok`]\([`Some`]\([`u64`])) with the offset if found,
     /// [`Ok`]\([`None`]) if the ID does not exist,
     /// or [`Err`]\([`io::Error`]) on I/O failure.
-    pub fn get(&mut self, id: &DocId) -> io::Result<Option<u64>> {
+    pub fn get(&self, id: &DocId) -> io::Result<Option<u64>> {
         let result = self.tree.get(&id.to_bytes())?;
         Ok(result.map(u64::from_le_bytes))
     }
@@ -151,9 +151,19 @@ impl CollectionIndex {
     ///
     /// Returns [`Ok`]\([`Vec<DocId>`]) containing all indexed IDs,
     /// or [`Err`]\([`io::Error`]) on I/O failure.
-    pub fn all_ids(&mut self) -> io::Result<Vec<DocId>> {
-        let result = self.tree.scan(None, None)?;
-        Ok(result.map(|v| DocId::from_bytes(&v.unwrap().0)).collect())
+    ///
+    /// TODO: deprecate this method in favor of iterated
+    pub fn all_ids(&self) -> io::Result<Vec<DocId>> {
+        let iter = self.iter_ids()?;
+        iter.collect()
+    }
+
+    pub fn iter_ids(&self) -> io::Result<impl Iterator<Item = io::Result<DocId>> + '_> {
+        let scan = self.tree.scan(None, None)?;
+        Ok(scan.map(|result| {
+            let (key_bytes, _) = result?;
+            Ok(DocId::from_bytes(&key_bytes))
+        }))
     }
 
     /// Returns all document IDs and their offsets currently stored in the index.
@@ -162,16 +172,22 @@ impl CollectionIndex {
     ///
     /// Returns [`Ok`]\([`Vec<(DocId, u64)>`]) containing all indexed entries,
     /// or [`Err`]\([`io::Error`]) on I/O failure.
-    pub fn all_entries(&mut self) -> io::Result<Vec<(DocId, u64)>> {
-        let result = self.tree.scan(None, None)?;
-        Ok(result
-            .map(|v| {
-                let v = v.unwrap();
-                let id = DocId::from_bytes(&v.0);
-                let offset = u64::from_le_bytes(v.1);
-                (id, offset)
-            })
-            .collect())
+    ///
+    /// TODO: deprecate this method in favor of iterated
+    pub fn all_entries(&self) -> io::Result<Vec<(DocId, u64)>> {
+        let iter = self.iter_entries()?;
+        iter.collect()
+    }
+
+    pub fn iter_entries(&self) -> io::Result<impl Iterator<Item = io::Result<(DocId, u64)>> + '_> {
+        let scan = self.tree.scan(None, None)?;
+        Ok(scan.map(|result| {
+            let (key_bytes, value_bytes) = result?;
+            let id = DocId::from_bytes(&key_bytes);
+            let offset = u64::from_le_bytes(value_bytes);
+
+            Ok((id, offset))
+        }))
     }
 
     /// Checks if the index is empty (contains no entries).
@@ -180,7 +196,7 @@ impl CollectionIndex {
     ///
     /// Returns [`Ok`]\([`bool`]) indicating whether the index is empty,
     /// or [`Err`]\([`io::Error`]) on I/O failure.
-    pub fn is_empty(&mut self) -> io::Result<bool> {
+    pub fn is_empty(&self) -> io::Result<bool> {
         let mut result = self.tree.scan(None, None)?;
         Ok(result.next().is_none())
     }
@@ -191,7 +207,7 @@ impl CollectionIndex {
     ///
     /// Returns [`Ok`]\([`usize`]) with the entry count,
     /// or [`Err`]\([`io::Error`]) on I/O failure.
-    pub fn len(&mut self) -> io::Result<usize> {
+    pub fn len(&self) -> io::Result<usize> {
         let result = self.tree.scan(None, None)?;
         Ok(result.count())
     }

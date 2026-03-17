@@ -10,8 +10,8 @@ use bson::{Bson, Document as BsonDocument};
 use std::{
     collections::HashMap,
     fmt,
-    fs::{self, OpenOptions},
-    io::{self, Seek, Write},
+    fs::{self, File, OpenOptions},
+    io::{self, Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -232,59 +232,26 @@ impl Collection {
         Ok(entries)
     }
 
-    /// Reads a single log entry at the specified offset.
-    ///
-    /// ## Arguments
-    ///
-    /// * `offset` - The byte offset in the logfile where the entry begins.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok`]\([`LogEntry`]) if successful,
-    /// or [`Err`]\([`io::Error`]) if the offset is invalid or the read failed.
-    pub fn read_log_entry_at_offset(&self, offset: u64) -> io::Result<LogEntry> {
-        let logfile_path = self.logfile_path();
-
-        if !logfile_path.exists() {
+    pub fn read_entry_at(base_path: &Path, offset: u64) -> io::Result<LogEntry> {
+        let log_path = base_path.join("logfile.log");
+        if !log_path.exists() {
             return Err(io::Error::new(
                 io::ErrorKind::NotFound,
                 "Logfile does not exist",
             ));
         }
+        let mut logs = File::open(log_path)?;
 
-        let contents = fs::read(&logfile_path)?;
-        let len = contents.len() as u64;
+        logs.seek(SeekFrom::Start(offset))?;
+        let mut len_buf = [0u8; 4];
+        logs.read_exact(&mut len_buf)?;
+        let len = u32::from_le_bytes(len_buf) as usize;
 
-        if offset >= len {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Offset is beyond end of file",
-            ));
-        }
+        logs.seek(SeekFrom::Start(offset))?;
+        let mut entry_buf = vec![0u8; len];
+        logs.read_exact(&mut entry_buf)?;
 
-        if offset + 4 >= len {
-            return Err(io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                "Not enough bytes for BSON length header",
-            ));
-        }
-
-        let length = u32::from_le_bytes([
-            contents[offset as usize],
-            contents[offset as usize + 1],
-            contents[offset as usize + 2],
-            contents[offset as usize + 3],
-        ]) as u64;
-
-        if offset + length > contents.len() as u64 {
-            return Err(io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                "BSON entry extends beyond end of file",
-            ));
-        }
-
-        let entry_bytes = &contents[offset as usize..(offset + length) as usize];
-        let log_doc: BsonDocument = bson::Document::from_reader(entry_bytes).map_err(|e| {
+        let log_doc = bson::Document::from_reader(entry_buf.as_slice()).map_err(|e| {
             io::Error::new(
                 io::ErrorKind::InvalidData,
                 format!("Failed to parse BSON: {}", e),
@@ -309,6 +276,22 @@ impl Collection {
             operation,
             document,
         })
+    }
+
+    /// Reads a single log entry at the specified offset.
+    ///
+    /// ## Arguments
+    ///
+    /// * `offset` - The byte offset in the logfile where the entry begins.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`LogEntry`]) if successful,
+    /// or [`Err`]\([`io::Error`]) if the offset is invalid or the read failed.
+    ///
+    /// TODO: deprecate in favor of read_entry_at
+    pub fn read_log_entry_at_offset(&self, offset: u64) -> io::Result<LogEntry> {
+        Self::read_entry_at(&self.base_path, offset)
     }
 
     /// Compacts the logfile by reconstructing the final state of each document.

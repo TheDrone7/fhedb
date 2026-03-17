@@ -241,25 +241,25 @@ impl Collection {
     /// ## Returns
     ///
     /// Returns [`Some`]\([`Document`]) if found, or [`None`] if not present.
-    pub fn get_document(&mut self, id: DocId) -> Option<Document> {
-        if let Some(Some(offset)) = self.primary_index.get(&id).ok()
-            && let Ok(log_entry) = self.read_log_entry_at_offset(offset)
-        {
-            return Some(Document::new(id, log_entry.document));
-        }
-        None
+    pub fn get_document(&self, id: DocId) -> Option<Document> {
+        let offset = self.primary_index.get(&id).ok()??;
+        let log_entry = self.read_log_entry_at_offset(offset).ok()?;
+        Some(Document::new(id, log_entry.document))
     }
 
     /// Returns all documents in the collection.
-    pub fn get_documents(&mut self) -> Vec<Document> {
-        let mut entries = Vec::new();
-        let ids = self.primary_index.all_entries().ok().unwrap_or_default();
-        for (id, offset) in ids {
-            if let Ok(log_entry) = self.read_log_entry_at_offset(offset) {
-                entries.push(Document::new(id.clone(), log_entry.document));
-            }
-        }
-        entries
+    /// TODO: deprecate in favor of iterated
+    pub fn get_documents(&self) -> Vec<Document> {
+        self.iter_documents().collect()
+    }
+
+    pub fn iter_documents(&self) -> impl Iterator<Item = Document> + '_ {
+        let scan_iter = self.primary_index.iter_entries();
+        scan_iter.into_iter().flatten().filter_map(|result| {
+            let (id, offset) = result.ok()?;
+            let log_entry = self.read_log_entry_at_offset(offset).ok()?;
+            Some(Document::new(id, log_entry.document))
+        })
     }
 
     /// Returns the schema of this collection.
