@@ -126,7 +126,7 @@ fn execute_get(
     let schema = collection.schema().clone();
 
     let filtered = collection
-        .filter_iter(&conditions)
+        .filter(&conditions)
         .collect::<Result<Vec<_>, _>>()?;
     let doc_data: Vec<BsonDocument> = filtered.iter().map(|doc| doc.data.clone()).collect();
 
@@ -167,7 +167,9 @@ fn execute_update(
 
     let collection = db.get_collection_mut(&collection_name).unwrap();
     let schema = collection.schema().clone();
-    let matching: Vec<_> = collection.filter(&conditions)?;
+    let matching: Vec<_> = collection
+        .filter(&conditions)
+        .collect::<Result<Vec<_>, _>>()?;
     if matching.is_empty() {
         return Ok(json!([]));
     }
@@ -231,7 +233,9 @@ fn execute_delete(
 
     let collection = db.get_collection_mut(&collection_name).unwrap();
     let schema = collection.schema().clone();
-    let matching = collection.filter(&conditions)?;
+    let matching = collection
+        .filter(&conditions)
+        .collect::<Result<Vec<_>, _>>()?;
 
     if matching.is_empty() {
         return Ok(json!([]));
