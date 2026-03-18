@@ -248,12 +248,7 @@ impl Collection {
     }
 
     /// Returns all documents in the collection.
-    /// TODO: deprecate in favor of iterated
-    pub fn get_documents(&self) -> Vec<Document> {
-        self.iter_documents().collect()
-    }
-
-    pub fn iter_documents(&self) -> impl Iterator<Item = Document> + '_ {
+    pub fn get_documents(&self) -> impl Iterator<Item = Document> + '_ {
         let scan_iter = self.primary_index.iter_entries();
         scan_iter.into_iter().flatten().filter_map(|result| {
             let (id, offset) = result.ok()?;

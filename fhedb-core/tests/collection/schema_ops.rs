@@ -380,7 +380,7 @@ fn string_id_collection_operations() {
     let result = collection.add_field("email".to_string(), field_def);
     assert!(result.is_ok());
 
-    let docs = collection.get_documents();
+    let docs = collection.get_documents().collect::<Vec<_>>();
     assert_eq!(docs.len(), 1);
     assert!(docs[0].data.contains_key("email"));
 }
@@ -455,7 +455,7 @@ fn schema_with_defaults() {
         })
         .expect("Failed to add document");
 
-    let docs = collection.get_documents();
+    let docs = collection.get_documents().collect::<Vec<_>>();
     assert_eq!(docs.len(), 1);
     let doc = &docs[0];
 

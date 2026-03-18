@@ -31,7 +31,7 @@ fn get_documents_with_data() {
     assert_eq!(id1.to_string(), uuid1);
     assert_eq!(id2.to_string(), uuid2);
 
-    let documents = collection.get_documents();
+    let documents = collection.get_documents().collect::<Vec<_>>();
     assert_eq!(documents.len(), 2);
 
     let doc_ids: Vec<_> = documents.iter().map(|doc| doc.id.clone()).collect();
@@ -253,7 +253,7 @@ fn add_document_duplicate_id() {
     let errors = result.unwrap_err();
     assert!(errors.iter().any(|e| e.contains("already exists")));
 
-    let documents = collection.get_documents();
+    let documents = collection.get_documents().collect::<Vec<_>>();
     assert_eq!(documents.len(), 1);
     assert_eq!(documents[0].data.get_str("name").unwrap(), "Alice");
 }

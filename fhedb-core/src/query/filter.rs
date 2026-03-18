@@ -20,7 +20,7 @@ impl Collection {
         &'a self,
         conditions: &'a [FieldCondition],
     ) -> impl Iterator<Item = Result<Document, String>> + 'a {
-        self.iter_documents().filter_map(move |doc| {
+        self.get_documents().filter_map(move |doc| {
             if conditions.is_empty() {
                 return Some(Ok(doc));
             }

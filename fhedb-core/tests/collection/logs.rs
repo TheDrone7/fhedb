@@ -350,6 +350,6 @@ fn collection_from_files_handles_update_operations() {
     assert_eq!(retrieved_doc.data.get_f64("salary").unwrap(), 65000.0);
     assert!(!retrieved_doc.data.get_bool("active").unwrap());
 
-    let all_docs = loaded_collection.get_documents();
+    let all_docs = loaded_collection.get_documents().collect::<Vec<_>>();
     assert_eq!(all_docs.len(), 1);
 }

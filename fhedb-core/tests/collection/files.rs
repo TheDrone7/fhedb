@@ -65,7 +65,7 @@ fn from_files_with_documents() {
     assert_eq!(retrieved_doc2.data.get_str("name").unwrap(), "Bob");
     assert_eq!(retrieved_doc3.data.get_str("name").unwrap(), "Charlie");
 
-    let all_docs = loaded_collection.get_documents();
+    let all_docs = loaded_collection.get_documents().collect::<Vec<_>>();
     assert_eq!(all_docs.len(), 3);
 }
 
@@ -112,7 +112,7 @@ fn from_files_with_deleted_documents() {
     assert!(loaded_collection.get_document(id2).is_none());
     assert!(loaded_collection.get_document(id3).is_some());
 
-    let all_docs = loaded_collection.get_documents();
+    let all_docs = loaded_collection.get_documents().collect::<Vec<_>>();
     assert_eq!(all_docs.len(), 2);
 }
 
@@ -210,6 +210,6 @@ fn from_files_complex_operations() {
     assert!(loaded_collection.get_document(id2).is_some());
     assert!(loaded_collection.get_document(id3).is_some());
 
-    let all_docs = loaded_collection.get_documents();
+    let all_docs = loaded_collection.get_documents().collect::<Vec<_>>();
     assert_eq!(all_docs.len(), 2);
 }
