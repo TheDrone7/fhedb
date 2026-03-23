@@ -190,6 +190,20 @@ impl CollectionIndex {
         }))
     }
 
+    pub fn next_id(&self, after: Option<&DocId>) -> io::Result<Option<DocId>> {
+        let start_bytes = after.map(|id| id.to_bytes());
+        let scan = self.tree.scan(start_bytes.as_deref(), None)?;
+        for result in scan {
+            let (key_bytes, _) = result?;
+            let id = DocId::from_bytes(&key_bytes);
+            if Some(&id) != after {
+                return Ok(Some(id));
+            }
+        }
+
+        Ok(None)
+    }
+
     /// Checks if the index is empty (contains no entries).
     ///
     /// ## Returns

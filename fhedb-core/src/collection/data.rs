@@ -294,24 +294,24 @@ impl Collection {
             .ok_or_else(|| format!("Field '{}' has no default value", field_name))?;
 
         let mut updated_document_ids = Vec::new();
-        let document_ids = self.primary_index.all_ids().map_err(|e| e.to_string())?;
-
-        let mut update_doc = bson::Document::new();
-        update_doc.insert(field_name, default_value.clone());
-
-        for doc_id in document_ids {
-            match self.update_document(doc_id.clone(), update_doc.clone()) {
-                Ok(_) => {
-                    updated_document_ids.push(doc_id);
-                }
-                Err(errors) => {
-                    return Err(format!(
+        let mut current_id = None;
+        while let Some(doc_id) = self
+            .primary_index
+            .next_id(current_id.as_ref())
+            .map_err(|e| e.to_string())?
+        {
+            current_id = Some(doc_id.clone());
+            let mut update_doc = bson::Document::new();
+            update_doc.insert(field_name, default_value.clone());
+            self.update_document(doc_id.clone(), update_doc)
+                .map_err(|errors| {
+                    format!(
                         "Failed to apply default value to document {:?}: {}",
                         doc_id,
                         errors.join(", ")
-                    ));
-                }
-            }
+                    )
+                })?;
+            updated_document_ids.push(doc_id);
         }
 
         Ok(updated_document_ids)
@@ -329,29 +329,26 @@ impl Collection {
     /// or [`Err`]\([`String`]) with an error message.
     pub fn cleanup_removed_field(&mut self, field_name: &str) -> Result<Vec<DocId>, String> {
         let mut updated_document_ids = Vec::new();
-        let document_ids = self.primary_index.all_ids().map_err(|e| e.to_string())?;
-
-        for doc_id in document_ids {
+        let mut current_id = None;
+        while let Some(doc_id) = self
+            .primary_index
+            .next_id(current_id.as_ref())
+            .map_err(|e| e.to_string())?
+        {
+            current_id = Some(doc_id.clone());
             if let Some(document) = self.get_document(doc_id.clone())
                 && document.data.contains_key(field_name)
             {
                 let mut cleaned_doc = document.data.clone();
                 cleaned_doc.remove(field_name);
 
-                match self.append_to_log(&Operation::Update, &cleaned_doc) {
-                    Ok(new_offset) => {
-                        self.primary_index
-                            .update(&doc_id, new_offset)
-                            .map_err(|e| e.to_string())?;
-                        updated_document_ids.push(doc_id);
-                    }
-                    Err(e) => {
-                        return Err(format!(
-                            "Failed to write cleaned document {:?} to log: {}",
-                            doc_id, e
-                        ));
-                    }
-                }
+                let new_offset = self
+                    .append_to_log(&Operation::Update, &cleaned_doc)
+                    .map_err(|e| e.to_string())?;
+                self.primary_index
+                    .update(&doc_id, new_offset)
+                    .map_err(|e| e.to_string())?;
+                updated_document_ids.push(doc_id);
             }
         }
 
@@ -375,29 +372,27 @@ impl Collection {
         new_field_name: &str,
     ) -> Result<Vec<DocId>, String> {
         let mut updated_document_ids = Vec::new();
-        let document_ids = self.primary_index.all_ids().map_err(|e| e.to_string())?;
+        let mut current_id = None;
 
-        for doc_id in document_ids {
-            if let Some(document) = self.get_document(doc_id.clone())
-                && let Some(field_value) = document.data.get(old_field_name)
-            {
-                let mut updated_doc = document.data.clone();
-                updated_doc.remove(old_field_name);
-                updated_doc.insert(new_field_name, field_value.clone());
+        while let Some(doc_id) = self
+            .primary_index
+            .next_id(current_id.as_ref())
+            .map_err(|e| e.to_string())?
+        {
+            current_id = Some(doc_id.clone());
 
-                match self.append_to_log(&Operation::Update, &updated_doc) {
-                    Ok(new_offset) => {
-                        self.primary_index
-                            .update(&doc_id, new_offset)
-                            .map_err(|e| e.to_string())?;
-                        updated_document_ids.push(doc_id);
-                    }
-                    Err(e) => {
-                        return Err(format!(
-                            "Failed to write renamed document {:?} to log: {}",
-                            doc_id, e
-                        ));
-                    }
+            if let Some(document) = self.get_document(doc_id.clone()) {
+                if let Some(field_value) = document.data.get(old_field_name) {
+                    let mut updated_doc = document.data.clone();
+                    updated_doc.remove(old_field_name);
+                    updated_doc.insert(new_field_name, field_value.clone());
+                    let new_offset = self
+                        .append_to_log(&Operation::Update, &updated_doc)
+                        .map_err(|e| e.to_string())?;
+                    self.primary_index
+                        .update(&doc_id, new_offset)
+                        .map_err(|e| e.to_string())?;
+                    updated_document_ids.push(doc_id);
                 }
             }
         }
