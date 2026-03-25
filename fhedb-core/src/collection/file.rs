@@ -153,9 +153,15 @@ impl Collection {
         Ok(offset)
     }
 
-    pub fn iter_log_entries(
+    /// Reads all log entries from the collection's logfile.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`] with an iterator yielding ([`LogEntry`], [`u64`] offset) pairs,
+    /// or [`Err`]\([`io::Error`]) if the read failed.
+    pub fn read_log_entries(
         &self,
-    ) -> io::Result<impl Iterator<Item = io::Result<(LogEntry, u64)>>> {
+    ) -> io::Result<impl Iterator<Item = io::Result<(LogEntry, u64)>> + 'static> {
         let logfile_path = self.logfile_path();
         let mut file = if logfile_path.exists() {
             Some(File::open(&logfile_path)?)
@@ -241,85 +247,6 @@ impl Collection {
         }))
     }
 
-    /// Reads all log entries from the collection's logfile.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok`]\([`Vec`]<\([`LogEntry`], [`usize`])>) with entries and their offsets,
-    /// or [`Err`]\([`io::Error`]) if the read failed.
-    pub fn read_log_entries(&self) -> io::Result<Vec<(LogEntry, u64)>> {
-        let logfile_path = self.logfile_path();
-
-        if !logfile_path.exists() {
-            return Ok(Vec::new());
-        }
-
-        let contents = fs::read(&logfile_path)?;
-        let contents_len = contents.len() as u64;
-        let mut entries = Vec::new();
-        let mut offset = 0u64;
-
-        while offset < contents_len {
-            if offset + 4 >= contents_len as u64 {
-                break;
-            }
-
-            let length = u32::from_le_bytes([
-                contents[offset as usize],
-                contents[offset as usize + 1],
-                contents[offset as usize + 2],
-                contents[offset as usize + 3],
-            ]) as u64;
-
-            if offset + length > contents_len {
-                break;
-            }
-
-            let entry_bytes = &contents[offset as usize..(offset + length) as usize];
-            match bson::Document::from_reader(entry_bytes) {
-                Ok(log_doc) => {
-                    let timestamp = log_doc
-                        .get_str("timestamp")
-                        .unwrap_or("unknown")
-                        .to_string();
-                    let operation_str = log_doc.get_str("operation").unwrap_or("unknown");
-                    let operation = operation_str
-                        .parse::<Operation>()
-                        .unwrap_or(Operation::Insert);
-                    let document = log_doc
-                        .get_document("document")
-                        .cloned()
-                        .unwrap_or_default();
-
-                    entries.push((
-                        LogEntry {
-                            timestamp,
-                            operation,
-                            document,
-                        },
-                        offset,
-                    ));
-
-                    offset += length as u64;
-
-                    if offset < contents_len && contents[offset as usize] == b'\n' {
-                        offset += 1;
-                    }
-                }
-                Err(_) => {
-                    let newline_pos = contents[offset as usize..].iter().position(|&b| b == b'\n');
-                    if let Some(pos) = newline_pos {
-                        offset += pos as u64 + 1;
-                    } else {
-                        break;
-                    }
-                }
-            }
-        }
-
-        Ok(entries)
-    }
-
     pub fn read_entry_at(base_path: &Path, offset: u64) -> io::Result<LogEntry> {
         let log_path = base_path.join("logfile.log");
         if !log_path.exists() {
@@ -391,13 +318,12 @@ impl Collection {
     pub fn compact_logfile(&self) -> io::Result<()> {
         let logfile_path = self.logfile_path();
 
-        let entries = self.read_log_entries()?;
-        if entries.is_empty() {
-            return Ok(());
-        }
-
         let mut current_state: HashMap<String, BsonDocument> = HashMap::new();
-        for (log_entry, log_offset) in entries {
+        let mut has_entries = false;
+
+        for result in self.read_log_entries()? {
+            let (log_entry, log_offset) = result?;
+            has_entries = true;
             let document = log_entry.document;
             let operation = log_entry.operation;
 
@@ -427,6 +353,10 @@ impl Collection {
                     current_state.insert(doc_id, document);
                 }
             }
+        }
+
+        if !has_entries {
+            return Ok(());
         }
 
         let temp_path = logfile_path.with_extension("tmp");
@@ -543,9 +473,9 @@ impl Collection {
         let mut collection = Self::read_metadata(base_path.as_ref(), name)?;
         collection.compact_logfile()?;
         collection.primary_index.clear()?;
-        let log_entries = collection.read_log_entries()?;
 
-        for (log_entry, log_offset) in log_entries {
+        for result in collection.read_log_entries()? {
+            let (log_entry, log_offset) = result?;
             let doc_id = collection
                 .get_doc_id_from_bson(&log_entry.document)
                 .ok_or_else(|| {

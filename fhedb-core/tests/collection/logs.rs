@@ -32,7 +32,11 @@ fn append_to_log_creates_file() {
     let file_size = fs::metadata(&logfile_path).unwrap().len();
     assert!(file_size > 0);
 
-    let entries = collection.read_log_entries().unwrap();
+    let entries = collection
+        .read_log_entries()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].0.document, document);
 }
@@ -43,7 +47,11 @@ fn read_log_entries_empty_file() {
     let temp_dir = tempdir().unwrap();
     let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
-    let entries = collection.read_log_entries().unwrap();
+    let entries = collection
+        .read_log_entries()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
     assert!(entries.is_empty());
 }
 
@@ -76,13 +84,21 @@ fn append_and_read_entries() {
     };
 
     let offset1 = collection.append_to_log(&Operation::Insert, &doc1).unwrap();
-    let entries1 = collection.read_log_entries().unwrap();
+    let entries1 = collection
+        .read_log_entries()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
     assert_eq!(entries1.len(), 1);
     assert_eq!(entries1[0].0.document, doc1);
     assert_eq!(offset1, 0);
 
     let offset2 = collection.append_to_log(&Operation::Update, &doc2).unwrap();
-    let entries2 = collection.read_log_entries().unwrap();
+    let entries2 = collection
+        .read_log_entries()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
     assert_eq!(entries2.len(), 2);
     assert_eq!(entries2[0].0.document, doc1);
     assert_eq!(entries2[1].0.document, doc2);
@@ -92,7 +108,11 @@ fn append_and_read_entries() {
     let offset3 = collection.append_to_log(&Operation::Delete, &doc3).unwrap();
     assert!(offset3 > offset2);
 
-    let entries = collection.read_log_entries().unwrap();
+    let entries = collection
+        .read_log_entries()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
     assert_eq!(entries.len(), 3);
 
     assert_eq!(entries[0].0.operation, Operation::Insert);
@@ -126,7 +146,11 @@ fn different_operation_types() {
         assert!(collection.append_to_log(operation, &document).is_ok());
     }
 
-    let entries = collection.read_log_entries().unwrap();
+    let entries = collection
+        .read_log_entries()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
     assert_eq!(entries.len(), 3);
 
     for (i, expected_op) in operations.iter().enumerate() {
@@ -170,7 +194,11 @@ fn log_entries_with_all_field_types() {
             .is_ok()
     );
 
-    let entries = collection.read_log_entries().unwrap();
+    let entries = collection
+        .read_log_entries()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].0.document, doc_with_all_types);
 }
@@ -202,8 +230,16 @@ fn multiple_collections_log_isolation() {
     assert!(collection1.append_to_log(&Operation::Insert, &doc1).is_ok());
     assert!(collection2.append_to_log(&Operation::Insert, &doc2).is_ok());
 
-    let entries1 = collection1.read_log_entries().unwrap();
-    let entries2 = collection2.read_log_entries().unwrap();
+    let entries1 = collection1
+        .read_log_entries()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    let entries2 = collection2
+        .read_log_entries()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
 
     assert_eq!(entries1.len(), 1);
     assert_eq!(entries2.len(), 1);
@@ -288,7 +324,11 @@ fn update_document_logs_correctly() {
     let result = collection.update_document(doc_id.clone(), update_doc);
     assert!(result.is_ok());
 
-    let log_entries = collection.read_log_entries().unwrap();
+    let log_entries = collection
+        .read_log_entries()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
     assert_eq!(log_entries.len(), 2);
 
     let (insert_entry, _) = &log_entries[0];

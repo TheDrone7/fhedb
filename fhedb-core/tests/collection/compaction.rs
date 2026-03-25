@@ -37,7 +37,11 @@ fn logfile_inserts_only() {
     collection.append_to_log(&Operation::Insert, &doc2).unwrap();
 
     assert!(collection.compact_logfile().is_ok());
-    let entries = collection.read_log_entries().unwrap();
+    let entries = collection
+        .read_log_entries()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
     assert_eq!(entries.len(), 2);
 
     let doc_ids: Vec<_> = entries
@@ -77,7 +81,11 @@ fn logfile_with_updates() {
         .unwrap();
 
     assert!(collection.compact_logfile().is_ok());
-    let entries = collection.read_log_entries().unwrap();
+    let entries = collection
+        .read_log_entries()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
     assert_eq!(entries.len(), 1);
 
     let entry = &entries[0];
@@ -108,7 +116,11 @@ fn logfile_with_deletes() {
     collection.append_to_log(&Operation::Delete, &doc1).unwrap();
 
     assert!(collection.compact_logfile().is_ok());
-    let entries = collection.read_log_entries().unwrap();
+    let entries = collection
+        .read_log_entries()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
     assert_eq!(entries.len(), 1);
 
     let entry = &entries[0];
@@ -155,7 +167,11 @@ fn logfile_complex_sequence() {
     collection.append_to_log(&Operation::Insert, &doc3).unwrap();
 
     assert!(collection.compact_logfile().is_ok());
-    let entries = collection.read_log_entries().unwrap();
+    let entries = collection
+        .read_log_entries()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
     assert_eq!(entries.len(), 2);
 
     let doc_ids: Vec<_> = entries
