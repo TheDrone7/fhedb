@@ -153,6 +153,94 @@ impl Collection {
         Ok(offset)
     }
 
+    pub fn iter_log_entries(
+        &self,
+    ) -> io::Result<impl Iterator<Item = io::Result<(LogEntry, u64)>>> {
+        let logfile_path = self.logfile_path();
+        let mut file = if logfile_path.exists() {
+            Some(File::open(&logfile_path)?)
+        } else {
+            None
+        };
+
+        let file_len = match &file {
+            Some(f) => f.metadata()?.len(),
+            None => 0,
+        };
+
+        let mut offset = 0u64;
+
+        Ok(std::iter::from_fn(move || {
+            let f = file.as_mut()?;
+
+            loop {
+                if offset + 4 > file_len {
+                    return None;
+                }
+
+                let mut len_buf = [0u8; 4];
+                if let Err(e) = f.seek(SeekFrom::Start(offset)) {
+                    return Some(Err(e));
+                }
+                if let Err(e) = f.read_exact(&mut len_buf) {
+                    return Some(Err(e));
+                }
+                let length = u32::from_le_bytes(len_buf) as u64;
+
+                if offset + length > file_len {
+                    return None;
+                }
+
+                if let Err(e) = f.seek(SeekFrom::Start(offset)) {
+                    return Some(Err(e));
+                }
+                let mut entry_buf = vec![0u8; length as usize];
+                if let Err(e) = f.read_exact(&mut entry_buf) {
+                    return Some(Err(e));
+                }
+
+                let entry_offset = offset;
+                offset += length;
+
+                if offset < file_len {
+                    let mut newline_buf = [0u8; 1];
+                    if f.read_exact(&mut newline_buf).is_ok() && newline_buf[0] == b'\n' {
+                        offset += 1;
+                    }
+                }
+
+                match bson::Document::from_reader(entry_buf.as_slice()) {
+                    Ok(log_doc) => {
+                        let timestamp = log_doc
+                            .get_str("timestamp")
+                            .unwrap_or("unknown")
+                            .to_string();
+                        let operation_str = log_doc.get_str("operation").unwrap_or("unknown");
+                        let operation = operation_str
+                            .parse::<Operation>()
+                            .unwrap_or(Operation::Insert);
+                        let document = log_doc
+                            .get_document("document")
+                            .cloned()
+                            .unwrap_or_default();
+
+                        return Some(Ok((
+                            LogEntry {
+                                timestamp,
+                                operation,
+                                document,
+                            },
+                            entry_offset,
+                        )));
+                    }
+                    Err(_) => {
+                        continue;
+                    }
+                }
+            }
+        }))
+    }
+
     /// Reads all log entries from the collection's logfile.
     ///
     /// ## Returns
