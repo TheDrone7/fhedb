@@ -145,20 +145,8 @@ impl CollectionIndex {
         self.tree.update(&id.to_bytes(), &new_offset.to_le_bytes())
     }
 
-    /// Returns all document IDs currently stored in the index.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok`]\([`Vec<DocId>`]) containing all indexed IDs,
-    /// or [`Err`]\([`io::Error`]) on I/O failure.
-    ///
-    /// TODO: deprecate this method in favor of iterated
-    pub fn all_ids(&self) -> io::Result<Vec<DocId>> {
-        let iter = self.iter_ids()?;
-        iter.collect()
-    }
-
-    pub fn iter_ids(&self) -> io::Result<impl Iterator<Item = io::Result<DocId>> + '_> {
+    /// Returns iterator over all document IDs currently stored in the index.
+    pub fn all_ids(&self) -> io::Result<impl Iterator<Item = io::Result<DocId>> + '_> {
         let scan = self.tree.scan(None, None)?;
         Ok(scan.map(|result| {
             let (key_bytes, _) = result?;
@@ -166,20 +154,8 @@ impl CollectionIndex {
         }))
     }
 
-    /// Returns all document IDs and their offsets currently stored in the index.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok`]\([`Vec<(DocId, u64)>`]) containing all indexed entries,
-    /// or [`Err`]\([`io::Error`]) on I/O failure.
-    ///
-    /// TODO: deprecate this method in favor of iterated
-    pub fn all_entries(&self) -> io::Result<Vec<(DocId, u64)>> {
-        let iter = self.iter_entries()?;
-        iter.collect()
-    }
-
-    pub fn iter_entries(&self) -> io::Result<impl Iterator<Item = io::Result<(DocId, u64)>> + '_> {
+    /// Returns iterator over document IDs and their offsets currently stored in the index.
+    pub fn all_entries(&self) -> io::Result<impl Iterator<Item = io::Result<(DocId, u64)>> + '_> {
         let scan = self.tree.scan(None, None)?;
         Ok(scan.map(|result| {
             let (key_bytes, value_bytes) = result?;

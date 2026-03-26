@@ -4,7 +4,6 @@
 
 use crate::{
     collection::{Collection, Operation},
-    document::DocId,
     schema::{FieldDefinition, FieldType, IdType, SchemaOps},
 };
 
@@ -281,19 +280,19 @@ impl Collection {
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok`]\([`Vec<DocId>`]) with the IDs of updated documents,
+    /// Returns [`Ok`]\([`usize`]) with the number of updated documents,
     /// or [`Err`]\([`String`]) with an error message.
     pub fn apply_defaults_to_existing(
         &mut self,
         field_name: &str,
         field_definition: &FieldDefinition,
-    ) -> Result<Vec<DocId>, String> {
+    ) -> Result<usize, String> {
         let default_value = field_definition
             .default_value
             .as_ref()
             .ok_or_else(|| format!("Field '{}' has no default value", field_name))?;
 
-        let mut updated_document_ids = Vec::new();
+        let mut updated_documents = 0;
         let mut current_id = None;
         while let Some(doc_id) = self
             .primary_index
@@ -311,10 +310,10 @@ impl Collection {
                         errors.join(", ")
                     )
                 })?;
-            updated_document_ids.push(doc_id);
+            updated_documents += 1;
         }
 
-        Ok(updated_document_ids)
+        Ok(updated_documents)
     }
 
     /// Removes field data from existing documents when a field is removed from the schema.
@@ -325,10 +324,10 @@ impl Collection {
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok`]\([`Vec<DocId>`]) with the IDs of updated documents,
+    /// Returns [`Ok`]\([`usize`]) with the number of updated documents,
     /// or [`Err`]\([`String`]) with an error message.
-    pub fn cleanup_removed_field(&mut self, field_name: &str) -> Result<Vec<DocId>, String> {
-        let mut updated_document_ids = Vec::new();
+    pub fn cleanup_removed_field(&mut self, field_name: &str) -> Result<usize, String> {
+        let mut updated_documents = 0;
         let mut current_id = None;
         while let Some(doc_id) = self
             .primary_index
@@ -348,11 +347,11 @@ impl Collection {
                 self.primary_index
                     .update(&doc_id, new_offset)
                     .map_err(|e| e.to_string())?;
-                updated_document_ids.push(doc_id);
+                updated_documents += 1;
             }
         }
 
-        Ok(updated_document_ids)
+        Ok(updated_documents)
     }
 
     /// Renames a field in all existing documents when a field is renamed in the schema.
@@ -364,14 +363,14 @@ impl Collection {
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok`]\([`Vec<DocId>`]) with the IDs of updated documents,
+    /// Returns [`Ok`]\([`usize`]) with the number of updated documents,
     /// or [`Err`]\([`String`]) with an error message.
     pub fn rename_field_in_documents(
         &mut self,
         old_field_name: &str,
         new_field_name: &str,
-    ) -> Result<Vec<DocId>, String> {
-        let mut updated_document_ids = Vec::new();
+    ) -> Result<usize, String> {
+        let mut updated_documents = 0;
         let mut current_id = None;
 
         while let Some(doc_id) = self
@@ -392,12 +391,12 @@ impl Collection {
                     self.primary_index
                         .update(&doc_id, new_offset)
                         .map_err(|e| e.to_string())?;
-                    updated_document_ids.push(doc_id);
+                    updated_documents += 1;
                 }
             }
         }
 
-        Ok(updated_document_ids)
+        Ok(updated_documents)
     }
 
     /// Returns the names of all fields in the schema.
@@ -414,32 +413,37 @@ impl Collection {
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok`]\([`Vec<DocId>`]) with the new document IDs,
+    /// Returns [`Ok`]\([`usize`]) with the number of updated documents,
     /// or [`Err`]\([`String`]) with an error message.
     pub fn add_ids_to_all_documents(
         &mut self,
         old_field_name: &str,
         new_field_name: &str,
-    ) -> Result<Vec<DocId>, String> {
+    ) -> Result<usize, String> {
         self.inserts = 0;
 
         let mut documents_to_readd = Vec::new();
-        let document_ids = self.primary_index.all_ids().map_err(|e| e.to_string())?;
+        let document_ids = self
+            .primary_index
+            .all_ids()
+            .map_err(|e| e.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
         for doc_id in document_ids {
             if let Some(document) = self.remove_document(doc_id) {
                 documents_to_readd.push(document.data);
             }
         }
 
-        let mut updated_document_ids = Vec::new();
+        let mut updated_documents = 0;
         for mut doc_data in documents_to_readd {
             doc_data.remove(old_field_name);
             let new_id = self.generate_id();
             doc_data.insert(new_field_name, new_id.to_bson());
 
             match self.add_document(doc_data) {
-                Ok(doc_id) => {
-                    updated_document_ids.push(doc_id);
+                Ok(_) => {
+                    updated_documents += 1;
                 }
                 Err(errors) => {
                     return Err(format!(
@@ -450,6 +454,6 @@ impl Collection {
             }
         }
 
-        Ok(updated_document_ids)
+        Ok(updated_documents)
     }
 }

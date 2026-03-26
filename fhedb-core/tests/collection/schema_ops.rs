@@ -255,8 +255,7 @@ fn apply_defaults_to_existing_success() {
     let result = collection.apply_defaults_to_existing("email", &field_def);
 
     assert!(result.is_ok());
-    let updated_ids = result.unwrap();
-    assert_eq!(updated_ids.len(), 2);
+    assert_eq!(result.unwrap(), 2);
 }
 
 #[test]
@@ -277,8 +276,7 @@ fn cleanup_removed_field() {
     let result = collection.cleanup_removed_field("age");
 
     assert!(result.is_ok());
-    let updated_ids = result.unwrap();
-    assert_eq!(updated_ids.len(), 2);
+    assert_eq!(result.unwrap(), 2);
 
     let docs = collection.get_documents();
     for doc in docs {
@@ -294,8 +292,7 @@ fn rename_field_in_documents() {
     let result = collection.rename_field_in_documents("name", "full_name");
 
     assert!(result.is_ok());
-    let updated_ids = result.unwrap();
-    assert_eq!(updated_ids.len(), 2);
+    assert_eq!(result.unwrap(), 2);
 
     let docs = collection.get_documents();
     for doc in docs {
@@ -322,8 +319,7 @@ fn add_ids_to_all_documents() {
     let result = collection.add_ids_to_all_documents("id", "new_id");
 
     assert!(result.is_ok());
-    let updated_ids = result.unwrap();
-    assert_eq!(updated_ids.len(), 2);
+    assert_eq!(result.unwrap(), 2);
 
     assert_eq!(collection.inserts(), 2);
 

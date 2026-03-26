@@ -112,7 +112,12 @@ fn insert_multiple_and_get_all_ids() {
         index.insert(id, (i as u64) * 10).unwrap();
     }
 
-    let mut all = index.all_ids().unwrap();
+    let mut all = index
+        .all_ids()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+
     all.sort_by_key(|id| match id {
         DocId::U64(v) => *v,
         _ => panic!("Expected u64 DocId"),
@@ -134,7 +139,11 @@ fn all_entries() {
     index.insert(&id1, 1000).unwrap();
     index.insert(&id2, 2000).unwrap();
 
-    let mut entries = index.all_entries().unwrap();
+    let mut entries = index
+        .all_entries()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
     entries.sort_by_key(|(id, _)| match id {
         DocId::U64(v) => *v,
         _ => panic!("Expected u64 DocId"),
@@ -291,7 +300,11 @@ fn update_preserves_other_entries() {
 fn all_ids_empty_index() {
     let dir = tempdir().unwrap();
     let index = CollectionIndex::new("id", dir.path()).unwrap();
-    let ids = index.all_ids().unwrap();
+    let ids = index
+        .all_ids()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
     assert!(ids.is_empty());
 }
 
@@ -299,7 +312,11 @@ fn all_ids_empty_index() {
 fn all_entries_empty_index() {
     let dir = tempdir().unwrap();
     let index = CollectionIndex::new("id", dir.path()).unwrap();
-    let entries = index.all_entries().unwrap();
+    let entries = index
+        .all_entries()
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
     assert!(entries.is_empty());
 }
 

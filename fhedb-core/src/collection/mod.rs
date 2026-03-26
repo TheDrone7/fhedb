@@ -249,7 +249,7 @@ impl Collection {
 
     /// Returns all documents in the collection.
     pub fn get_documents(&self) -> impl Iterator<Item = Document> + '_ {
-        let scan_iter = self.primary_index.iter_entries();
+        let scan_iter = self.primary_index.all_entries();
         scan_iter.into_iter().flatten().filter_map(|result| {
             let (id, offset) = result.ok()?;
             let log_entry = self.read_log_entry_at_offset(offset).ok()?;
