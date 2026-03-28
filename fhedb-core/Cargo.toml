@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 fhedb-types = { path = "../fhedb-types" }
 bson = { workspace = true, features = ["serde"] }
-uuid = "1.22.0"
+uuid = "1.23.0"
 chrono = { workspace = true }
 
 [dev-dependencies]
