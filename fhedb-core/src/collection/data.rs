@@ -2,6 +2,12 @@
 //!
 //! Provides schema modification and data consistency operations for collections.
 
+use bson::{Bson, Document as BsonDocument};
+use std::{
+    fs::{OpenOptions, remove_file, rename},
+    io::Write,
+};
+
 use crate::{
     collection::{Collection, Operation},
     schema::{FieldDefinition, FieldType, IdType, SchemaOps},
@@ -420,39 +426,57 @@ impl Collection {
         old_field_name: &str,
         new_field_name: &str,
     ) -> Result<usize, String> {
-        self.inserts = 0;
+        let logfile_path = self.logfile_path();
+        let temp_path = logfile_path.with_extension("tmp");
 
-        let mut documents_to_readd = Vec::new();
-        let document_ids = self
-            .primary_index
-            .all_ids()
-            .map_err(|e| e.to_string())?
-            .collect::<Result<Vec<_>, _>>()
+        let mut temp_file = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(&temp_path)
             .map_err(|e| e.to_string())?;
-        for doc_id in document_ids {
-            if let Some(document) = self.remove_document(doc_id) {
-                documents_to_readd.push(document.data);
-            }
-        }
 
         let mut updated_documents = 0;
-        for mut doc_data in documents_to_readd {
+        self.inserts = 0;
+
+        for result in self
+            .primary_index
+            .all_entries()
+            .map_err(|e| e.to_string())?
+        {
+            let (_, offset) = result.map_err(|e| e.to_string())?;
+            let log_entry =
+                Self::read_entry_at(&self.base_path, offset).map_err(|e| e.to_string())?;
+            let mut doc_data = log_entry.document;
+
             doc_data.remove(old_field_name);
             let new_id = self.generate_id();
             doc_data.insert(new_field_name, new_id.to_bson());
 
-            match self.add_document(doc_data) {
-                Ok(_) => {
-                    updated_documents += 1;
-                }
-                Err(errors) => {
-                    return Err(format!(
-                        "Failed to re-add document with new ID: {}",
-                        errors.join(", ")
-                    ));
-                }
-            }
+            let mut entry = BsonDocument::new();
+            entry.insert("timestamp", Bson::String(chrono::Utc::now().to_rfc3339()));
+            entry.insert(
+                "operation",
+                Bson::String(Operation::Insert.as_str().to_string()),
+            );
+            entry.insert("document", Bson::Document(doc_data));
+
+            let bson_bytes = entry.to_vec().map_err(|e| e.to_string())?;
+            temp_file
+                .write_all(&bson_bytes)
+                .map_err(|e| e.to_string())?;
+            writeln!(temp_file).map_err(|e| e.to_string())?;
+
+            updated_documents += 1;
+            self.inserts += 1;
         }
+
+        remove_file(&logfile_path).map_err(|e| e.to_string())?;
+        rename(&temp_path, &logfile_path).map_err(|e| e.to_string())?;
+
+        self.id_field = new_field_name.to_string();
+        self.build_primary_index().map_err(|e| e.to_string())?;
+        self.write_metadata().map_err(|e| e.to_string())?;
 
         Ok(updated_documents)
     }

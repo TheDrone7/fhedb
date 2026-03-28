@@ -183,7 +183,7 @@ impl Collection {
             None => return Err(vec![format!("Document with ID {:?} not found", id)]),
         };
 
-        let current_log_entry = match self.read_log_entry_at_offset(offset) {
+        let current_log_entry = match Self::read_entry_at(&self.base_path, offset) {
             Ok(entry) => entry,
             Err(e) => return Err(vec![format!("Failed to read document: {}", e)]),
         };
@@ -223,7 +223,7 @@ impl Collection {
         let removed = self.primary_index.remove(&id).ok();
 
         if let Some(Some(offset)) = removed
-            && let Ok(log_entry) = self.read_log_entry_at_offset(offset)
+            && let Ok(log_entry) = Self::read_entry_at(&self.base_path, offset)
         {
             self.append_to_log(&Operation::Delete, &log_entry.document)
                 .ok();
@@ -243,7 +243,7 @@ impl Collection {
     /// Returns [`Some`]\([`Document`]) if found, or [`None`] if not present.
     pub fn get_document(&self, id: DocId) -> Option<Document> {
         let offset = self.primary_index.get(&id).ok()??;
-        let log_entry = self.read_log_entry_at_offset(offset).ok()?;
+        let log_entry = Self::read_entry_at(&self.base_path, offset).ok()?;
         Some(Document::new(id, log_entry.document))
     }
 
@@ -252,7 +252,7 @@ impl Collection {
         let scan_iter = self.primary_index.all_entries();
         scan_iter.into_iter().flatten().filter_map(|result| {
             let (id, offset) = result.ok()?;
-            let log_entry = self.read_log_entry_at_offset(offset).ok()?;
+            let log_entry = Self::read_entry_at(&self.base_path, offset).ok()?;
             Some(Document::new(id, log_entry.document))
         })
     }

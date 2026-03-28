@@ -281,9 +281,9 @@ fn read_log_entry_at_offset() {
     let offset2 = collection.append_to_log(&Operation::Update, &doc2).unwrap();
     let offset3 = collection.append_to_log(&Operation::Delete, &doc3).unwrap();
 
-    let entry1 = collection.read_log_entry_at_offset(offset1).unwrap();
-    let entry2 = collection.read_log_entry_at_offset(offset2).unwrap();
-    let entry3 = collection.read_log_entry_at_offset(offset3).unwrap();
+    let entry1 = Collection::read_entry_at(collection.base_path(), offset1).unwrap();
+    let entry2 = Collection::read_entry_at(collection.base_path(), offset2).unwrap();
+    let entry3 = Collection::read_entry_at(collection.base_path(), offset3).unwrap();
 
     assert_eq!(entry1.operation, Operation::Insert);
     assert_eq!(entry1.document, doc1);
@@ -295,10 +295,10 @@ fn read_log_entry_at_offset() {
     assert_eq!(entry3.document, doc3);
 
     let empty_collection = Collection::new("empty", make_int_schema(), temp_dir.path()).unwrap();
-    let result = empty_collection.read_log_entry_at_offset(0);
+    let result = Collection::read_entry_at(empty_collection.base_path(), 0);
     assert!(result.is_err());
 
-    let invalid_offset_result = collection.read_log_entry_at_offset(99999);
+    let invalid_offset_result = Collection::read_entry_at(collection.base_path(), 99999);
     assert!(invalid_offset_result.is_err());
 }
 

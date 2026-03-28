@@ -145,7 +145,12 @@ impl CollectionIndex {
         self.tree.update(&id.to_bytes(), &new_offset.to_le_bytes())
     }
 
-    /// Returns iterator over all document IDs currently stored in the index.
+    /// Returns an iterator over all document IDs currently stored in the index.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`] with an iterator yielding [`io::Result`]<[`DocId`]> for each entry,
+    /// or [`Err`]\([`io::Error`]) on I/O failure.
     pub fn all_ids(&self) -> io::Result<impl Iterator<Item = io::Result<DocId>> + '_> {
         let scan = self.tree.scan(None, None)?;
         Ok(scan.map(|result| {
@@ -155,6 +160,11 @@ impl CollectionIndex {
     }
 
     /// Returns iterator over document IDs and their offsets currently stored in the index.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`] with an iterator yielding [`io::Result`]<([`DocId`], [`u64`] offset)> pairs,
+    /// or [`Err`]\([`io::Error`]) on I/O failure.
     pub fn all_entries(&self) -> io::Result<impl Iterator<Item = io::Result<(DocId, u64)>> + '_> {
         let scan = self.tree.scan(None, None)?;
         Ok(scan.map(|result| {
@@ -166,6 +176,18 @@ impl CollectionIndex {
         }))
     }
 
+    /// Returns the next document ID after the given one in index order.
+    ///
+    /// ## Arguments
+    ///
+    /// * `after` - If [`Some`], returns the first ID strictly after this one.
+    ///   If [`None`], returns the first ID in the index.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`Some`]\([`DocId`])) with the next ID if one exists,
+    /// [`Ok`]\([`None`]) if there are no more IDs,
+    /// or [`Err`]\([`io::Error`]) on I/O failure.
     pub fn next_id(&self, after: Option<&DocId>) -> io::Result<Option<DocId>> {
         let start_bytes = after.map(|id| id.to_bytes());
         let scan = self.tree.scan(start_bytes.as_deref(), None)?;

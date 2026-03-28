@@ -8,7 +8,7 @@ use super::super::common::make_int_schema;
 fn logfile_empty() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
-    let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
     assert!(collection.compact_logfile().is_ok());
 
@@ -20,7 +20,7 @@ fn logfile_empty() {
 fn logfile_inserts_only() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
-    let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
     let doc1 = doc! {
         "id": 1i64,
@@ -36,6 +36,7 @@ fn logfile_inserts_only() {
     collection.append_to_log(&Operation::Insert, &doc1).unwrap();
     collection.append_to_log(&Operation::Insert, &doc2).unwrap();
 
+    assert!(collection.build_primary_index().is_ok());
     assert!(collection.compact_logfile().is_ok());
     let entries = collection
         .read_log_entries()
@@ -60,7 +61,7 @@ fn logfile_inserts_only() {
 fn logfile_with_updates() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
-    let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
     let doc1_original = doc! {
         "id": 1i64,
@@ -80,6 +81,7 @@ fn logfile_with_updates() {
         .append_to_log(&Operation::Update, &doc1_updated)
         .unwrap();
 
+    assert!(collection.build_primary_index().is_ok());
     assert!(collection.compact_logfile().is_ok());
     let entries = collection
         .read_log_entries()
@@ -98,7 +100,7 @@ fn logfile_with_updates() {
 fn logfile_with_deletes() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
-    let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
     let doc1 = doc! {
         "id": 1i64,
@@ -115,6 +117,7 @@ fn logfile_with_deletes() {
     collection.append_to_log(&Operation::Insert, &doc2).unwrap();
     collection.append_to_log(&Operation::Delete, &doc1).unwrap();
 
+    assert!(collection.build_primary_index().is_ok());
     assert!(collection.compact_logfile().is_ok());
     let entries = collection
         .read_log_entries()
@@ -133,7 +136,7 @@ fn logfile_with_deletes() {
 fn logfile_complex_sequence() {
     let schema = make_int_schema();
     let temp_dir = tempdir().unwrap();
-    let collection = Collection::new("users", schema, temp_dir.path()).unwrap();
+    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
 
     let doc1_v1 = doc! {
         "id": 1i64,
@@ -166,6 +169,7 @@ fn logfile_complex_sequence() {
     collection.append_to_log(&Operation::Delete, &doc2).unwrap();
     collection.append_to_log(&Operation::Insert, &doc3).unwrap();
 
+    assert!(collection.build_primary_index().is_ok());
     assert!(collection.compact_logfile().is_ok());
     let entries = collection
         .read_log_entries()

@@ -165,7 +165,11 @@ fn from_files_missing_document_id() {
     assert!(result.is_err());
     let error = result.unwrap_err();
     assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
-    assert!(error.to_string().contains("Could not extract document ID"));
+    assert!(
+        error
+            .to_string()
+            .contains("Unable to find ID for log entry")
+    );
 }
 
 #[test]

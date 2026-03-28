@@ -8,7 +8,6 @@ use crate::{
 };
 use bson::{Bson, Document as BsonDocument};
 use std::{
-    collections::HashMap,
     fmt,
     fs::{self, File, OpenOptions},
     io::{self, Read, Seek, SeekFrom, Write},
@@ -123,7 +122,7 @@ impl Collection {
     ///
     /// ## Returns
     ///
-    /// Returns [`Ok`]\([`usize`]) with the file offset where the entry was written,
+    /// Returns [`Ok`]\([`u64`]) with the file offset where the entry was written,
     /// or [`Err`]\([`io::Error`]) if the write failed.
     pub fn append_to_log(&self, operation: &Operation, document: &BsonDocument) -> io::Result<u64> {
         self.ensure_collection_dir()?;
@@ -247,6 +246,17 @@ impl Collection {
         }))
     }
 
+    /// Reads a single log entry at the specified offset.
+    ///
+    /// ## Arguments
+    ///
+    /// * `base_path` - The base path for the collection that needs to be read.
+    /// * `offset` - The byte offset in the logfile where the entry begins.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\([`LogEntry`]) if successful,
+    /// or [`Err`]\([`io::Error`]) if the offset is invalid or the read failed.
     pub fn read_entry_at(base_path: &Path, offset: u64) -> io::Result<LogEntry> {
         let log_path = base_path.join("logfile.log");
         if !log_path.exists() {
@@ -293,69 +303,16 @@ impl Collection {
         })
     }
 
-    /// Reads a single log entry at the specified offset.
-    ///
-    /// ## Arguments
-    ///
-    /// * `offset` - The byte offset in the logfile where the entry begins.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok`]\([`LogEntry`]) if successful,
-    /// or [`Err`]\([`io::Error`]) if the offset is invalid or the read failed.
-    ///
-    /// TODO: deprecate in favor of read_entry_at
-    pub fn read_log_entry_at_offset(&self, offset: u64) -> io::Result<LogEntry> {
-        Self::read_entry_at(&self.base_path, offset)
-    }
-
-    /// Compacts the logfile by reconstructing the final state of each document.
+    /// Compacts the logfile by getting the final state of each document from the primary index.
     ///
     /// ## Returns
     ///
     /// Returns [`Ok`]\(()) if the logfile was compacted successfully,
     /// or [`Err`]\([`io::Error`]) if the compaction failed.
-    pub fn compact_logfile(&self) -> io::Result<()> {
+    pub fn compact_logfile(&mut self) -> io::Result<()> {
         let logfile_path = self.logfile_path();
 
-        let mut current_state: HashMap<String, BsonDocument> = HashMap::new();
-        let mut has_entries = false;
-
-        for result in self.read_log_entries()? {
-            let (log_entry, log_offset) = result?;
-            has_entries = true;
-            let document = log_entry.document;
-            let operation = log_entry.operation;
-
-            let doc_id = match document.get(&self.id_field) {
-                Some(bson::Bson::String(s)) => s.clone(),
-                Some(bson::Bson::Int32(i)) => i.to_string(),
-                Some(bson::Bson::Int64(i)) => i.to_string(),
-                _ => {
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        format!(
-                            "Could not extract document ID from log entry at offset {}",
-                            log_offset
-                        ),
-                    ));
-                }
-            };
-
-            match operation {
-                Operation::Insert => {
-                    current_state.insert(doc_id, document);
-                }
-                Operation::Delete => {
-                    current_state.remove(&doc_id);
-                }
-                Operation::Update => {
-                    current_state.insert(doc_id, document);
-                }
-            }
-        }
-
-        if !has_entries {
+        if self.primary_index.is_empty()? {
             return Ok(());
         }
 
@@ -366,7 +323,10 @@ impl Collection {
             .write(true)
             .open(&temp_path)?;
 
-        for (_, document) in current_state {
+        for result in self.primary_index.all_entries()? {
+            let (_, offset) = result?;
+            let log_entry = Self::read_entry_at(&self.base_path, offset)?;
+            let document = log_entry.document;
             let timestamp = chrono::Utc::now().to_rfc3339();
             let mut log_entry = BsonDocument::new();
             log_entry.insert("timestamp", Bson::String(timestamp));
@@ -384,7 +344,9 @@ impl Collection {
             writeln!(temp_file)?;
         }
 
+        fs::remove_file(&logfile_path)?;
         fs::rename(temp_path, logfile_path)?;
+        self.build_primary_index()?;
 
         Ok(())
     }
@@ -458,6 +420,43 @@ impl Collection {
         Ok(collection)
     }
 
+    /// Reads the log entries and builds the primary index from scratch.
+    /// This is a cleanup utility to avoid corrupted indices.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful,
+    /// or [`Err`]\([`io::Error`]) if failed.
+    pub fn build_primary_index(&mut self) -> io::Result<()> {
+        self.primary_index.clear()?;
+
+        for result in self.read_log_entries()? {
+            let (log_entry, offset) = result?;
+            let doc_id = self
+                .get_doc_id_from_bson(&log_entry.document)
+                .ok_or_else(|| {
+                    io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "Unable to find ID for log entry",
+                    )
+                })?;
+
+            match log_entry.operation {
+                Operation::Insert => {
+                    self.primary_index.insert(&doc_id, offset)?;
+                }
+                Operation::Update => {
+                    self.primary_index.update(&doc_id, offset)?;
+                }
+                Operation::Delete => {
+                    self.primary_index.remove(&doc_id)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Creates a [`Collection`] from existing files on disk.
     ///
     /// ## Arguments
@@ -471,32 +470,8 @@ impl Collection {
     /// or [`Err`]\([`io::Error`]) if the load failed.
     pub fn from_files(base_path: impl AsRef<Path>, name: &str) -> io::Result<Collection> {
         let mut collection = Self::read_metadata(base_path.as_ref(), name)?;
+        collection.build_primary_index()?;
         collection.compact_logfile()?;
-        collection.primary_index.clear()?;
-
-        for result in collection.read_log_entries()? {
-            let (log_entry, log_offset) = result?;
-            let doc_id = collection
-                .get_doc_id_from_bson(&log_entry.document)
-                .ok_or_else(|| {
-                    io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        format!(
-                            "Could not extract document ID from log entry at offset {}",
-                            log_offset
-                        ),
-                    )
-                })?;
-
-            match log_entry.operation {
-                Operation::Insert | Operation::Update => {
-                    collection.primary_index.insert(&doc_id, log_offset)?;
-                }
-                Operation::Delete => {
-                    collection.primary_index.remove(&doc_id)?;
-                }
-            }
-        }
 
         Ok(collection)
     }
