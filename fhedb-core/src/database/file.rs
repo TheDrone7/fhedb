@@ -21,7 +21,7 @@ impl Database {
     pub fn from_files(
         name: impl Into<String>,
         base_path: impl Into<PathBuf>,
-    ) -> Result<Self, std::io::Error> {
+    ) -> Result<Self, io::Error> {
         let mut database = Self::new(name, base_path);
 
         if !database.base_path.exists() {

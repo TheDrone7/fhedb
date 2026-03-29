@@ -2,7 +2,10 @@
 //!
 //! Provides utilities for parsing string values into BSON.
 
-use crate::schema::validate_bson_type;
+use crate::{
+    errors::{Error, Result},
+    schema::validate_bson_type,
+};
 use bson::Bson;
 use fhedb_types::FieldType;
 
@@ -18,14 +21,15 @@ pub trait ValueParseable {
     ///
     /// Returns [`Ok`]\([`Bson`]) with the parsed value, or [`Err`]\([`String`]) if
     /// parsing or type validation fails.
-    fn parse_as_bson(&self, expected_type: &FieldType) -> Result<Bson, String>;
+    fn parse_as_bson(&self, expected_type: &FieldType) -> Result<Bson>;
 }
 
 impl ValueParseable for str {
-    fn parse_as_bson(&self, expected_type: &FieldType) -> Result<Bson, String> {
+    fn parse_as_bson(&self, expected_type: &FieldType) -> Result<Bson> {
         let input = self.trim();
         let value = parse_value_string(input)?;
-        validate_bson_type(&value, expected_type)?;
+        validate_bson_type(&value, expected_type)
+            .map_err(|e| Error::Validation(vec![format!("Value '{self}': {e}")]))?;
         Ok(value)
     }
 }
@@ -39,7 +43,7 @@ impl ValueParseable for str {
 /// ## Returns
 ///
 /// Returns the parsed [`Bson`] value.
-fn parse_value_string(input: &str) -> Result<Bson, String> {
+fn parse_value_string(input: &str) -> Result<Bson> {
     if input.eq_ignore_ascii_case("null") {
         return Ok(Bson::Null);
     }
@@ -70,7 +74,7 @@ fn parse_value_string(input: &str) -> Result<Bson, String> {
         return Ok(Bson::Double(n));
     }
 
-    Err(format!("Cannot parse value: {input}"))
+    Err(Error::Execution(format!("Cannot parse value: {input}")))
 }
 
 /// Parses an array string to BSON array.
@@ -82,7 +86,7 @@ fn parse_value_string(input: &str) -> Result<Bson, String> {
 /// ## Returns
 ///
 /// Returns the parsed [`Bson::Array`].
-fn parse_array(input: &str) -> Result<Bson, String> {
+fn parse_array(input: &str) -> Result<Bson> {
     let inner = &input[1..input.len() - 1];
     let elements = split_array_elements(inner)?;
     let mut result = Vec::new();
@@ -101,7 +105,7 @@ fn parse_array(input: &str) -> Result<Bson, String> {
 /// ## Returns
 ///
 /// Returns a vector of element strings.
-fn split_array_elements(inner: &str) -> Result<Vec<&str>, String> {
+fn split_array_elements(inner: &str) -> Result<Vec<&str>> {
     if inner.trim().is_empty() {
         return Ok(Vec::new());
     }

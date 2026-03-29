@@ -2,7 +2,7 @@
 //!
 //! Provides document filtering utilities for query operations.
 
-use crate::{collection::Collection, document::Document, schema::SchemaOps};
+use crate::{collection::Collection, document::Document, errors::Result, schema::SchemaOps};
 use fhedb_types::FieldCondition;
 
 /// Document filtering operations for query execution.
@@ -19,7 +19,7 @@ impl Collection {
     pub fn filter<'a>(
         &'a self,
         conditions: &'a [FieldCondition],
-    ) -> impl Iterator<Item = Result<Document, String>> + 'a {
+    ) -> impl Iterator<Item = Result<Document>> + 'a {
         self.get_documents().filter_map(move |doc| {
             if conditions.is_empty() {
                 return Some(Ok(doc));

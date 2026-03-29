@@ -4,7 +4,11 @@
 
 pub mod file;
 
-use crate::{collection::Collection, schema::Schema};
+use crate::{
+    collection::Collection,
+    errors::{Error, Result},
+    schema::Schema,
+};
 use std::{collections::HashMap, path::PathBuf};
 
 /// A named group of [`Collection`]s stored under a shared base path.
@@ -57,19 +61,16 @@ impl Database {
         &mut self,
         name: impl Into<String>,
         schema: Schema,
-    ) -> Result<&Collection, String> {
+    ) -> Result<&Collection> {
         let collection_name = name.into();
 
         if self.collections.contains_key(&collection_name) {
-            return Err(format!("Collection '{}' already exists", collection_name));
+            return Err(Error::CollectionAlreadyExists(collection_name));
         }
 
         let collection = Collection::new(collection_name.clone(), schema, &self.base_path)?;
 
-        collection
-            .write_metadata()
-            .map_err(|e| format!("Failed to write collection metadata: {}", e))?;
-
+        collection.write_metadata()?;
         self.collections.insert(collection_name.clone(), collection);
 
         Ok(self.collections.get(&collection_name).unwrap())
@@ -85,17 +86,12 @@ impl Database {
     ///
     /// Returns [`Ok`]\([`String`]) with the dropped collection name,
     /// or [`Err`]\([`String`]) if not found or deletion failed.
-    pub fn drop_collection(&mut self, collection_name: &str) -> Result<String, String> {
+    pub fn drop_collection(&mut self, collection_name: &str) -> Result<String> {
         if let Some(collection) = self.collections.remove(collection_name) {
-            if let Err(e) = collection.delete_collection_files() {
-                self.collections
-                    .insert(collection_name.to_string(), collection);
-                return Err(format!("Failed to delete collection files: {}", e));
-            }
-
+            collection.delete_collection_files()?;
             Ok(collection_name.to_string())
         } else {
-            Err(format!("Collection '{}' not found", collection_name))
+            Err(Error::CollectionNotFound(collection_name.to_string()))
         }
     }
 

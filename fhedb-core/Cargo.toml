@@ -6,8 +6,10 @@ edition = "2024"
 [dependencies]
 fhedb-types = { path = "../fhedb-types" }
 bson = { workspace = true, features = ["serde"] }
-uuid = "1.23.0"
 chrono = { workspace = true }
+thiserror = { workspace = true }
+uuid = "1.23.0"
 
 [dev-dependencies]
 tempfile = "3.27.0"
+assert_matches = "1.5.0"

@@ -10,6 +10,7 @@ use std::{
 
 use crate::{
     collection::{Collection, Operation},
+    errors::{Error, Result},
     schema::{FieldDefinition, FieldType, IdType, SchemaOps},
 };
 
@@ -38,7 +39,7 @@ impl Collection {
     ///
     /// Returns [`Ok`]\(()) if the document matches the schema,
     /// or [`Err`]\([`Vec<String>`]) with validation errors.
-    pub fn validate_document(&self, doc: &bson::Document) -> Result<(), Vec<String>> {
+    pub fn validate_document(&self, doc: &bson::Document) -> Result<()> {
         self.schema.validate_document(doc)
     }
 
@@ -57,22 +58,22 @@ impl Collection {
         &mut self,
         field_name: String,
         mut field_definition: FieldDefinition,
-    ) -> Result<(), String> {
+    ) -> Result<()> {
         if self.schema.fields.contains_key(&field_name) {
-            return Err(format!(
+            return Err(Error::Schema(format!(
                 "Field '{}' already exists in the schema",
                 field_name
-            ));
+            )));
         }
 
         if matches!(
             field_definition.field_type,
             FieldType::IdString | FieldType::IdInt
         ) {
-            return Err(format!(
+            return Err(Error::Schema(format!(
                 "Cannot add ID field '{}' because the schema already has an ID field '{}'",
                 field_name, self.id_field
-            ));
+            )));
         }
 
         let is_nullable = matches!(field_definition.field_type, FieldType::Nullable(_));
@@ -82,15 +83,12 @@ impl Collection {
             field_definition.default_value = Some(bson::Bson::Null);
         }
 
-        if !is_nullable
-            && !has_default
-            && !self.primary_index.is_empty().map_err(|e| e.to_string())?
-        {
-            return Err(format!(
+        if !is_nullable && !has_default && !self.primary_index.is_empty()? {
+            return Err(Error::Schema(format!(
                 "Cannot add non-nullable field '{}' without a default value because the collection contains {} existing documents",
                 field_name,
-                self.primary_index.len().map_err(|e| e.to_string())?
-            ));
+                self.primary_index.len()?
+            )));
         }
 
         self.schema
@@ -117,12 +115,12 @@ impl Collection {
     ///
     /// Returns [`Ok`]\(()) if the field was successfully removed,
     /// or [`Err`]\([`String`]) with an error message.
-    pub fn remove_field(&mut self, field_name: &str) -> Result<(), String> {
+    pub fn remove_field(&mut self, field_name: &str) -> Result<()> {
         if !self.schema.fields.contains_key(field_name) {
-            return Err(format!(
+            return Err(Error::Schema(format!(
                 "Field '{}' does not exist in the schema",
                 field_name
-            ));
+            )));
         }
         let is_id_field = field_name == self.id_field;
 
@@ -161,12 +159,12 @@ impl Collection {
         &mut self,
         field_name: &str,
         mut new_definition: FieldDefinition,
-    ) -> Result<(), String> {
+    ) -> Result<()> {
         if !self.schema.fields.contains_key(field_name) {
-            return Err(format!(
+            return Err(Error::Schema(format!(
                 "Field '{}' does not exist in the schema",
                 field_name
-            ));
+            )));
         }
 
         let original_definition = self.schema.fields.get(field_name).unwrap().clone();
@@ -178,15 +176,12 @@ impl Collection {
             new_definition.default_value = Some(bson::Bson::Null);
         }
 
-        if !self.primary_index.is_empty().map_err(|e| e.to_string())?
-            && !is_nullable
-            && !has_default
-        {
-            return Err(format!(
+        if !self.primary_index.is_empty()? && !is_nullable && !has_default {
+            return Err(Error::Schema(format!(
                 "Cannot modify field '{}' to non-nullable without a default value because the collection contains {} existing documents",
                 field_name,
-                self.primary_index.len().map_err(|e| e.to_string())?
-            ));
+                self.primary_index.len()?
+            )));
         }
 
         let original_is_id = matches!(
@@ -200,10 +195,10 @@ impl Collection {
         );
 
         if !original_is_id && new_is_id {
-            return Err(format!(
+            return Err(Error::Schema(format!(
                 "Cannot modify field '{}' to ID type because the schema already has an ID field '{}'",
                 field_name, self.id_field
-            ));
+            )));
         }
 
         self.schema
@@ -227,13 +222,11 @@ impl Collection {
             self.id_field = "id".to_string();
             self.id_type = IdType::Int;
 
-            if !self.primary_index.is_empty().map_err(|e| e.to_string())?
-                && new_definition.default_value.is_some()
-            {
+            if !self.primary_index.is_empty()? && new_definition.default_value.is_some() {
                 self.add_ids_to_all_documents(field_name, "id")?;
                 self.apply_defaults_to_existing(field_name, &new_definition)?;
             }
-        } else if !self.primary_index.is_empty().map_err(|e| e.to_string())? {
+        } else if !self.primary_index.is_empty()? {
             self.cleanup_removed_field(field_name)?;
 
             if new_definition.default_value.is_some() {
@@ -256,12 +249,18 @@ impl Collection {
     ///
     /// Returns [`Ok`]\(()) if the field was successfully renamed,
     /// or [`Err`]\([`String`]) with an error message.
-    pub fn rename_field(&mut self, old_name: &str, new_name: String) -> Result<(), String> {
+    pub fn rename_field(&mut self, old_name: &str, new_name: String) -> Result<()> {
         if !self.has_field(old_name) {
-            return Err(format!("Field '{}' does not exist", old_name));
+            return Err(Error::Schema(format!(
+                "Field '{}' does not exist",
+                old_name
+            )));
         }
         if self.has_field(&new_name) {
-            return Err(format!("Field '{}' already exists", new_name));
+            return Err(Error::Schema(format!(
+                "Field '{}' already exists",
+                new_name
+            )));
         }
 
         let field_definition = self.schema.fields.remove(old_name).unwrap();
@@ -292,30 +291,19 @@ impl Collection {
         &mut self,
         field_name: &str,
         field_definition: &FieldDefinition,
-    ) -> Result<usize, String> {
+    ) -> Result<usize> {
         let default_value = field_definition
             .default_value
             .as_ref()
-            .ok_or_else(|| format!("Field '{}' has no default value", field_name))?;
+            .ok_or_else(|| Error::Schema(format!("Field '{}' has no default value", field_name)))?;
 
         let mut updated_documents = 0;
         let mut current_id = None;
-        while let Some(doc_id) = self
-            .primary_index
-            .next_id(current_id.as_ref())
-            .map_err(|e| e.to_string())?
-        {
+        while let Some(doc_id) = self.primary_index.next_id(current_id.as_ref())? {
             current_id = Some(doc_id.clone());
             let mut update_doc = bson::Document::new();
             update_doc.insert(field_name, default_value.clone());
-            self.update_document(doc_id.clone(), update_doc)
-                .map_err(|errors| {
-                    format!(
-                        "Failed to apply default value to document {:?}: {}",
-                        doc_id,
-                        errors.join(", ")
-                    )
-                })?;
+            self.update_document(doc_id.clone(), update_doc)?;
             updated_documents += 1;
         }
 
@@ -332,14 +320,10 @@ impl Collection {
     ///
     /// Returns [`Ok`]\([`usize`]) with the number of updated documents,
     /// or [`Err`]\([`String`]) with an error message.
-    pub fn cleanup_removed_field(&mut self, field_name: &str) -> Result<usize, String> {
+    pub fn cleanup_removed_field(&mut self, field_name: &str) -> Result<usize> {
         let mut updated_documents = 0;
         let mut current_id = None;
-        while let Some(doc_id) = self
-            .primary_index
-            .next_id(current_id.as_ref())
-            .map_err(|e| e.to_string())?
-        {
+        while let Some(doc_id) = self.primary_index.next_id(current_id.as_ref())? {
             current_id = Some(doc_id.clone());
             if let Some(document) = self.get_document(doc_id.clone())
                 && document.data.contains_key(field_name)
@@ -347,12 +331,8 @@ impl Collection {
                 let mut cleaned_doc = document.data.clone();
                 cleaned_doc.remove(field_name);
 
-                let new_offset = self
-                    .append_to_log(&Operation::Update, &cleaned_doc)
-                    .map_err(|e| e.to_string())?;
-                self.primary_index
-                    .update(&doc_id, new_offset)
-                    .map_err(|e| e.to_string())?;
+                let new_offset = self.append_to_log(&Operation::Update, &cleaned_doc)?;
+                self.primary_index.update(&doc_id, new_offset)?;
                 updated_documents += 1;
             }
         }
@@ -375,15 +355,11 @@ impl Collection {
         &mut self,
         old_field_name: &str,
         new_field_name: &str,
-    ) -> Result<usize, String> {
+    ) -> Result<usize> {
         let mut updated_documents = 0;
         let mut current_id = None;
 
-        while let Some(doc_id) = self
-            .primary_index
-            .next_id(current_id.as_ref())
-            .map_err(|e| e.to_string())?
-        {
+        while let Some(doc_id) = self.primary_index.next_id(current_id.as_ref())? {
             current_id = Some(doc_id.clone());
 
             if let Some(document) = self.get_document(doc_id.clone()) {
@@ -391,12 +367,8 @@ impl Collection {
                     let mut updated_doc = document.data.clone();
                     updated_doc.remove(old_field_name);
                     updated_doc.insert(new_field_name, field_value.clone());
-                    let new_offset = self
-                        .append_to_log(&Operation::Update, &updated_doc)
-                        .map_err(|e| e.to_string())?;
-                    self.primary_index
-                        .update(&doc_id, new_offset)
-                        .map_err(|e| e.to_string())?;
+                    let new_offset = self.append_to_log(&Operation::Update, &updated_doc)?;
+                    self.primary_index.update(&doc_id, new_offset)?;
                     updated_documents += 1;
                 }
             }
@@ -425,7 +397,7 @@ impl Collection {
         &mut self,
         old_field_name: &str,
         new_field_name: &str,
-    ) -> Result<usize, String> {
+    ) -> Result<usize> {
         let logfile_path = self.logfile_path();
         let temp_path = logfile_path.with_extension("tmp");
 
@@ -433,20 +405,14 @@ impl Collection {
             .create(true)
             .truncate(true)
             .write(true)
-            .open(&temp_path)
-            .map_err(|e| e.to_string())?;
+            .open(&temp_path)?;
 
         let mut updated_documents = 0;
         self.inserts = 0;
 
-        for result in self
-            .primary_index
-            .all_entries()
-            .map_err(|e| e.to_string())?
-        {
-            let (_, offset) = result.map_err(|e| e.to_string())?;
-            let log_entry =
-                Self::read_entry_at(&self.base_path, offset).map_err(|e| e.to_string())?;
+        for result in self.primary_index.all_entries()? {
+            let (_, offset) = result?;
+            let log_entry = Self::read_entry_at(&self.base_path, offset)?;
             let mut doc_data = log_entry.document;
 
             doc_data.remove(old_field_name);
@@ -461,22 +427,22 @@ impl Collection {
             );
             entry.insert("document", Bson::Document(doc_data));
 
-            let bson_bytes = entry.to_vec().map_err(|e| e.to_string())?;
-            temp_file
-                .write_all(&bson_bytes)
-                .map_err(|e| e.to_string())?;
-            writeln!(temp_file).map_err(|e| e.to_string())?;
+            let bson_bytes = entry
+                .to_vec()
+                .map_err(|e| Error::Validation(vec![e.to_string()]))?;
+            temp_file.write_all(&bson_bytes)?;
+            writeln!(temp_file)?;
 
             updated_documents += 1;
             self.inserts += 1;
         }
 
-        remove_file(&logfile_path).map_err(|e| e.to_string())?;
-        rename(&temp_path, &logfile_path).map_err(|e| e.to_string())?;
+        remove_file(&logfile_path)?;
+        rename(&temp_path, &logfile_path)?;
 
         self.id_field = new_field_name.to_string();
-        self.build_primary_index().map_err(|e| e.to_string())?;
-        self.write_metadata().map_err(|e| e.to_string())?;
+        self.build_primary_index()?;
+        self.write_metadata()?;
 
         Ok(updated_documents)
     }

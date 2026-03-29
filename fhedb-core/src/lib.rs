@@ -11,6 +11,8 @@ pub mod collection;
 /// The document module - contains the document and ID types.
 pub mod document;
 
+pub mod errors;
+
 /// The reference utilities module - contains reference validation utilities.
 pub mod reference_utils;
 

@@ -2,7 +2,10 @@
 //!
 //! Schema definitions and validation logic for FHEDB collections.
 
-use crate::query::{BsonComparable, ValueParseable};
+use crate::{
+    errors::{Error, Result},
+    query::{BsonComparable, ValueParseable},
+};
 use bson::{Bson, Document};
 use std::collections::HashMap;
 
@@ -21,7 +24,7 @@ pub trait SchemaOps {
     /// ## Returns
     ///
     /// Returns [`Ok`]\(()) if valid, or [`Err`]\([`Vec<String>`]) with validation errors.
-    fn validate_document(&self, doc: &Document) -> Result<(), Vec<String>>;
+    fn validate_document(&self, doc: &Document) -> Result<()>;
 
     /// Ensures the schema has exactly one Id field.
     /// Adds a default `id` field with type [`FieldType::IdInt`] if none exists.
@@ -30,7 +33,7 @@ pub trait SchemaOps {
     ///
     /// Returns [`Ok`]\((field_name, [`IdType`])) on success,
     /// or [`Err`]\([`String`]) if multiple Id fields exist.
-    fn ensure_id(&mut self) -> Result<(String, IdType), String>;
+    fn ensure_id(&mut self) -> Result<(String, IdType)>;
 
     /// Applies default values to a [`Document`] for any missing fields that have defaults.
     ///
@@ -49,7 +52,7 @@ pub trait SchemaOps {
     ///
     /// Returns a [`Document`] with parsed values and defaults applied,
     /// or [`Err`]\([`String`]) if a field is unknown or cannot be parsed.
-    fn prepare_document(&self, fields: &HashMap<String, String>) -> Result<Document, String>;
+    fn prepare_document(&self, fields: &HashMap<String, String>) -> Result<Document>;
 
     /// Evaluates a condition against a document.
     ///
@@ -62,11 +65,7 @@ pub trait SchemaOps {
     ///
     /// Returns [`Ok`]\([`bool`]) indicating whether the condition matches,
     /// or [`Err`]\([`String`]) if the field is unknown.
-    fn evaluate_condition(
-        &self,
-        doc: &Document,
-        condition: &FieldCondition,
-    ) -> Result<bool, String>;
+    fn evaluate_condition(&self, doc: &Document, condition: &FieldCondition) -> Result<bool>;
 
     /// Selects fields from a document based on selectors.
     ///
@@ -79,15 +78,11 @@ pub trait SchemaOps {
     ///
     /// Returns a new [`Document`] containing only selected fields,
     /// or [`Err`]\([`String`]) if a selector references an unknown field.
-    fn select_fields(
-        &self,
-        doc: &Document,
-        selectors: &[FieldSelector],
-    ) -> Result<Document, String>;
+    fn select_fields(&self, doc: &Document, selectors: &[FieldSelector]) -> Result<Document>;
 }
 
 impl SchemaOps for Schema {
-    fn validate_document(&self, doc: &Document) -> Result<(), Vec<String>> {
+    fn validate_document(&self, doc: &Document) -> Result<()> {
         let mut errors = Vec::new();
         for (field, field_def) in &self.fields {
             match doc.get(field) {
@@ -105,11 +100,11 @@ impl SchemaOps for Schema {
         if errors.is_empty() {
             Ok(())
         } else {
-            Err(errors)
+            Err(Error::Validation(errors))
         }
     }
 
-    fn ensure_id(&mut self) -> Result<(String, IdType), String> {
+    fn ensure_id(&mut self) -> Result<(String, IdType)> {
         let id_fields: Vec<(String, IdType)> = self
             .fields
             .iter()
@@ -132,9 +127,9 @@ impl SchemaOps for Schema {
                 Ok(("id".to_string(), IdType::Int))
             }
             1 => Ok(id_fields[0].clone()),
-            _ => {
-                Err("Schema must contain at most one field with type IdString or IdInt".to_string())
-            }
+            _ => Err(Error::Schema(
+                "Schema must contain at most one field with type IdString or IdInt".to_string(),
+            )),
         }
     }
 
@@ -160,14 +155,14 @@ impl SchemaOps for Schema {
         applied_count
     }
 
-    fn prepare_document(&self, fields: &HashMap<String, String>) -> Result<Document, String> {
+    fn prepare_document(&self, fields: &HashMap<String, String>) -> Result<Document> {
         let mut doc = Document::new();
 
         for (field_name, value_str) in fields {
             let field_def = self
                 .fields
                 .get(field_name)
-                .ok_or_else(|| format!("Unknown field '{}'.", field_name))?;
+                .ok_or_else(|| Error::Schema(format!("Unknown field '{}'.", field_name)))?;
             doc.insert(
                 field_name.clone(),
                 value_str.parse_as_bson(&field_def.field_type)?,
@@ -205,7 +200,10 @@ impl SchemaOps for Schema {
                     if let Some(default) = &field_def.default_value {
                         doc.insert(field_name.clone(), default.clone());
                     } else {
-                        return Err(format!("Missing required field '{}'.", field_name));
+                        return Err(Error::Validation(vec![format!(
+                            "Missing required field '{}'.",
+                            field_name
+                        )]));
                     }
                 }
             }
@@ -213,15 +211,11 @@ impl SchemaOps for Schema {
         Ok(doc)
     }
 
-    fn evaluate_condition(
-        &self,
-        doc: &Document,
-        condition: &FieldCondition,
-    ) -> Result<bool, String> {
+    fn evaluate_condition(&self, doc: &Document, condition: &FieldCondition) -> Result<bool> {
         let field_def = self
             .fields
             .get(&condition.field_name)
-            .ok_or_else(|| format!("Unknown field '{}'.", condition.field_name))?;
+            .ok_or_else(|| Error::Schema(format!("Unknown field '{}'.", condition.field_name)))?;
 
         let parse_type = get_parse_type(&field_def.field_type, &condition.operator);
         let condition_value = condition.value.parse_as_bson(parse_type)?;
@@ -251,11 +245,7 @@ impl SchemaOps for Schema {
         }
     }
 
-    fn select_fields(
-        &self,
-        doc: &Document,
-        selectors: &[FieldSelector],
-    ) -> Result<Document, String> {
+    fn select_fields(&self, doc: &Document, selectors: &[FieldSelector]) -> Result<Document> {
         if selectors.is_empty() {
             return Ok(Document::new());
         }
@@ -265,7 +255,7 @@ impl SchemaOps for Schema {
             match selector {
                 FieldSelector::Field(name) => {
                     if !self.fields.contains_key(name) {
-                        return Err(format!("Unknown field '{}'.", name));
+                        return Err(Error::Schema(format!("Unknown field '{}'.", name)));
                     }
                     if let Some(value) = doc.get(name) {
                         result.insert(name.clone(), value.clone());
@@ -278,7 +268,7 @@ impl SchemaOps for Schema {
                 }
                 FieldSelector::SubDocument { field_name, .. } => {
                     if !self.fields.contains_key(field_name) {
-                        return Err(format!("Unknown field '{}'.", field_name));
+                        return Err(Error::Schema(format!("Unknown field '{}'.", field_name)));
                     }
                     let value = doc.get(field_name).cloned().unwrap_or(Bson::Null);
                     result.insert(field_name.clone(), value);
@@ -464,7 +454,7 @@ fn field_definition_to_bson(field_def: &FieldDefinition) -> Bson {
 /// ## Returns
 ///
 /// Returns [`Ok`]\(()) if the value matches, or [`Err`]\([`String`]) with an error message.
-pub fn validate_bson_type(value: &Bson, field_type: &FieldType) -> Result<(), String> {
+pub fn validate_bson_type(value: &Bson, field_type: &FieldType) -> std::result::Result<(), String> {
     match field_type {
         FieldType::Int => match value {
             Bson::Int32(_) | Bson::Int64(_) => Ok(()),

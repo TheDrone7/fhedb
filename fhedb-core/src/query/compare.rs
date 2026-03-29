@@ -2,6 +2,7 @@
 //!
 //! Provides comparison operations for BSON values.
 
+use crate::errors::{Error, Result};
 use bson::Bson;
 use fhedb_types::QueryOperator;
 
@@ -18,11 +19,11 @@ pub trait BsonComparable {
     ///
     /// Returns [`Ok`]\([`bool`]) with the comparison result, or [`Err`]\([`String`]) for
     /// incompatible types or unsupported operations.
-    fn compare_to(&self, other: &Bson, op: &QueryOperator) -> Result<bool, String>;
+    fn compare_to(&self, other: &Bson, op: &QueryOperator) -> Result<bool>;
 }
 
 impl BsonComparable for Bson {
-    fn compare_to(&self, other: &Bson, op: &QueryOperator) -> Result<bool, String> {
+    fn compare_to(&self, other: &Bson, op: &QueryOperator) -> Result<bool> {
         let result = match (self, other) {
             (Bson::Int64(x), Bson::Int64(y)) => compare_ord(x, y, op),
             (Bson::Double(x), Bson::Double(y)) => compare_ord(x, y, op),
@@ -30,10 +31,16 @@ impl BsonComparable for Bson {
             (Bson::Double(x), Bson::Int64(y)) => compare_ord(x, &(*y as f64), op),
             (Bson::String(x), Bson::String(y)) => compare_ord(x, y, op),
             (Bson::Array(_), _) | (_, Bson::Array(_)) => {
-                return Err("Comparison operators not supported for arrays.".to_string());
+                return Err(Error::Execution(
+                    "Comparison operators not supported for arrays.".to_string(),
+                ));
             }
             (Bson::Null, _) | (_, Bson::Null) => false,
-            _ => return Err("Incompatible types for comparison.".to_string()),
+            _ => {
+                return Err(Error::Execution(
+                    "Incompatible types for comparison.".to_string(),
+                ));
+            }
         };
         Ok(result)
     }

@@ -7,6 +7,7 @@ pub mod file;
 
 use crate::{
     document::{DocId, Document},
+    errors::{Error, Result},
     index::CollectionIndex,
     schema::{IdType, Schema, SchemaOps},
 };
@@ -50,14 +51,13 @@ impl Collection {
         name: impl Into<String>,
         mut schema: Schema,
         base_path: impl Into<PathBuf>,
-    ) -> Result<Self, String> {
+    ) -> Result<Self> {
         let (id_field, id_type) = schema.ensure_id()?;
         let name = name.into();
         let temp_path = base_path.into();
         let base_path = temp_path.join(&name);
-        create_dir_all(&base_path).map_err(|e| e.to_string())?;
-        let primary_index =
-            CollectionIndex::new(id_field.clone(), &base_path).map_err(|e| e.to_string())?;
+        create_dir_all(&base_path)?;
+        let primary_index = CollectionIndex::new(id_field.clone(), &base_path)?;
 
         Ok(Self {
             name,
@@ -80,7 +80,7 @@ impl Collection {
     ///
     /// Returns [`Ok`]\([`DocId`]) of the added document,
     /// or [`Err`]\([`Vec<String>`]) with validation errors.
-    pub fn add_document(&mut self, mut doc: bson::Document) -> Result<DocId, Vec<String>> {
+    pub fn add_document(&mut self, mut doc: bson::Document) -> Result<DocId> {
         self.schema.apply_defaults(&mut doc);
 
         self.validate_document(&doc)?;
@@ -94,32 +94,16 @@ impl Collection {
             }
         };
 
-        let exists = self
-            .primary_index
-            .contains_id(&doc_id)
-            .map_err(|e| vec![e.to_string()])?;
+        let exists = self.primary_index.contains_id(&doc_id)?;
 
         if exists {
-            return Err(vec![format!(
-                "Document with ID '{}' already exists.",
-                doc_id.to_string()
-            )]);
+            return Err(Error::DocumentAlreadyExists(doc_id.to_string()));
         }
 
-        match self.append_to_log(&Operation::Insert, &doc) {
-            Ok(offset) => {
-                self.primary_index
-                    .insert(&doc_id, offset)
-                    .map_err(|e| vec![e.to_string()])?;
-            }
-            Err(e) => {
-                return Err(vec![e.to_string()]);
-            }
-        }
-
+        let offset = self.append_to_log(&Operation::Insert, &doc)?;
+        self.primary_index.insert(&doc_id, offset)?;
         self.inserts += 1;
-        self.write_metadata()
-            .map_err(|e| vec![format!("Failed to write metadata: {}", e)])?;
+        self.write_metadata()?;
         Ok(doc_id)
     }
 
@@ -164,29 +148,20 @@ impl Collection {
     ///
     /// Returns [`Ok`]\([`Document`]) with the updated document,
     /// or [`Err`]\([`Vec<String>`]) with validation errors.
-    pub fn update_document(
-        &mut self,
-        id: DocId,
-        update_doc: bson::Document,
-    ) -> Result<Document, Vec<String>> {
+    pub fn update_document(&mut self, id: DocId, update_doc: bson::Document) -> Result<Document> {
         if update_doc.contains_key(&self.id_field) {
-            return Err(vec![format!("Cannot update ID field '{}'", self.id_field)]);
+            return Err(Error::Validation(vec![format!(
+                "Cannot update ID field '{}'",
+                self.id_field
+            )]));
         }
 
-        let offset = self
-            .primary_index
-            .get(&id)
-            .map_err(|e| vec![e.to_string()])?;
-
-        let offset = match offset {
+        let offset = match self.primary_index.get(&id)? {
             Some(offset) => offset,
-            None => return Err(vec![format!("Document with ID {:?} not found", id)]),
+            None => return Err(Error::DocumentNotFound(id.to_string())),
         };
 
-        let current_log_entry = match Self::read_entry_at(&self.base_path, offset) {
-            Ok(entry) => entry,
-            Err(e) => return Err(vec![format!("Failed to read document: {}", e)]),
-        };
+        let current_log_entry = Self::read_entry_at(&self.base_path, offset)?;
 
         let mut updated_doc = current_log_entry.document.clone();
 
@@ -196,18 +171,9 @@ impl Collection {
 
         self.validate_document(&updated_doc)?;
 
-        match self.append_to_log(&Operation::Update, &updated_doc) {
-            Ok(new_offset) => {
-                self.primary_index
-                    .update(&id, new_offset)
-                    .map_err(|e| vec![e.to_string()])?;
-                Ok(Document::new(id, updated_doc))
-            }
-            Err(e) => Err(vec![format!(
-                "Failed to write updated document to log: {}",
-                e
-            )]),
-        }
+        let new_offset = self.append_to_log(&Operation::Update, &updated_doc)?;
+        self.primary_index.update(&id, new_offset)?;
+        Ok(Document::new(id, updated_doc))
     }
 
     /// Removes a document from the collection by its ID.
