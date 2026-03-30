@@ -28,4 +28,16 @@ pub enum Error {
     Execution(String),
 }
 
+impl PartialEq for Error {
+    fn eq(&self, other: &Self) -> bool {
+        if let Error::Io(self_io) = self
+            && let Error::Io(other_io) = other
+        {
+            return self_io.kind() == other_io.kind()
+                && self_io.to_string() == other_io.to_string();
+        }
+        self == other
+    }
+}
+
 pub type Result<T> = result::Result<T, Error>;
