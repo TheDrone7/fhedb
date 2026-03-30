@@ -157,16 +157,17 @@ impl SchemaOps for Schema {
 
     fn prepare_document(&self, fields: &HashMap<String, String>) -> Result<Document> {
         let mut doc = Document::new();
+        let mut errors = vec![];
 
         for (field_name, value_str) in fields {
-            let field_def = self
-                .fields
-                .get(field_name)
-                .ok_or_else(|| Error::Schema(format!("Unknown field '{}'.", field_name)))?;
-            doc.insert(
-                field_name.clone(),
-                value_str.parse_as_bson(&field_def.field_type)?,
-            );
+            if let Some(field_def) = self.fields.get(field_name) {
+                doc.insert(
+                    field_name.clone(),
+                    value_str.parse_as_bson(&field_def.field_type)?,
+                );
+            } else {
+                errors.push(format!("Unknown field '{}'.", field_name));
+            }
         }
 
         for (field_name, field_def) in &self.fields {
@@ -200,15 +201,17 @@ impl SchemaOps for Schema {
                     if let Some(default) = &field_def.default_value {
                         doc.insert(field_name.clone(), default.clone());
                     } else {
-                        return Err(Error::Validation(vec![format!(
-                            "Missing required field '{}'.",
-                            field_name
-                        )]));
+                        errors.push(format!("Missing required field '{}'.", field_name));
                     }
                 }
             }
         }
-        Ok(doc)
+
+        if errors.is_empty() {
+            Ok(doc)
+        } else {
+            Err(Error::Validation(errors))
+        }
     }
 
     fn evaluate_condition(&self, doc: &Document, condition: &FieldCondition) -> Result<bool> {
