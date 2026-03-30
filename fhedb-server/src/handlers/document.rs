@@ -11,7 +11,7 @@ use fhedb_core::prelude::{
 use fhedb_types::{DocumentQuery, FieldCondition, FieldSelector};
 use serde_json::{Value as JsonValue, json};
 
-use crate::state::ServerState;
+use crate::{errors::AppError, state::ServerState};
 
 /// Executes a document-level query within a specific database.
 ///
@@ -28,7 +28,7 @@ pub fn execute_document_query(
     db_name: String,
     query: DocumentQuery,
     state: &ServerState,
-) -> Result<JsonValue, String> {
+) -> Result<JsonValue, AppError> {
     match query {
         DocumentQuery::Insert {
             collection_name,
@@ -77,23 +77,28 @@ fn execute_insert(
     collection_name: String,
     fields: HashMap<String, String>,
     state: &ServerState,
-) -> Result<JsonValue, String> {
-    let mut dbs = state.databases.write().map_err(|e| e.to_string())?;
+) -> Result<JsonValue, AppError> {
+    let mut dbs = state
+        .databases
+        .write()
+        .map_err(|e| AppError::Server(e.to_string()))?;
     let db = dbs
         .get_mut(&db_name)
-        .ok_or_else(|| format!("Database '{}' not found.", db_name))?;
-    let collection = db
-        .get_collection_mut(&collection_name)
-        .ok_or_else(|| format!("Collection '{}' not found.", collection_name))?;
+        .ok_or_else(|| AppError::Server(format!("Database '{}' not found.", db_name)))?;
+    let collection = db.get_collection_mut(&collection_name).ok_or_else(|| {
+        AppError::Core(fhedb_core::errors::Error::CollectionNotFound(
+            collection_name,
+        ))
+    })?;
 
     let doc = collection.schema().prepare_document(&fields)?;
-    let doc_id = collection.add_document(doc).map_err(|e| e.join("; "))?;
-    let inserted = collection
-        .get_document(doc_id)
-        .ok_or("Failed to retrieve inserted document.")?;
+    let doc_id = collection.add_document(doc)?;
+    let inserted = collection.get_document(doc_id).ok_or(AppError::Server(
+        "Failed to retrieve inserted document.".to_string(),
+    ))?;
 
     Ok(json!([
-        serde_json::to_value(&inserted.data).map_err(|e| e.to_string())?
+        serde_json::to_value(&inserted.data).map_err(|e| AppError::Server(e.to_string()))?
     ]))
 }
 
@@ -116,11 +121,14 @@ fn execute_get(
     conditions: Vec<FieldCondition>,
     selectors: Vec<FieldSelector>,
     state: &ServerState,
-) -> Result<JsonValue, String> {
-    let mut dbs = state.databases.write().map_err(|e| e.to_string())?;
+) -> Result<JsonValue, AppError> {
+    let mut dbs = state
+        .databases
+        .write()
+        .map_err(|e| AppError::Server(e.to_string()))?;
     let db = dbs
         .get_mut(&db_name)
-        .ok_or_else(|| format!("Database '{}' not found.", db_name))?;
+        .ok_or_else(|| AppError::Server(format!("Database '{}' not found.", db_name)))?;
 
     let collection = db.get_collection(&collection_name).unwrap();
     let schema = collection.schema().clone();
@@ -159,11 +167,14 @@ fn execute_update(
     updates: HashMap<String, String>,
     selectors: Vec<FieldSelector>,
     state: &ServerState,
-) -> Result<JsonValue, String> {
-    let mut dbs = state.databases.write().map_err(|e| e.to_string())?;
+) -> Result<JsonValue, AppError> {
+    let mut dbs = state
+        .databases
+        .write()
+        .map_err(|e| AppError::Server(e.to_string()))?;
     let db = dbs
         .get_mut(&db_name)
-        .ok_or_else(|| format!("Database '{}' not found.", db_name))?;
+        .ok_or_else(|| AppError::Server(format!("Database '{}' not found.", db_name)))?;
 
     let collection = db.get_collection_mut(&collection_name).unwrap();
     let schema = collection.schema().clone();
@@ -190,10 +201,10 @@ fn execute_update(
                 for (orig_id, orig_data) in originals.iter().take(idx) {
                     let _ = collection.update_document(orig_id.clone(), orig_data.clone());
                 }
-                return Err(format!(
-                    "Update failed and rolled back: {}",
-                    errors.join("; ")
-                ));
+                return Err(AppError::Server(format!(
+                    "Update failed and rolled back: {:?}",
+                    errors
+                )));
             }
         }
     }
@@ -225,11 +236,14 @@ fn execute_delete(
     conditions: Vec<FieldCondition>,
     selectors: Vec<FieldSelector>,
     state: &ServerState,
-) -> Result<JsonValue, String> {
-    let mut dbs = state.databases.write().map_err(|e| e.to_string())?;
+) -> Result<JsonValue, AppError> {
+    let mut dbs = state
+        .databases
+        .write()
+        .map_err(|e| AppError::Server(e.to_string()))?;
     let db = dbs
         .get_mut(&db_name)
-        .ok_or_else(|| format!("Database '{}' not found.", db_name))?;
+        .ok_or_else(|| AppError::Server(format!("Database '{}' not found.", db_name)))?;
 
     let collection = db.get_collection_mut(&collection_name).unwrap();
     let schema = collection.schema().clone();
@@ -271,13 +285,15 @@ fn execute_delete(
 fn convert_fields_to_bson(
     fields: &HashMap<String, String>,
     schema: &Schema,
-) -> Result<BsonDocument, String> {
+) -> Result<BsonDocument, AppError> {
     let mut doc = BsonDocument::new();
     for (field_name, value_str) in fields {
-        let field_def = schema
-            .fields
-            .get(field_name)
-            .ok_or_else(|| format!("Unknown field '{}' not in schema.", field_name))?;
+        let field_def = schema.fields.get(field_name).ok_or_else(|| {
+            AppError::Core(fhedb_core::errors::Error::Schema(format!(
+                "Unknown field '{}'",
+                field_name
+            )))
+        })?;
         doc.insert(
             field_name.clone(),
             value_str.parse_as_bson(&field_def.field_type)?,
@@ -305,24 +321,27 @@ fn select_fields(
     schema: &Schema,
     database: &mut Database,
     depth: u8,
-) -> Result<JsonValue, String> {
+) -> Result<JsonValue, AppError> {
     if selectors.is_empty() {
         return Ok(json!({}));
     }
 
     let selected = schema.select_fields(doc, selectors)?;
-    let mut result: serde_json::Map<String, JsonValue> =
-        serde_json::from_value(serde_json::to_value(&selected).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?;
+    let mut result: serde_json::Map<String, JsonValue> = serde_json::from_value(
+        serde_json::to_value(&selected).map_err(|e| AppError::Server(e.to_string()))?,
+    )
+    .map_err(|e| AppError::Server(e.to_string()))?;
 
     for selector in selectors {
         match selector {
             FieldSelector::AllFieldsRecursive => {
                 for (key, value) in doc {
-                    let field_def = schema
-                        .fields
-                        .get(key)
-                        .ok_or_else(|| format!("Unknown field '{}'.", key))?;
+                    let field_def = schema.fields.get(key).ok_or_else(|| {
+                        AppError::Core(fhedb_core::errors::Error::Execution(format!(
+                            "Unknown field '{}'.",
+                            key
+                        )))
+                    })?;
 
                     let resolved = if field_def.field_type.contains_reference() {
                         resolve_reference(
@@ -335,7 +354,7 @@ fn select_fields(
                             depth,
                         )?
                     } else {
-                        serde_json::to_value(value).map_err(|e| e.to_string())?
+                        serde_json::to_value(value).map_err(|e| AppError::Server(e.to_string()))?
                     };
                     result.insert(key.to_string(), resolved);
                 }
@@ -344,10 +363,12 @@ fn select_fields(
                 field_name,
                 content,
             } => {
-                let field_def = schema
-                    .fields
-                    .get(field_name)
-                    .ok_or_else(|| format!("Unknown field '{}'.", field_name))?;
+                let field_def = schema.fields.get(field_name).ok_or_else(|| {
+                    AppError::Core(fhedb_core::errors::Error::Execution(format!(
+                        "Unknown field '{}'.",
+                        field_name
+                    )))
+                })?;
                 let field_value = doc.get(field_name).cloned().unwrap_or(Bson::Null);
                 result.insert(
                     field_name.clone(),
@@ -391,9 +412,9 @@ fn resolve_reference(
     selectors: &[FieldSelector],
     database: &mut Database,
     depth: u8,
-) -> Result<JsonValue, String> {
+) -> Result<JsonValue, AppError> {
     if depth >= 3 {
-        return serde_json::to_value(value).map_err(|e| e.to_string());
+        return serde_json::to_value(value).map_err(|e| AppError::Server(e.to_string()));
     }
 
     match field_type {
@@ -418,7 +439,7 @@ fn resolve_reference(
                 select_fields(&ref_doc.data, selectors, &ref_schema, database, depth + 1)
             }
             Bson::Null => Ok(JsonValue::Null),
-            _ => serde_json::to_value(value).map_err(|e| e.to_string()),
+            _ => serde_json::to_value(value).map_err(|e| AppError::Server(e.to_string())),
         },
         FieldType::Nullable(inner) => match value {
             Bson::Null => Ok(JsonValue::Null),
@@ -442,6 +463,8 @@ fn resolve_reference(
             Bson::Null => Ok(JsonValue::Array(vec![])),
             _ => Ok(JsonValue::Array(vec![])),
         },
-        _ => Err(format!("Field '{}' is not a reference type.", field_name)),
+        _ => Err(AppError::Core(fhedb_core::errors::Error::Execution(
+            format!("Field '{}' is not a reference type.", field_name),
+        ))),
     }
 }

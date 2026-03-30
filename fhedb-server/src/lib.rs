@@ -5,6 +5,7 @@
 
 /// Configuration module for server, logging, and storage settings.
 pub mod config;
+pub mod errors;
 /// Query extractor for parsing incoming requests.
 pub mod extractor;
 /// Request handlers for database and collection operations.

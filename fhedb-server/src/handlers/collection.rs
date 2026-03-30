@@ -3,7 +3,7 @@
 //! This module handles collection operations within a database context,
 //! such as creating, dropping, modifying, and listing collections.
 
-use crate::state::ServerState;
+use crate::{errors::AppError, state::ServerState};
 use fhedb_core::prelude::{
     FieldDefinition, FieldType, ReferenceChecker, Schema, SchemaReferenceValidator,
 };
@@ -82,13 +82,13 @@ fn format_field_type(ft: &FieldType) -> String {
 /// ## Returns
 ///
 /// Returns [`Ok`]\([`serde_json::Value`]) on success, or [`Err`]\([`String`]) on failure.
-fn serialize_schema(schema: &Schema) -> Result<serde_json::Value, String> {
+fn serialize_schema(schema: &Schema) -> Result<serde_json::Value, AppError> {
     let schema_map: HashMap<String, JsonFieldDefinition> = schema
         .fields
         .iter()
         .map(|(k, v)| (k.clone(), JsonFieldDefinition::from(v)))
         .collect();
-    serde_json::to_value(&schema_map).map_err(|e| e.to_string())
+    serde_json::to_value(&schema_map).map_err(|e| AppError::Server(e.to_string()))
 }
 
 /// Executes a collection-level query and returns the result.
@@ -106,11 +106,14 @@ pub fn execute_collection_query(
     db_name: String,
     query: CollectionQuery,
     state: &ServerState,
-) -> Result<serde_json::Value, String> {
-    let mut dbs = state.databases.write().map_err(|e| e.to_string())?;
+) -> Result<serde_json::Value, AppError> {
+    let mut dbs = state
+        .databases
+        .write()
+        .map_err(|e| AppError::Server(e.to_string()))?;
     let db = dbs
         .get_mut(&db_name)
-        .ok_or_else(|| "Database not found".to_string())?;
+        .ok_or_else(|| AppError::Server("Database not found".to_string()))?;
 
     match query {
         CollectionQuery::Create {
@@ -123,19 +126,19 @@ pub fn execute_collection_query(
             }
             schema.validate_references(db, Some(&name))?;
             db.create_collection(&name, schema)?;
-            let col = db
-                .get_collection(&name)
-                .ok_or("Collection not found after creation")?;
+            let col = db.get_collection(&name).ok_or(AppError::Server(
+                "Collection not found after creation".to_string(),
+            ))?;
             serialize_schema(col.schema())
         }
         CollectionQuery::Drop { name } => {
             let referencing = db.find_referencing_collections(&name);
             if !referencing.is_empty() {
-                return Err(format!(
+                return Err(AppError::Server(format!(
                     "Cannot drop collection '{}'. It is referenced by: {}.",
                     name,
                     referencing.join(", ")
-                ));
+                )));
             }
             db.drop_collection(&name)?;
             Ok(json!({ "dropped": name }))
@@ -145,9 +148,9 @@ pub fn execute_collection_query(
             Ok(json!(names))
         }
         CollectionQuery::GetSchema { name } => {
-            let col = db
-                .get_collection(&name)
-                .ok_or_else(|| format!("Collection '{}' not found", name))?;
+            let col = db.get_collection(&name).ok_or_else(|| {
+                AppError::Core(fhedb_core::errors::Error::CollectionNotFound(name))
+            })?;
             serialize_schema(col.schema())
         }
         CollectionQuery::Modify {
@@ -159,13 +162,15 @@ pub fn execute_collection_query(
                     && let Some(invalid_ref) =
                         def.field_type.find_invalid_reference(db, Some(&name))
                 {
-                    return Err(format!("Collection '{}' does not exist.", invalid_ref));
+                    return Err(AppError::Core(
+                        fhedb_core::errors::Error::CollectionNotFound(invalid_ref),
+                    ));
                 }
             }
 
-            let col = db
-                .get_collection_mut(&name)
-                .ok_or_else(|| format!("Collection '{}' not found", name))?;
+            let col = db.get_collection_mut(&name).ok_or_else(|| {
+                AppError::Core(fhedb_core::errors::Error::CollectionNotFound(name))
+            })?;
             for (field_name, modification) in modifications {
                 match modification {
                     FieldModification::Drop => {

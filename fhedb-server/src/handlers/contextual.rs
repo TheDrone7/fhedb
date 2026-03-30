@@ -6,6 +6,7 @@
 use fhedb_types::ContextualQuery;
 
 use crate::{
+    errors::AppError,
     handlers::{collection::execute_collection_query, document::execute_document_query},
     state::ServerState,
 };
@@ -25,7 +26,7 @@ pub(crate) fn execute_contextual_query(
     db_name: String,
     query: ContextualQuery,
     state: &ServerState,
-) -> Result<serde_json::Value, String> {
+) -> Result<serde_json::Value, AppError> {
     match query {
         ContextualQuery::Collection(collection_query) => {
             execute_collection_query(db_name, collection_query, state)
