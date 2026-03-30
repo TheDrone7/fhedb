@@ -2,7 +2,10 @@
 //!
 //! Provides utilities for inspecting and validating schema references.
 
-use crate::database::Database;
+use crate::{
+    database::Database,
+    errors::{Error, Result},
+};
 use fhedb_types::{FieldType, Schema};
 
 /// Extension trait for [`FieldType`] reference utilities.
@@ -89,25 +92,17 @@ pub trait SchemaReferenceValidator {
     /// ## Returns
     ///
     /// Returns [`Ok`]\(()) if all references are valid, or [`Err`]\([`String`]) with the first invalid reference.
-    fn validate_references(
-        &self,
-        db: &Database,
-        self_collection: Option<&str>,
-    ) -> Result<(), String>;
+    fn validate_references(&self, db: &Database, self_collection: Option<&str>) -> Result<()>;
 }
 
 impl SchemaReferenceValidator for Schema {
-    fn validate_references(
-        &self,
-        db: &Database,
-        self_collection: Option<&str>,
-    ) -> Result<(), String> {
+    fn validate_references(&self, db: &Database, self_collection: Option<&str>) -> Result<()> {
         for field_def in self.fields.values() {
             if let Some(invalid) = field_def
                 .field_type
                 .find_invalid_reference(db, self_collection)
             {
-                return Err(format!("Collection '{}' does not exist.", invalid));
+                return Err(Error::CollectionNotFound(invalid));
             }
         }
         Ok(())

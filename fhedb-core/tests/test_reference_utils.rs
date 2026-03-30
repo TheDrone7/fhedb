@@ -1,5 +1,11 @@
-use fhedb_core::prelude::{
-    Database, FieldDefinition, FieldType, ReferenceChecker, Schema, SchemaReferenceValidator,
+#[macro_use]
+extern crate assert_matches;
+
+use fhedb_core::{
+    errors::Error,
+    prelude::{
+        Database, FieldDefinition, FieldType, ReferenceChecker, Schema, SchemaReferenceValidator,
+    },
 };
 use tempfile::TempDir;
 
@@ -156,7 +162,7 @@ fn validate_references_invalid() {
     )]);
     let result = s.validate_references(&db, None);
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("nonexistent"));
+    assert_matches!(result.unwrap_err(), Error::CollectionNotFound(_));
 }
 
 #[test]
