@@ -1,5 +1,5 @@
 use bson::doc;
-use fhedb_core::prelude::*;
+use fhedb_core::{errors::Error, prelude::*};
 use tempfile::tempdir;
 
 use super::super::common::make_int_schema;
@@ -79,28 +79,6 @@ fn add_document_with_custom_id() {
 
     let retrieved_doc = collection.get_document(doc_id.clone()).unwrap();
     assert_eq!(retrieved_doc.data.get_i64("id").unwrap(), 999);
-}
-
-#[test]
-fn add_document_with_string_id() {
-    let schema = make_int_schema();
-    let temp_dir = tempdir().unwrap();
-    let mut collection = Collection::new("users", schema, temp_dir.path()).unwrap();
-
-    let doc = doc! {
-        "id": "user-123",
-        "name": "Alice",
-        "age": 30i64
-    };
-
-    let result = collection.add_document(doc);
-    assert!(result.is_err());
-    let errors = result.unwrap_err();
-    assert!(
-        errors
-            .iter()
-            .any(|e| e.contains("Field 'id': Expected ID as integer"))
-    );
 }
 
 #[test]
@@ -199,8 +177,7 @@ fn update_document_nonexistent() {
 
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| e.contains("Document with ID")));
-    assert!(errors.iter().any(|e| e.contains("not found")));
+    assert_matches!(errors, Error::DocumentNotFound(_));
 }
 
 #[test]
@@ -224,7 +201,10 @@ fn update_document_cannot_update_id() {
 
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| e.contains("Cannot update ID field")));
+    assert_matches!(errors, Error::Validation(_));
+    if let Error::Validation(errors) = errors {
+        assert!(errors.iter().any(|e| e.contains("Cannot update ID field")));
+    }
 }
 
 #[test]
@@ -247,7 +227,10 @@ fn update_document_schema_validation() {
 
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| e.contains("Field 'age'")));
+    assert_matches!(errors, Error::Validation(_));
+    if let Error::Validation(errors) = errors {
+        assert!(errors.iter().any(|e| e.contains("Field 'age'")));
+    }
 }
 
 #[test]
@@ -264,7 +247,7 @@ fn add_document_duplicate_id() {
 
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| e.contains("already exists")));
+    assert_matches!(errors, Error::DocumentAlreadyExists(_));
 
     let documents = collection.get_documents().collect::<Vec<_>>();
     assert_eq!(documents.len(), 1);

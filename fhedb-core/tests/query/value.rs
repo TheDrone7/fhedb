@@ -1,5 +1,8 @@
 use bson::Bson;
-use fhedb_core::prelude::{FieldType, ValueParseable};
+use fhedb_core::{
+    errors::Error,
+    prelude::{FieldType, ValueParseable},
+};
 
 #[test]
 fn parse_null() {
@@ -204,7 +207,7 @@ fn parse_array_with_escape_sequences() {
 fn parse_unparseable_value_error() {
     let result = "not_a_valid_value".parse_as_bson(&FieldType::Int);
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("Cannot parse"));
+    assert_matches!(result.unwrap_err(), Error::Execution(msg) if msg.contains("Cannot parse"));
 }
 
 #[test]

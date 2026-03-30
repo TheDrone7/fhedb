@@ -1,5 +1,8 @@
 use bson::{Bson, doc};
-use fhedb_core::prelude::{FieldDefinition, FieldType, Schema, SchemaOps};
+use fhedb_core::{
+    errors::Error,
+    prelude::{FieldDefinition, FieldType, Schema, SchemaOps},
+};
 use fhedb_types::{FieldCondition, QueryOperator};
 use std::collections::HashMap;
 
@@ -425,7 +428,11 @@ fn unknown_field_error() {
     let doc = doc! { "name": "Alice" };
     let result = test_schema().evaluate_condition(&doc, &condition("unknown", "=", "\"value\""));
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("Unknown field"));
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Schema(_));
+    if let Error::Schema(error) = error {
+        assert!(error.contains("Unknown field"));
+    }
 }
 
 #[test]

@@ -1,5 +1,8 @@
 use bson::{Bson, doc};
-use fhedb_core::prelude::{FieldDefinition, FieldType, Schema, SchemaOps};
+use fhedb_core::{
+    errors::Error,
+    prelude::{FieldDefinition, FieldType, Schema, SchemaOps},
+};
 use fhedb_types::FieldSelector;
 use std::collections::HashMap;
 
@@ -107,7 +110,7 @@ fn select_unknown_field_error() {
     let result = test_schema().select_fields(&doc, &selectors);
 
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("Unknown field"));
+    assert_matches!(result.unwrap_err(), Error::Schema(msg) if msg.contains("Unknown field"));
 }
 
 #[test]
@@ -183,5 +186,5 @@ fn subdocument_unknown_field_error() {
     let result = schema_with_reference().select_fields(&doc, &selectors);
 
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("Unknown field"));
+    assert_matches!(result.unwrap_err(), Error::Schema(msg) if msg.contains("Unknown field"));
 }

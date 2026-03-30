@@ -1,5 +1,5 @@
 use bson::{Bson, doc};
-use fhedb_core::prelude::*;
+use fhedb_core::{errors::Error, prelude::*};
 use tempfile::TempDir;
 
 use crate::common;
@@ -105,7 +105,11 @@ fn add_field_already_exists() {
     let result = collection.add_field("name".to_string(), field_def);
 
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("already exists"));
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Schema(_));
+    if let Error::Schema(error) = error {
+        assert!(error.contains("already exists"));
+    }
 }
 
 #[test]
@@ -116,7 +120,11 @@ fn add_field_without_default_with_existing_docs() {
     let result = collection.add_field("email".to_string(), field_def);
 
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("without a default value"));
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Schema(_));
+    if let Error::Schema(error) = error {
+        assert!(error.contains("without a default value"));
+    }
 }
 
 #[test]
@@ -181,7 +189,11 @@ fn remove_field_not_exists() {
     let result = collection.remove_field("nonexistent");
 
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("does not exist"));
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Schema(_));
+    if let Error::Schema(error) = error {
+        assert!(error.contains("does not exist"));
+    }
 }
 
 #[test]
@@ -204,7 +216,11 @@ fn modify_field_not_exists() {
     let result = collection.modify_field("nonexistent", new_def);
 
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("does not exist"));
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Schema(_));
+    if let Error::Schema(error) = error {
+        assert!(error.contains("does not exist"));
+    }
 }
 
 #[test]
@@ -231,7 +247,11 @@ fn rename_field_old_not_exists() {
     let result = collection.rename_field("nonexistent", "new_name".to_string());
 
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("does not exist"));
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Schema(_));
+    if let Error::Schema(error) = error {
+        assert!(error.contains("does not exist"));
+    }
 }
 
 #[test]
@@ -241,7 +261,11 @@ fn rename_field_new_already_exists() {
     let result = collection.rename_field("name", "age".to_string());
 
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("already exists"));
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Schema(_));
+    if let Error::Schema(error) = error {
+        assert!(error.contains("already exists"));
+    }
 }
 
 #[test]
@@ -266,7 +290,11 @@ fn apply_defaults_to_existing_no_default() {
     let result = collection.apply_defaults_to_existing("email", &field_def);
 
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("has no default value"));
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Schema(_));
+    if let Error::Schema(error) = error {
+        assert!(error.contains("has no default value"));
+    }
 }
 
 #[test]
@@ -339,7 +367,11 @@ fn add_field_id_type_error() {
     let result = collection.add_field("another_id".to_string(), field_def);
 
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("already has an ID field"));
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Schema(_));
+    if let Error::Schema(error) = error {
+        assert!(error.contains("already has an ID field"));
+    }
 }
 
 #[test]

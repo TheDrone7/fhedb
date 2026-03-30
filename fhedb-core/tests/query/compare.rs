@@ -1,5 +1,5 @@
 use bson::Bson;
-use fhedb_core::prelude::BsonComparable;
+use fhedb_core::{errors::Error, prelude::BsonComparable};
 use fhedb_types::QueryOperator;
 
 #[test]
@@ -493,7 +493,11 @@ fn array_left_operand_error() {
     let b = Bson::Int64(5);
     let result = a.compare_to(&b, &QueryOperator::GreaterThan);
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("arrays"));
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Execution(_));
+    if let Error::Execution(error) = error {
+        assert!(error.contains("arrays"));
+    }
 }
 
 #[test]
@@ -502,7 +506,11 @@ fn array_right_operand_error() {
     let b = Bson::Array(vec![Bson::Int64(1)]);
     let result = a.compare_to(&b, &QueryOperator::GreaterThan);
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("arrays"));
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Execution(_));
+    if let Error::Execution(error) = error {
+        assert!(error.contains("arrays"));
+    }
 }
 
 #[test]
@@ -511,6 +519,8 @@ fn both_arrays_error() {
     let b = Bson::Array(vec![Bson::Int64(2)]);
     let result = a.compare_to(&b, &QueryOperator::GreaterThan);
     assert!(result.is_err());
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Execution(_));
 }
 
 #[test]
@@ -519,7 +529,11 @@ fn incompatible_int_vs_string_error() {
     let b = Bson::String("hello".to_string());
     let result = a.compare_to(&b, &QueryOperator::GreaterThan);
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("Incompatible"));
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Execution(_));
+    if let Error::Execution(error) = error {
+        assert!(error.contains("Incompatible"));
+    }
 }
 
 #[test]
@@ -528,6 +542,8 @@ fn incompatible_string_vs_int_error() {
     let b = Bson::Int64(5);
     let result = a.compare_to(&b, &QueryOperator::GreaterThan);
     assert!(result.is_err());
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Execution(_));
 }
 
 #[test]
@@ -536,6 +552,8 @@ fn incompatible_float_vs_string_error() {
     let b = Bson::String("hello".to_string());
     let result = a.compare_to(&b, &QueryOperator::GreaterThan);
     assert!(result.is_err());
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Execution(_));
 }
 
 #[test]
@@ -544,6 +562,8 @@ fn incompatible_string_vs_float_error() {
     let b = Bson::Double(5.5);
     let result = a.compare_to(&b, &QueryOperator::GreaterThan);
     assert!(result.is_err());
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Execution(_));
 }
 
 #[test]

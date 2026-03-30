@@ -1,5 +1,8 @@
+#[macro_use]
+extern crate assert_matches;
+
 use bson::doc;
-use fhedb_core::prelude::*;
+use fhedb_core::{errors::Error, prelude::*};
 use std::fs;
 use tempfile::tempdir;
 
@@ -34,11 +37,7 @@ fn database_collection_management() {
 
     let result2 = db.create_collection("users", schema2);
     assert!(result2.is_err());
-    assert!(
-        result2
-            .unwrap_err()
-            .contains("Collection 'users' already exists")
-    );
+    assert_matches!(result2.unwrap_err(), Error::CollectionAlreadyExists(_));
 
     let simple_schema = make_simple_schema();
     db.create_collection("posts", simple_schema).unwrap();
@@ -71,11 +70,7 @@ fn database_collection_drop_operations() {
 
     let result = db.drop_collection("nonexistent");
     assert!(result.is_err());
-    assert!(
-        result
-            .unwrap_err()
-            .contains("Collection 'nonexistent' not found")
-    );
+    assert_matches!(result.unwrap_err(), Error::CollectionNotFound(_));
 
     db.clear_collections();
     assert_eq!(db.collection_count(), 0);

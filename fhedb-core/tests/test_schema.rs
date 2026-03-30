@@ -1,5 +1,11 @@
+#[macro_use]
+extern crate assert_matches;
+
 use bson::doc;
-use fhedb_core::prelude::{FieldDefinition, FieldType, IdType, Schema, SchemaOps};
+use fhedb_core::{
+    errors::Error,
+    prelude::{FieldDefinition, FieldType, IdType, Schema, SchemaOps},
+};
 use std::collections::HashMap;
 
 fn make_schema() -> Schema {
@@ -64,11 +70,7 @@ fn missing_field() {
     let result = schema.validate_document(&doc);
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(
-        errors
-            .iter()
-            .any(|e| e.contains("Missing field: 'float_field'"))
-    );
+    assert_matches!(errors,Error::Validation(errs) if errs.iter().any(|e| e.contains("Missing field: 'float_field'")));
 }
 
 #[test]
@@ -86,8 +88,8 @@ fn type_mismatch() {
     let result = schema.validate_document(&doc);
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(
-        errors
+    assert_matches!(errors, Error::Validation(errs) if
+        errs
             .iter()
             .any(|e| e.contains("Field 'int_field': Expected int"))
     );
@@ -108,8 +110,8 @@ fn array_type_mismatch() {
     let result = schema.validate_document(&doc);
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(
-        errors
+    assert_matches!(errors, Error::Validation(errs) if
+        errs
             .iter()
             .any(|e| e.contains("Array element 1: Expected int"))
     );
@@ -130,7 +132,11 @@ fn invalid_id_type() {
     let result = schema.validate_document(&doc);
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| e.contains("Expected ID as integer")));
+    assert_matches!(errors, Error::Validation(errs) if
+        errs
+            .iter()
+            .any(|e| e.contains("Expected ID as integer"))
+    );
 }
 
 #[test]
@@ -177,10 +183,8 @@ fn ensure_id_multiple_id_fields() {
 
     let result = schema.ensure_id();
     assert!(result.is_err());
-    assert!(
-        result
-            .unwrap_err()
-            .contains("Schema must contain at most one field with type IdString or IdInt")
+    assert_matches!(result.unwrap_err(), Error::Schema(msg) if
+        msg.contains("Schema must contain at most one field with type IdString or IdInt")
     );
 }
 
@@ -218,7 +222,7 @@ fn validate_document_missing_other_field() {
     let result = schema.validate_document(&doc);
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| e.contains("Missing field: 'age'")));
+    assert_matches!(errors, Error::Validation(errs) if errs.iter().any(|e| e.contains("Missing field: 'age'")));
 }
 
 #[test]
@@ -237,8 +241,7 @@ fn validate_document_missing_id_and_other_field() {
     let result = schema.validate_document(&doc);
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| e.contains("Missing field: 'age'")));
-    assert!(!errors.iter().any(|e| e.contains("Missing field: 'id'")));
+    assert_matches!(errors, Error::Validation(errs) if errs.iter().any(|e| e.contains("Missing field: 'age'")) && errs.iter().all(|e| !e.contains("Missing field: 'id'")));
 }
 
 #[test]
@@ -288,11 +291,7 @@ fn nullable_fields() {
     let result = schema.validate_document(&doc4);
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(
-        errors
-            .iter()
-            .any(|e| e.contains("nickname") && e.contains("Expected string"))
-    );
+    assert_matches!(errors, Error::Validation(errs) if errs.iter().any(|e| e.contains("nickname") && e.contains("Expected string")));
 }
 
 #[test]
@@ -345,7 +344,7 @@ fn default_values() {
     let result = schema.validate_document(&doc3);
     assert!(result.is_err());
     let errors = result.unwrap_err();
-    assert!(errors.iter().any(|e| e.contains("Missing field: 'email'")));
+    assert_matches!(errors, Error::Validation(errs) if errs.iter().any(|e| e.contains("Missing field: 'email'")));
 
     let mut doc4 = doc! {
         "id": 4i64,

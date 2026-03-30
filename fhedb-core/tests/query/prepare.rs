@@ -1,5 +1,8 @@
 use bson::Bson;
-use fhedb_core::prelude::{FieldDefinition, FieldType, Schema, SchemaOps};
+use fhedb_core::{
+    errors::Error,
+    prelude::{FieldDefinition, FieldType, Schema, SchemaOps},
+};
 use std::collections::HashMap;
 
 fn test_schema() -> Schema {
@@ -82,8 +85,13 @@ fn missing_required_field_error() {
 
     assert!(result.is_err());
     let err = result.unwrap_err();
-    assert!(err.contains("Missing required field"));
-    assert!(err.contains("age") || err.contains("active"));
+    assert_matches!(&err, Error::Validation(errors) if errors.len() == 2);
+    if let Error::Validation(errors) = &err {
+        for error in errors {
+            assert!(error.contains("Missing required field"));
+            assert!(error.contains("age") || error.contains("active"));
+        }
+    }
 }
 
 #[test]
@@ -148,8 +156,7 @@ fn unknown_field_error() {
 
     assert!(result.is_err());
     let err = result.unwrap_err();
-    assert!(err.contains("Unknown field"));
-    assert!(err.contains("nonexistent"));
+    assert_matches!(&err, Error::Validation(errors) if errors.iter().any(|e| e.contains("Unknown field 'nonexistent'")));
 }
 
 #[test]

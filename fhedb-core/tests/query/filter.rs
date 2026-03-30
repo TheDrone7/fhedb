@@ -1,5 +1,8 @@
 use bson::doc;
-use fhedb_core::prelude::{Database, FieldDefinition, FieldType, Schema};
+use fhedb_core::{
+    errors::Error,
+    prelude::{Database, FieldDefinition, FieldType, Schema},
+};
 use fhedb_types::FieldCondition;
 use std::collections::HashMap;
 use tempfile::TempDir;
@@ -206,7 +209,11 @@ fn unknown_field_error() {
     let result = col.filter(&conditions).collect::<Result<Vec<_>, _>>();
 
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("Unknown field"));
+    let error = result.unwrap_err();
+    assert_matches!(error, Error::Schema(_));
+    if let Error::Schema(error) = error {
+        assert!(error.contains("Unknown field"));
+    }
 }
 
 #[test]

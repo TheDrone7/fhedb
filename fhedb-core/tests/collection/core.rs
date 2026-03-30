@@ -1,5 +1,5 @@
 use bson::doc;
-use fhedb_core::prelude::*;
+use fhedb_core::{errors::Error, prelude::*};
 use tempfile::tempdir;
 
 use super::super::common::{make_int_schema, make_schema_with_defaults, make_string_schema};
@@ -35,12 +35,15 @@ fn id_type_enforcement() {
     let doc_with_int_id = doc! { "id": 42i64, "name": "Alice", "age": 30i64 };
     let result = string_collection.add_document(doc_with_int_id);
     assert!(result.is_err());
-    let errors = result.unwrap_err();
-    assert!(
-        errors
-            .iter()
-            .any(|e| e.contains("Field 'id': Expected ID as string"))
-    );
+    let errors = result.as_ref().unwrap_err();
+    assert_matches!(errors, Error::Validation(_));
+    if let Error::Validation(errors) = errors {
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.contains("Field 'id': Expected ID as string"))
+        );
+    }
 
     let int_schema = make_int_schema();
     let temp_dir2 = tempdir().unwrap();
@@ -49,12 +52,8 @@ fn id_type_enforcement() {
     let doc_with_string_id = doc! { "id": "user-123", "name": "Bob", "age": 25i64 };
     let result = int_collection.add_document(doc_with_string_id);
     assert!(result.is_err());
-    let errors = result.unwrap_err();
-    assert!(
-        errors
-            .iter()
-            .any(|e| e.contains("Field 'id': Expected ID as integer"))
-    );
+    let errors = result.as_ref().unwrap_err();
+    assert_matches!(errors, Error::Validation(errs) if errs.iter().any(|e| e.contains("Field 'id': Expected ID as int")));
 }
 
 #[test]
