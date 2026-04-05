@@ -10,10 +10,11 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use fhedb_query::prelude::{ParserError, parse_contextual_query, parse_database_query};
-use fhedb_types::{CollectionQuery, ContextualQuery, DatabaseQuery, DocumentQuery};
+use fhedb_types::{ContextualQuery, DatabaseQuery};
 use log::debug;
 
 /// Represents a parsed query from the request body.
+#[derive(Debug)]
 pub enum ParsedQuery {
     /// A database-level query (CREATE/DROP/LIST DATABASE).
     Base(DatabaseQuery),
@@ -86,28 +87,5 @@ fn handle_errs(query: &str, errs: Vec<ParserError>) -> Response {
 /// * `query` - The [`ParsedQuery`] to log.
 /// * `path` - The request path for context.
 fn log_query(query: &ParsedQuery, path: &str) {
-    let query_type = match query {
-        ParsedQuery::Base(ast) => match ast {
-            DatabaseQuery::Create { .. } => "Create database",
-            DatabaseQuery::Drop { .. } => "Drop database",
-            DatabaseQuery::List => "List database",
-        },
-        ParsedQuery::Context(ast) => match ast {
-            ContextualQuery::Collection(coll) => match coll {
-                CollectionQuery::Create { .. } => "Create collection",
-                CollectionQuery::Drop { .. } => "Drop collection",
-                CollectionQuery::List => "List collections",
-                CollectionQuery::GetSchema { .. } => "Get collection schema",
-                CollectionQuery::Modify { .. } => "Modify collection",
-            },
-            ContextualQuery::Document(doc) => match doc {
-                DocumentQuery::Insert { .. } => "Insert document",
-                DocumentQuery::Delete { .. } => "Delete document",
-                DocumentQuery::Get { .. } => "Get/List documents",
-                DocumentQuery::Update { .. } => "Update document",
-            },
-        },
-    };
-
-    debug!("Parsed {} query at path '{}'", query_type, path);
+    debug!("Parsed query at path '{}': {:#?}", path, query);
 }
