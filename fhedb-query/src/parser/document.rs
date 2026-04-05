@@ -271,10 +271,10 @@ where
                     "assignments are not allowed in GET queries",
                 ));
             }
-            if body.conditions.is_empty() && body.selectors.is_empty() {
+            if body.selectors.is_empty() {
                 return Err(Rich::custom(
                     span,
-                    "GET query must have at least one condition or selector",
+                    "GET query must have at least one selector",
                 ));
             }
             Ok(DocumentQuery::Get {
@@ -342,12 +342,6 @@ where
                 return Err(Rich::custom(
                     span,
                     "assignments are not allowed in DELETE queries",
-                ));
-            }
-            if body.conditions.is_empty() && body.selectors.is_empty() {
-                return Err(Rich::custom(
-                    span,
-                    "DELETE query must have at least one condition or selector",
                 ));
             }
             Ok(DocumentQuery::Delete {
