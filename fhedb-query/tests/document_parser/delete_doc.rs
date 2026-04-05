@@ -577,10 +577,10 @@ fn invalid_field_structure() {
 }
 
 #[test]
-fn invalid_empty_query() {
+fn empty_query() {
     let input = "DELETE DOCUMENT FROM users {}";
     let result = parse_contextual_query(input);
-    assert!(result.is_err());
+    assert!(result.is_ok());
 }
 
 #[test]

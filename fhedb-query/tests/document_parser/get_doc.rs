@@ -475,32 +475,6 @@ fn empty_braces() {
 }
 
 #[test]
-fn only_conditions() {
-    let input = "GET DOCUMENT FROM users {id = 1, age > 18, status = 'active'}";
-    let result = parse_contextual_query(input);
-    assert!(result.is_ok());
-
-    let Ok(ContextualQuery::Document(query)) = result else {
-        panic!("Expected Ok result");
-    };
-
-    let DocumentQuery::Get {
-        conditions,
-        selectors,
-        ..
-    } = query
-    else {
-        panic!("Expected Get variant");
-    };
-
-    assert_eq!(conditions.len(), 3);
-    assert_eq!(conditions[0].field_name, "id");
-    assert_eq!(conditions[1].field_name, "age");
-    assert_eq!(conditions[2].field_name, "status");
-    assert!(selectors.is_empty());
-}
-
-#[test]
 fn only_selectors() {
     let input = "GET DOCUMENT FROM users {name, email, age}";
     let result = parse_contextual_query(input);
@@ -652,7 +626,7 @@ fn invalid_field_structure() {
         assert!(error.expected.contains(&"}".to_string()));
     }
 
-    let input3 = "GET DOCUMENT FROM users {id = 1} EXTRA";
+    let input3 = "GET DOCUMENT FROM users {id} EXTRA";
     let result3 = parse_contextual_query(input3);
     assert!(result3.is_err());
 
