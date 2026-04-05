@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_Dorz9A5NDj
 createdAt: 2025-12-15T01:54:36.332268500
-updatedAt: 2025-12-15T02:06:32.157129500
+updatedAt: 2026-04-05T18:41:27.691662800
 workspaceId: wk_B2naWxZpAS
 folderId: fl_3wM8cMyNQX
 authentication: {}
@@ -10,7 +10,8 @@ authenticationType: null
 body:
   text: |-
     DELETE DOCUMENT FROM ${[ COL_NAME ]} {
-        id = 1
+        id = 3,
+        *
     }
 bodyType: other
 description: Delete a single document from `COL_NAME` (where `id = 1`) and return nothing.

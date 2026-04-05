@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_sqKkfWB2tP
 createdAt: 2025-12-15T01:23:05.601955700
-updatedAt: 2025-12-15T02:04:37.893005600
+updatedAt: 2026-04-05T18:38:23.344797500
 workspaceId: wk_B2naWxZpAS
 folderId: fl_3wM8cMyNQX
 authentication: {}
@@ -10,7 +10,7 @@ authenticationType: null
 body:
   text: |-
     GET DOCUMENTS FROM ${[ COL_NAME ]} {
-      name = "Jane Smith",
+      name = "John Doe",
       **
     }
 bodyType: other

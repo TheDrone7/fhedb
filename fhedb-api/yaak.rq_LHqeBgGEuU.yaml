@@ -1,0 +1,27 @@
+type: http_request
+model: http_request
+id: rq_LHqeBgGEuU
+createdAt: 2026-04-05T18:54:42.639825100
+updatedAt: 2026-04-05T18:57:56.692899700
+workspaceId: wk_B2naWxZpAS
+folderId: fl_AovS7EydkX
+authentication: {}
+authenticationType: null
+body:
+  text: |-
+    MODIFY COLLECTION department {
+      average: drop,
+      salary: float
+    }
+bodyType: other
+description: Modify schema for collection with the name `department` inside the database named `DB_NAME`. Drop its field named `average` and add a new field `salary` of the type `float`.
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: isbCUUnXQy
+method: POST
+name: Modify collection department
+sortPriority: 0.002
+url: ${[ BASE_URL ]}${[ DB_NAME ]}
+urlParameters: []

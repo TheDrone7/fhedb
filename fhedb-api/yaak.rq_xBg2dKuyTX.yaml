@@ -1,0 +1,27 @@
+type: http_request
+model: http_request
+id: rq_xBg2dKuyTX
+createdAt: 2026-04-01T15:10:22.771899900
+updatedAt: 2026-04-05T18:57:12.400015500
+workspaceId: wk_B2naWxZpAS
+folderId: fl_AovS7EydkX
+authentication: {}
+authenticationType: null
+body:
+  text: |-
+    CREATE COLLECTION department {
+      id: id_string,
+      average: float
+    }
+bodyType: other
+description: Create a new collection with the name `department` inside the database named `DB_NAME`.
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: isbCUUnXQy
+method: POST
+name: Create collection department
+sortPriority: 0.001
+url: ${[ BASE_URL ]}${[ DB_NAME ]}
+urlParameters: []

@@ -1,0 +1,27 @@
+type: http_request
+model: http_request
+id: rq_rC2oWsprap
+createdAt: 2026-04-01T15:08:56.565281200
+updatedAt: 2026-04-05T18:56:54.264660900
+workspaceId: wk_B2naWxZpAS
+folderId: fl_AovS7EydkX
+authentication: {}
+authenticationType: null
+body:
+  text: |-
+    CREATE COLLECTION numero {
+      id: id_string,
+      value: int
+    }
+bodyType: other
+description: Create a new collection with the name `numero` inside the database named `DB_NAME`.
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: isbCUUnXQy
+method: POST
+name: Create collection numero
+sortPriority: 0.0
+url: ${[ BASE_URL ]}${[ DB_NAME ]}
+urlParameters: []

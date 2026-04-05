@@ -1,0 +1,23 @@
+type: http_request
+model: http_request
+id: rq_Kurj4r7wmP
+createdAt: 2026-04-05T18:55:26.306018500
+updatedAt: 2026-04-05T18:58:34.771455300
+workspaceId: wk_B2naWxZpAS
+folderId: fl_AovS7EydkX
+authentication: {}
+authenticationType: null
+body:
+  text: GET SCHEMA FROM ${[ COL_NAME ]}
+bodyType: other
+description: Get the schema for the collection named `COL_NAME` inside the database named `DB_NAME`.
+headers:
+- enabled: true
+  name: Content-Type
+  value: text/plain
+  id: C0FfEq4Mqs
+method: POST
+name: Get collection schema
+sortPriority: 2333.3333333333335
+url: ${[ BASE_URL ]}${[ DB_NAME ]}
+urlParameters: []

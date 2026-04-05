@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_JHJ5faEo9B
 createdAt: 2025-12-14T00:02:16.708422900
-updatedAt: 2025-12-14T02:01:30.404701400
+updatedAt: 2026-04-01T15:09:08.159352300
 workspaceId: wk_B2naWxZpAS
 folderId: fl_AovS7EydkX
 authentication: {}
@@ -21,6 +21,6 @@ headers:
   id: 0UfCXqDJn7
 method: POST
 name: Create collection (drop if exists)
-sortPriority: 1000.0
+sortPriority: 2000.0
 url: ${[ BASE_URL ]}${[ DB_NAME ]}
 urlParameters: []
