@@ -82,7 +82,6 @@ impl Collection {
     /// or [`Err`]\([`Vec<String>`]) with validation errors.
     pub fn add_document(&mut self, mut doc: bson::Document) -> Result<DocId> {
         self.schema.apply_defaults(&mut doc);
-
         self.validate_document(&doc)?;
         let id_field = &self.id_field;
         let doc_id = match self.get_doc_id_from_bson(&doc) {
@@ -94,9 +93,16 @@ impl Collection {
             }
         };
 
-        let exists = self.primary_index.contains_id(&doc_id)?;
+        if let DocId::String(string_id) = &doc_id
+            && string_id.len() > 255
+        {
+            return Err(Error::Validation(vec![format!(
+                "ID '{} cannot be longer than 255 bytes.",
+                self.id_field
+            )]));
+        }
 
-        if exists {
+        if self.primary_index.contains_id(&doc_id)? {
             return Err(Error::DocumentAlreadyExists(doc_id.to_string()));
         }
 
