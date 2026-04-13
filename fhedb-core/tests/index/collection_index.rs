@@ -1,11 +1,11 @@
-use fhedb_core::index::CollectionIndex;
+use fhedb_core::index::primary::PrimaryIndex;
 use fhedb_core::prelude::DocId;
 use tempfile::tempdir;
 
 #[test]
 fn new_creates_index() {
     let dir = tempdir().unwrap();
-    let index = CollectionIndex::new("user_id", dir.path());
+    let index = PrimaryIndex::new("user_id", dir.path());
     assert!(index.is_ok());
     assert_eq!(index.unwrap().field_name(), "user_id");
 }
@@ -13,21 +13,21 @@ fn new_creates_index() {
 #[test]
 fn is_empty_on_new_index() {
     let dir = tempdir().unwrap();
-    let index = CollectionIndex::new("id", dir.path()).unwrap();
+    let index = PrimaryIndex::new("id", dir.path()).unwrap();
     assert!(index.is_empty().unwrap());
 }
 
 #[test]
 fn len_empty() {
     let dir = tempdir().unwrap();
-    let index = CollectionIndex::new("id", dir.path()).unwrap();
+    let index = PrimaryIndex::new("id", dir.path()).unwrap();
     assert_eq!(index.len().unwrap(), 0);
 }
 
 #[test]
 fn insert_and_get_string_id() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let id = DocId::from_string("doc-abc-123".to_string());
     index.insert(&id, 100).unwrap();
@@ -39,7 +39,7 @@ fn insert_and_get_string_id() {
 #[test]
 fn insert_and_get_u64_id() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let id = DocId::from_u64(42);
     index.insert(&id, 200).unwrap();
@@ -51,7 +51,7 @@ fn insert_and_get_u64_id() {
 #[test]
 fn get_missing_id() {
     let dir = tempdir().unwrap();
-    let index = CollectionIndex::new("id", dir.path()).unwrap();
+    let index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let id = DocId::from_string("nonexistent".to_string());
     let result = index.get(&id).unwrap();
@@ -61,7 +61,7 @@ fn get_missing_id() {
 #[test]
 fn contains_id_after_insert() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let id = DocId::from_u64(7);
     assert!(!index.contains_id(&id).unwrap());
@@ -73,7 +73,7 @@ fn contains_id_after_insert() {
 #[test]
 fn contains_id_missing() {
     let dir = tempdir().unwrap();
-    let index = CollectionIndex::new("id", dir.path()).unwrap();
+    let index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let id = DocId::from_string("missing".to_string());
     assert!(!index.contains_id(&id).unwrap());
@@ -82,7 +82,7 @@ fn contains_id_missing() {
 #[test]
 fn is_empty_after_insert() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let id = DocId::from_u64(1);
     index.insert(&id, 50).unwrap();
@@ -92,7 +92,7 @@ fn is_empty_after_insert() {
 #[test]
 fn len_after_inserts() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     for i in 0..5u64 {
         let id = DocId::from_u64(i);
@@ -105,7 +105,7 @@ fn len_after_inserts() {
 #[test]
 fn insert_multiple_and_get_all_ids() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let ids: Vec<DocId> = (0..3u64).map(DocId::from_u64).collect();
     for (i, id) in ids.iter().enumerate() {
@@ -132,7 +132,7 @@ fn insert_multiple_and_get_all_ids() {
 #[test]
 fn all_entries() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let id1 = DocId::from_u64(10);
     let id2 = DocId::from_u64(20);
@@ -157,7 +157,7 @@ fn all_entries() {
 #[test]
 fn remove_existing() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let id = DocId::from_u64(5);
     index.insert(&id, 500).unwrap();
@@ -172,7 +172,7 @@ fn remove_existing() {
 #[test]
 fn remove_missing() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let id = DocId::from_u64(99);
     let removed = index.remove(&id).unwrap();
@@ -182,7 +182,7 @@ fn remove_missing() {
 #[test]
 fn is_empty_after_remove_all() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let id1 = DocId::from_u64(1);
     let id2 = DocId::from_u64(2);
@@ -199,7 +199,7 @@ fn is_empty_after_remove_all() {
 #[test]
 fn update_existing() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let id = DocId::from_u64(3);
     index.insert(&id, 300).unwrap();
@@ -212,7 +212,7 @@ fn update_existing() {
 #[test]
 fn update_nonexistent_id_error() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let id = DocId::from_u64(77);
     let result = index.update(&id, 123);
@@ -223,7 +223,7 @@ fn update_nonexistent_id_error() {
 #[test]
 fn insert_and_get_with_string_ids() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let id_a = DocId::from_string("alpha".to_string());
     let id_b = DocId::from_string("beta".to_string());
@@ -242,7 +242,7 @@ fn insert_and_get_with_string_ids() {
 #[test]
 fn remove_does_not_affect_other_entries() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let id1 = DocId::from_u64(1);
     let id2 = DocId::from_u64(2);
@@ -262,7 +262,7 @@ fn remove_does_not_affect_other_entries() {
 #[test]
 fn insert_many_entries() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     for i in 0..100u64 {
         let id = DocId::from_u64(i);
@@ -282,7 +282,7 @@ fn insert_many_entries() {
 #[test]
 fn update_preserves_other_entries() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let id1 = DocId::from_u64(10);
     let id2 = DocId::from_u64(20);
@@ -299,7 +299,7 @@ fn update_preserves_other_entries() {
 #[test]
 fn all_ids_empty_index() {
     let dir = tempdir().unwrap();
-    let index = CollectionIndex::new("id", dir.path()).unwrap();
+    let index = PrimaryIndex::new("id", dir.path()).unwrap();
     let ids = index
         .all_ids()
         .unwrap()
@@ -311,7 +311,7 @@ fn all_ids_empty_index() {
 #[test]
 fn all_entries_empty_index() {
     let dir = tempdir().unwrap();
-    let index = CollectionIndex::new("id", dir.path()).unwrap();
+    let index = PrimaryIndex::new("id", dir.path()).unwrap();
     let entries = index
         .all_entries()
         .unwrap()
@@ -323,7 +323,7 @@ fn all_entries_empty_index() {
 #[test]
 fn insert_duplicate_id_allowed() {
     let dir = tempdir().unwrap();
-    let mut index = CollectionIndex::new("id", dir.path()).unwrap();
+    let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
     let id = DocId::from_u64(1);
     index.insert(&id, 100).unwrap();
@@ -336,8 +336,8 @@ fn insert_duplicate_id_allowed() {
 #[test]
 fn separate_field_indices_are_independent() {
     let dir = tempdir().unwrap();
-    let mut index_a = CollectionIndex::new("field_a", dir.path()).unwrap();
-    let index_b = CollectionIndex::new("field_b", dir.path()).unwrap();
+    let mut index_a = PrimaryIndex::new("field_a", dir.path()).unwrap();
+    let index_b = PrimaryIndex::new("field_b", dir.path()).unwrap();
 
     let id = DocId::from_u64(1);
     index_a.insert(&id, 100).unwrap();

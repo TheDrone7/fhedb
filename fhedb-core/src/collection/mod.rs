@@ -8,7 +8,7 @@ pub mod file;
 use crate::{
     document::{DocId, Document},
     errors::{Error, Result},
-    index::CollectionIndex,
+    index::primary::PrimaryIndex,
     schema::{IdType, Schema, SchemaOps},
 };
 use file::Operation;
@@ -23,7 +23,7 @@ pub struct Collection {
     /// The schema describing the structure of documents in this collection.
     pub(crate) schema: Schema,
     /// The primary index for the collection, mapping document IDs to log file offsets.
-    pub(crate) primary_index: CollectionIndex,
+    pub(crate) primary_index: PrimaryIndex,
     /// The name of the field in the schema with type Id, or "id" if not present in the schema.
     pub(crate) id_field: String,
     /// The type of ID used in this collection (string or integer).
@@ -57,7 +57,7 @@ impl Collection {
         let temp_path = base_path.into();
         let base_path = temp_path.join(&name);
         create_dir_all(&base_path)?;
-        let primary_index = CollectionIndex::new(id_field.clone(), &base_path)?;
+        let primary_index = PrimaryIndex::new(id_field.clone(), &base_path)?;
 
         Ok(Self {
             name,
@@ -250,7 +250,7 @@ impl Collection {
     }
 
     /// Returns the primary document index map containing [`DocId`] to log offset mappings.
-    pub fn primary_index(&mut self) -> &mut CollectionIndex {
+    pub fn primary_index(&mut self) -> &mut PrimaryIndex {
         &mut self.primary_index
     }
 }
