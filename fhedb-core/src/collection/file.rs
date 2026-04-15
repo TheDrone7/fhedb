@@ -447,7 +447,12 @@ impl Collection {
 
             match log_entry.operation {
                 Operation::Insert => {
-                    self.primary_index.insert(&doc_id, offset)?;
+                    if let Err(e) = self.primary_index.insert(&doc_id, offset)
+                        && e.kind() != io::ErrorKind::AlreadyExists
+                    {
+                        return Err(e);
+                        // Ignore AlreadyExists errors (dangling failed inserts)
+                    }
                 }
                 Operation::Update => {
                     self.primary_index.update(&doc_id, offset)?;

@@ -12,7 +12,7 @@ use crate::{
     schema::{IdType, Schema, SchemaOps},
 };
 use file::Operation;
-use std::{fs::create_dir_all, path::PathBuf};
+use std::{fs::create_dir_all, io, path::PathBuf};
 use uuid::Uuid;
 
 /// A collection of documents with a shared [`Schema`].
@@ -102,12 +102,13 @@ impl Collection {
             )]));
         }
 
-        if self.primary_index.contains_id(&doc_id)? {
-            return Err(Error::DocumentAlreadyExists(doc_id.to_string()));
-        }
-
         let offset = self.append_to_log(&Operation::Insert, &doc)?;
-        self.primary_index.insert(&doc_id, offset)?;
+        if let Err(e) = self.primary_index.insert(&doc_id, offset) {
+            if e.kind() == io::ErrorKind::AlreadyExists {
+                return Err(Error::DocumentAlreadyExists(doc_id.to_string()));
+            }
+            return Err(Error::Io(e));
+        }
         self.inserts += 1;
         self.write_metadata()?;
         Ok(doc_id)

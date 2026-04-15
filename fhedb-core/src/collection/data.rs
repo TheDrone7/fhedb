@@ -362,15 +362,15 @@ impl Collection {
         while let Some(doc_id) = self.primary_index.next_id(current_id.as_ref())? {
             current_id = Some(doc_id.clone());
 
-            if let Some(document) = self.get_document(doc_id.clone()) {
-                if let Some(field_value) = document.data.get(old_field_name) {
-                    let mut updated_doc = document.data.clone();
-                    updated_doc.remove(old_field_name);
-                    updated_doc.insert(new_field_name, field_value.clone());
-                    let new_offset = self.append_to_log(&Operation::Update, &updated_doc)?;
-                    self.primary_index.update(&doc_id, new_offset)?;
-                    updated_documents += 1;
-                }
+            if let Some(document) = self.get_document(doc_id.clone())
+                && let Some(field_value) = document.data.get(old_field_name)
+            {
+                let mut updated_doc = document.data.clone();
+                updated_doc.remove(old_field_name);
+                updated_doc.insert(new_field_name, field_value.clone());
+                let new_offset = self.append_to_log(&Operation::Update, &updated_doc)?;
+                self.primary_index.update(&doc_id, new_offset)?;
+                updated_documents += 1;
             }
         }
 
