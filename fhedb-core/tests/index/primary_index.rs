@@ -321,7 +321,7 @@ fn all_entries_empty_index() {
 }
 
 #[test]
-fn insert_duplicate_id_allowed() {
+fn insert_duplicate_id_rejected() {
     let dir = tempdir().unwrap();
     let mut index = PrimaryIndex::new("id", dir.path()).unwrap();
 
@@ -329,8 +329,8 @@ fn insert_duplicate_id_allowed() {
     index.insert(&id, 100).unwrap();
 
     let result = index.insert(&id, 200);
-    assert!(result.is_ok());
-    assert_eq!(index.len(), 2);
+    assert!(result.is_err());
+    assert_eq!(index.len(), 1);
 }
 
 #[test]

@@ -32,7 +32,7 @@ fn reopen_existing_tree() {
 }
 
 #[test]
-fn insert_duplicate_key_allowed() {
+fn insert_duplicate_key_rejected() {
     let dir = tempdir().unwrap();
     let path = dir.path().join("test.idx");
 
@@ -41,12 +41,16 @@ fn insert_duplicate_key_allowed() {
     tree.insert(b"key1", &[1u8; 8]).unwrap();
 
     let result = tree.insert(b"key1", &[2u8; 8]);
-    assert!(result.is_ok());
+    assert!(result.is_err());
+    assert_eq!(
+        result.unwrap_err().kind(),
+        std::io::ErrorKind::AlreadyExists
+    );
 
     let pager = Pager::new(&path).unwrap();
     let tree = BPlusTree::open(pager).unwrap();
     let entries: Vec<_> = tree.scan(None, None).unwrap().collect();
-    assert_eq!(entries.len(), 2);
+    assert_eq!(entries.len(), 1);
 }
 
 #[test]
