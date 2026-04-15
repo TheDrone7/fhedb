@@ -40,6 +40,10 @@ pub trait SchemaOps {
     /// ## Arguments
     ///
     /// * `doc` - The [`Document`] to apply defaults to.
+    ///
+    /// ## Returns
+    ///
+    /// The number of default values that were applied.
     fn apply_defaults(&self, doc: &mut Document) -> usize;
 
     /// Prepares a document for insertion by parsing field values and applying defaults.
@@ -289,6 +293,10 @@ impl SchemaOps for Schema {
 ///
 /// * `field_type` - The field's declared type.
 /// * `operator` - The query operator.
+///
+/// ## Returns
+///
+/// The [`FieldType`] to use when parsing the condition value.
 fn get_parse_type<'a>(field_type: &'a FieldType, operator: &QueryOperator) -> &'a FieldType {
     if *operator == QueryOperator::Similar
         && let FieldType::Array(inner) = field_type
@@ -303,6 +311,10 @@ fn get_parse_type<'a>(field_type: &'a FieldType, operator: &QueryOperator) -> &'
 /// ## Arguments
 ///
 /// * `doc` - The [`Document`] containing schema field definitions.
+///
+/// ## Returns
+///
+/// A [`Schema`] parsed from the document.
 pub fn schema_from_document(doc: Document) -> Schema {
     let mut schema = Schema::new();
 
@@ -320,6 +332,10 @@ pub fn schema_from_document(doc: Document) -> Schema {
 /// ## Arguments
 ///
 /// * `schema` - The [`Schema`] to convert.
+///
+/// ## Returns
+///
+/// A [`Document`] representing the schema.
 pub fn schema_to_document(schema: &Schema) -> Document {
     let mut doc = Document::new();
 
@@ -404,6 +420,10 @@ fn parse_field_type(value: &Bson) -> Option<FieldType> {
 /// ## Arguments
 ///
 /// * `field_type` - The [`FieldType`] to convert.
+///
+/// ## Returns
+///
+/// A [`Bson`] value representing the field type.
 fn field_type_to_bson(field_type: &FieldType) -> Bson {
     match &field_type {
         FieldType::Int => Bson::String("int".to_string()),
@@ -435,6 +455,10 @@ fn field_type_to_bson(field_type: &FieldType) -> Bson {
 /// ## Arguments
 ///
 /// * `field_def` - The [`FieldDefinition`] to convert.
+///
+/// ## Returns
+///
+/// A [`Bson`] value representing the field definition.
 fn field_definition_to_bson(field_def: &FieldDefinition) -> Bson {
     match &field_def.default_value {
         None => field_type_to_bson(&field_def.field_type),

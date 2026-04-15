@@ -29,6 +29,10 @@ impl Database {
     ///
     /// * `name` - The name of the database.
     /// * `base_path` - The base directory where the database will be stored.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`Database`] with no collections.
     pub fn new(name: impl Into<String>, base_path: impl Into<PathBuf>) -> Self {
         let name = name.into();
         let temp_path = base_path.into();
@@ -100,6 +104,10 @@ impl Database {
     /// ## Arguments
     ///
     /// * `collection_name` - The name of the collection to check.
+    ///
+    /// ## Returns
+    ///
+    /// `true` if the collection exists in the database.
     pub fn has_collection(&self, collection_name: &str) -> bool {
         self.collections.contains_key(collection_name)
     }

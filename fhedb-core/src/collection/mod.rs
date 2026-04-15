@@ -114,6 +114,10 @@ impl Collection {
     }
 
     /// Generates a new document ID based on the collection's ID type.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`DocId`], either a UUID string or a sequential integer.
     pub(crate) fn generate_id(&self) -> DocId {
         match self.id_type {
             IdType::String => DocId::from_uuid(Uuid::new_v4()),

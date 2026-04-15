@@ -19,6 +19,10 @@ impl<'a> LeafCell<'a> {
     /// ## Arguments
     ///
     /// * `bytes` - The raw byte slice containing the serialized leaf cell.
+    ///
+    /// ## Returns
+    ///
+    /// A [`LeafCell`] parsed from the given bytes.
     pub fn from_bytes(bytes: &'a [u8]) -> Self {
         let key_length = u16::from_le_bytes(bytes[0..2].try_into().unwrap()) as usize;
         let key = &bytes[2..2 + key_length];
@@ -29,6 +33,10 @@ impl<'a> LeafCell<'a> {
     }
 
     /// Converts the leaf cell to a byte array for storage.
+    ///
+    /// ## Returns
+    ///
+    /// A [`Vec<u8>`] containing the serialized leaf cell.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(2 + self.key.len() + 8);
         bytes.extend_from_slice(&(self.key.len() as u16).to_le_bytes());
@@ -52,6 +60,10 @@ impl<'a> InternalCell<'a> {
     /// ## Arguments
     ///
     /// * `bytes` - The raw byte slice containing the serialized internal cell.
+    ///
+    /// ## Returns
+    ///
+    /// An [`InternalCell`] parsed from the given bytes.
     pub fn from_bytes(bytes: &'a [u8]) -> Self {
         let key_length = u16::from_le_bytes(bytes[0..2].try_into().unwrap()) as usize;
         let key = &bytes[2..2 + key_length];
@@ -65,6 +77,10 @@ impl<'a> InternalCell<'a> {
     }
 
     /// Converts the internal cell to a byte array for storage.
+    ///
+    /// ## Returns
+    ///
+    /// A [`Vec<u8>`] containing the serialized internal cell.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(2 + self.key.len() + 4);
         bytes.extend_from_slice(&(self.key.len() as u16).to_le_bytes());
@@ -119,6 +135,10 @@ impl NodeHeader {
     /// ## Arguments
     ///
     /// * `bytes` - The raw bytes of the node page from which to read the header.
+    ///
+    /// ## Returns
+    ///
+    /// A [`NodeHeader`] parsed from the given bytes.
     pub fn from_bytes(bytes: &[u8]) -> Self {
         Self {
             node_type: NodeType::from(bytes[0]),
@@ -131,6 +151,10 @@ impl NodeHeader {
     }
 
     /// Converts the node header to a byte array for storage.
+    ///
+    /// ## Returns
+    ///
+    /// A fixed-size byte array containing the serialized header.
     pub fn to_bytes(&self) -> [u8; Self::SIZE] {
         let mut bytes = [0u8; Self::SIZE];
 
@@ -159,6 +183,10 @@ impl<'a> Node<'a> {
     /// ## Arguments
     ///
     /// * `page` - A mutable reference to the page data for the node.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`Node`] wrapping the given page.
     pub fn new(page: &'a mut Page) -> Self {
         Self(page)
     }
@@ -200,6 +228,10 @@ impl<'a> Node<'a> {
     /// ## Arguments
     ///
     /// * `idx` - The index of the cell to retrieve (0-based).
+    ///
+    /// ## Returns
+    ///
+    /// A byte slice containing the raw cell data.
     pub fn get_cell_data(&self, idx: u16) -> &[u8] {
         debug_assert!(
             idx < self.get_header().keys_count,
@@ -265,6 +297,10 @@ impl<'a> Node<'a> {
     /// ## Arguments
     ///
     /// * `idx` - The index of the cell whose key to retrieve (0-based).
+    ///
+    /// ## Returns
+    ///
+    /// A byte slice containing the key.
     pub fn get_key_at(&self, idx: u16) -> &[u8] {
         let data = self.get_cell_data(idx);
         let key_length = u16::from_le_bytes(data[0..2].try_into().unwrap()) as usize;

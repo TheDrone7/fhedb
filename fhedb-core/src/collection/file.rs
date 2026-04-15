@@ -87,6 +87,10 @@ impl LogEntry {
     ///
     /// * `operation` - The type of operation.
     /// * `document` - The BSON document associated with the operation.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`LogEntry`] with the current UTC timestamp.
     pub fn new(operation: Operation, document: BsonDocument) -> Self {
         Self {
             timestamp: chrono::Utc::now().to_rfc3339(),

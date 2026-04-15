@@ -38,6 +38,11 @@ impl BPlusTree {
     }
 
     /// Initializes the tree by allocating a root leaf page.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful,
+    /// or [`Err`]\([`io::Error`]) if allocation or write failed.
     fn initialize(&mut self) -> io::Result<()> {
         let root_page_num = self.pager.allocate_page()?;
         self.pager.set_root(root_page_num)?;
@@ -207,6 +212,11 @@ impl BPlusTree {
     /// * `left_page_num` - The page number of the left child.
     /// * `right_page_num` - The page number of the new right child.
     /// * `separator_key` - The key that separates the two children.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful,
+    /// or [`Err`]\([`io::Error`]) if a page allocation or write failed.
     pub fn insert_internal(
         &mut self,
         parent_page_num: u32,
@@ -366,6 +376,11 @@ impl BPlusTree {
     ///
     /// * `child_page_num` - The page number of the child node to update.
     /// * `new_parent_page_num` - The new parent page number to set.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful,
+    /// or [`Err`]\([`io::Error`]) if the page could not be read or written.
     pub fn update_parent(
         &mut self,
         child_page_num: u32,
@@ -526,6 +541,11 @@ impl BPlusTree {
     /// ## Arguments
     ///
     /// * `key` - The key bytes to delete.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful (including when the key does not exist),
+    /// or [`Err`]\([`io::Error`]) on I/O failure.
     pub fn delete(&mut self, key: &[u8]) -> io::Result<()> {
         let page_num = self.find_leaf(key)?;
         let mut page = self.pager.read_page(page_num)?;
@@ -560,6 +580,11 @@ impl BPlusTree {
     /// ## Arguments
     ///
     /// * `page_num` - The page number of the underflowing node.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful,
+    /// or [`Err`]\([`io::Error`]) on I/O failure.
     pub fn attempt_merge(&mut self, page_num: u32) -> io::Result<()> {
         let parent_page_num = {
             let mut page = self.pager.read_page(page_num)?;
@@ -702,6 +727,11 @@ impl BPlusTree {
     ///
     /// * `parent_page_num` - The page number of the internal node.
     /// * `remove_idx` - The index of the key to remove.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful,
+    /// or [`Err`]\([`io::Error`]) on I/O failure.
     pub fn delete_internal(&mut self, parent_page_num: u32, remove_idx: u16) -> io::Result<()> {
         let mut page = self.pager.read_page(parent_page_num)?;
 

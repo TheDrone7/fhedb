@@ -81,6 +81,10 @@ impl Pager {
     }
 
     /// Creates a new empty page filled with zeroes.
+    ///
+    /// ## Returns
+    ///
+    /// A zeroed [`Page`] of [`PAGE_SIZE`] bytes.
     pub fn new_page(&self) -> Page {
         [0u8; PAGE_SIZE]
     }

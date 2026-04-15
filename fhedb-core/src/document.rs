@@ -27,6 +27,10 @@ impl DocId {
     /// ## Arguments
     ///
     /// * `value` - The [`u64`] value to use as the ID.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`DocId::U64`] variant.
     pub fn from_u64(value: u64) -> Self {
         Self::U64(value)
     }
@@ -36,6 +40,10 @@ impl DocId {
     /// ## Arguments
     ///
     /// * `uuid` - The [`Uuid`] to use as the ID.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`DocId::String`] variant containing the UUID string.
     pub fn from_uuid(uuid: Uuid) -> Self {
         Self::String(uuid.to_string())
     }
@@ -45,11 +53,19 @@ impl DocId {
     /// ## Arguments
     ///
     /// * `value` - The string value to use as the ID.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`DocId::String`] variant.
     pub fn from_string(value: String) -> Self {
         Self::String(value)
     }
 
     /// Converts the document ID to a [`Bson`](bson::Bson) value.
+    ///
+    /// ## Returns
+    ///
+    /// A [`Bson::String`] for string IDs or [`Bson::Int64`] for integer IDs.
     pub fn to_bson(&self) -> bson::Bson {
         match self {
             DocId::String(s) => bson::Bson::String(s.clone()),
@@ -58,6 +74,10 @@ impl DocId {
     }
 
     /// Converts the document ID to a byte vector.
+    ///
+    /// ## Returns
+    ///
+    /// A [`Vec<u8>`] with a type tag byte followed by the ID bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         let bytes = match self {
             Self::String(s) => s.as_bytes(),
@@ -73,6 +93,14 @@ impl DocId {
     }
 
     /// Creates a [`DocId`] from a byte slice.
+    ///
+    /// ## Arguments
+    ///
+    /// * `bytes` - A byte slice with a type tag prefix (0 for string, 1 for u64).
+    ///
+    /// ## Returns
+    ///
+    /// A [`DocId`] parsed from the given bytes.
     pub fn from_bytes(bytes: &[u8]) -> Self {
         match bytes.first() {
             Some(0u8) => bytes[1..]
@@ -154,6 +182,10 @@ impl Document {
     ///
     /// * `id` - The [`DocId`] to use.
     /// * `data` - The [`BsonDocument`] containing the document data.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`Document`] with the specified ID and data.
     pub fn new(id: DocId, data: BsonDocument) -> Self {
         Self { id, data }
     }
@@ -163,6 +195,10 @@ impl Document {
     /// ## Arguments
     ///
     /// * `data` - The [`BsonDocument`] containing the document data.
+    ///
+    /// ## Returns
+    ///
+    /// A new [`Document`] with a randomly generated UUID as its ID.
     pub fn with_random_id(data: BsonDocument) -> Self {
         Self {
             id: DocId::new(),
@@ -171,6 +207,10 @@ impl Document {
     }
 
     /// Consumes the document and returns its ([`DocId`], [`BsonDocument`]) components.
+    ///
+    /// ## Returns
+    ///
+    /// A tuple of ([`DocId`], [`BsonDocument`]).
     pub fn into_parts(self) -> (DocId, BsonDocument) {
         (self.id, self.data)
     }

@@ -11,6 +11,10 @@ use fhedb_types::{FieldType, Schema};
 /// Extension trait for [`FieldType`] reference utilities.
 pub trait ReferenceChecker {
     /// Checks if this field type is or contains a reference.
+    ///
+    /// ## Returns
+    ///
+    /// `true` if this field type is or wraps a [`FieldType::Reference`].
     fn contains_reference(&self) -> bool;
 
     /// Checks if this field type references the specified collection.
@@ -18,6 +22,10 @@ pub trait ReferenceChecker {
     /// ## Arguments
     ///
     /// * `collection_name` - The name of the collection to check for.
+    ///
+    /// ## Returns
+    ///
+    /// `true` if this field type references the specified collection.
     fn references_collection(&self, collection_name: &str) -> bool;
 
     /// Finds the first invalid reference in this field type.
@@ -116,6 +124,10 @@ impl Database {
     /// ## Arguments
     ///
     /// * `target_collection` - The name of the collection to find references to.
+    ///
+    /// ## Returns
+    ///
+    /// A [`Vec<String>`] of collection names that reference the target.
     pub fn find_referencing_collections(&self, target_collection: &str) -> Vec<String> {
         let mut referencing = Vec::new();
 
