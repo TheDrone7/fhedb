@@ -194,25 +194,13 @@ impl PrimaryIndex {
     }
 
     /// Checks if the index is empty (contains no entries).
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok`]\([`bool`]) indicating whether the index is empty,
-    /// or [`Err`]\([`io::Error`]) on I/O failure.
-    pub fn is_empty(&self) -> io::Result<bool> {
-        let mut result = self.tree.scan(None, None)?;
-        Ok(result.next().is_none())
+    pub fn is_empty(&self) -> bool {
+        self.tree.is_empty()
     }
 
     /// Returns the number of entries currently stored in the index.
-    ///
-    /// ## Returns
-    ///
-    /// Returns [`Ok`]\([`usize`]) with the entry count,
-    /// or [`Err`]\([`io::Error`]) on I/O failure.
-    pub fn len(&self) -> io::Result<usize> {
-        let result = self.tree.scan(None, None)?;
-        Ok(result.count())
+    pub fn len(&self) -> usize {
+        self.tree.len() as usize
     }
 
     /// Returns the field name that this index is built on.

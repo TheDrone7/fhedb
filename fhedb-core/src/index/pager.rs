@@ -25,6 +25,8 @@ pub struct Pager {
     root_page_num: u32,
     /// The page number of the first free page in the file.
     free_page_num: u32,
+    /// The total number of entries.
+    total_entries: u64,
 }
 
 impl Pager {
@@ -63,6 +65,7 @@ impl Pager {
                 total_pages: 1,
                 root_page_num: 0,
                 free_page_num: 0,
+                total_entries: 0,
             };
             temp.save_metadata()?;
             temp
@@ -72,6 +75,7 @@ impl Pager {
                 total_pages,
                 root_page_num: 0,
                 free_page_num: 0,
+                total_entries: 0,
             };
             temp.load_metadata()?;
             temp
@@ -99,6 +103,33 @@ impl Pager {
         self.free_page_num
     }
 
+    /// Returns the total number of entries stored by the pager's pages.
+    pub fn total_entries(&self) -> u64 {
+        self.total_entries
+    }
+
+    /// Increments the total entry count by 1 and persists the metadata.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful,
+    /// or [`Err`]\([`io::Error`]) if the metadata could not be saved.
+    pub fn increment_entries(&mut self) -> io::Result<()> {
+        self.total_entries = self.total_entries.saturating_add(1);
+        self.save_metadata()
+    }
+
+    /// Decrements the total entry count by 1 and persists the metadata.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful,
+    /// or [`Err`]\([`io::Error`]) if the metadata could not be saved.
+    pub fn decrement_entries(&mut self) -> io::Result<()> {
+        self.total_entries = self.total_entries.saturating_sub(1);
+        self.save_metadata()
+    }
+
     /// Sets the root page number and persists the metadata.
     ///
     /// ## Arguments
@@ -124,8 +155,10 @@ impl Pager {
         let metadata_page = self.read_page(0)?;
         let root_page_num = u32::from_le_bytes(metadata_page[0..4].try_into().unwrap());
         let free_page_num = u32::from_le_bytes(metadata_page[4..8].try_into().unwrap());
+        let total_entries = u64::from_le_bytes(metadata_page[8..16].try_into().unwrap());
         self.root_page_num = root_page_num;
         self.free_page_num = free_page_num;
+        self.total_entries = total_entries;
 
         Ok((root_page_num, free_page_num))
     }
@@ -140,6 +173,7 @@ impl Pager {
         let mut metadata_page = self.new_page();
         metadata_page[0..4].copy_from_slice(&self.root_page_num.to_le_bytes());
         metadata_page[4..8].copy_from_slice(&self.free_page_num.to_le_bytes());
+        metadata_page[8..16].copy_from_slice(&self.total_entries.to_le_bytes());
 
         self.write_page(0, &metadata_page)
     }

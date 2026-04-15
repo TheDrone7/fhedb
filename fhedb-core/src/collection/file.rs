@@ -316,7 +316,7 @@ impl Collection {
     pub fn compact_logfile(&mut self) -> io::Result<()> {
         let logfile_path = self.logfile_path();
 
-        if self.primary_index.is_empty()? {
+        if self.primary_index.is_empty() {
             return Ok(());
         }
 

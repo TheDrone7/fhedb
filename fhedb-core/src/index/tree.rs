@@ -37,6 +37,16 @@ impl BPlusTree {
         Ok(tree)
     }
 
+    /// Returns the number of entries in the tree.
+    pub fn len(&self) -> u64 {
+        self.pager.total_entries()
+    }
+
+    /// Returns whether the tree is empty (contains no entries).
+    pub fn is_empty(&self) -> bool {
+        self.pager.total_entries() == 0
+    }
+
     /// Initializes the tree by allocating a root leaf page.
     ///
     /// ## Returns
@@ -131,6 +141,7 @@ impl BPlusTree {
 
             if insert_result.is_ok() {
                 self.pager.write_page(current_page_num, &page)?;
+                self.pager.increment_entries()?;
                 return Ok(());
             } else {
                 let new_page_num = self.pager.allocate_page()?;
@@ -566,6 +577,7 @@ impl BPlusTree {
         };
 
         self.pager.write_page(page_num, &page)?;
+        self.pager.decrement_entries()?;
 
         let max_capacity = PAGE_SIZE - NodeHeader::SIZE;
         if used_space < max_capacity / 2 {

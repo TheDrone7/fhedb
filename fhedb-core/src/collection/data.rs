@@ -83,11 +83,11 @@ impl Collection {
             field_definition.default_value = Some(bson::Bson::Null);
         }
 
-        if !is_nullable && !has_default && !self.primary_index.is_empty()? {
+        if !is_nullable && !has_default && !self.primary_index.is_empty() {
             return Err(Error::Schema(format!(
                 "Cannot add non-nullable field '{}' without a default value because the collection contains {} existing documents",
                 field_name,
-                self.primary_index.len()?
+                self.primary_index.len()
             )));
         }
 
@@ -176,11 +176,11 @@ impl Collection {
             new_definition.default_value = Some(bson::Bson::Null);
         }
 
-        if !self.primary_index.is_empty()? && !is_nullable && !has_default {
+        if !self.primary_index.is_empty() && !is_nullable && !has_default {
             return Err(Error::Schema(format!(
                 "Cannot modify field '{}' to non-nullable without a default value because the collection contains {} existing documents",
                 field_name,
-                self.primary_index.len()?
+                self.primary_index.len()
             )));
         }
 
@@ -222,11 +222,11 @@ impl Collection {
             self.id_field = "id".to_string();
             self.id_type = IdType::Int;
 
-            if !self.primary_index.is_empty()? && new_definition.default_value.is_some() {
+            if !self.primary_index.is_empty() && new_definition.default_value.is_some() {
                 self.add_ids_to_all_documents(field_name, "id")?;
                 self.apply_defaults_to_existing(field_name, &new_definition)?;
             }
-        } else if !self.primary_index.is_empty()? {
+        } else if !self.primary_index.is_empty() {
             self.cleanup_removed_field(field_name)?;
 
             if new_definition.default_value.is_some() {
