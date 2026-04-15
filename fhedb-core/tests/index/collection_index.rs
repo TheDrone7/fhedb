@@ -14,14 +14,14 @@ fn new_creates_index() {
 fn is_empty_on_new_index() {
     let dir = tempdir().unwrap();
     let index = PrimaryIndex::new("id", dir.path()).unwrap();
-    assert!(index.is_empty().unwrap());
+    assert!(index.is_empty());
 }
 
 #[test]
 fn len_empty() {
     let dir = tempdir().unwrap();
     let index = PrimaryIndex::new("id", dir.path()).unwrap();
-    assert_eq!(index.len().unwrap(), 0);
+    assert_eq!(index.len(), 0);
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn is_empty_after_insert() {
 
     let id = DocId::from_u64(1);
     index.insert(&id, 50).unwrap();
-    assert!(!index.is_empty().unwrap());
+    assert!(!index.is_empty());
 }
 
 #[test]
@@ -99,7 +99,7 @@ fn len_after_inserts() {
         index.insert(&id, i * 100).unwrap();
     }
 
-    assert_eq!(index.len().unwrap(), 5);
+    assert_eq!(index.len(), 5);
 }
 
 #[test]
@@ -188,12 +188,12 @@ fn is_empty_after_remove_all() {
     let id2 = DocId::from_u64(2);
     index.insert(&id1, 100).unwrap();
     index.insert(&id2, 200).unwrap();
-    assert!(!index.is_empty().unwrap());
+    assert!(!index.is_empty());
 
     index.remove(&id1).unwrap();
     index.remove(&id2).unwrap();
-    assert!(index.is_empty().unwrap());
-    assert_eq!(index.len().unwrap(), 0);
+    assert!(index.is_empty());
+    assert_eq!(index.len(), 0);
 }
 
 #[test]
@@ -236,7 +236,7 @@ fn insert_and_get_with_string_ids() {
     assert_eq!(index.get(&id_a).unwrap(), Some(10));
     assert_eq!(index.get(&id_b).unwrap(), Some(20));
     assert_eq!(index.get(&id_g).unwrap(), Some(30));
-    assert_eq!(index.len().unwrap(), 3);
+    assert_eq!(index.len(), 3);
 }
 
 #[test]
@@ -256,7 +256,7 @@ fn remove_does_not_affect_other_entries() {
     assert_eq!(index.get(&id1).unwrap(), Some(100));
     assert_eq!(index.get(&id2).unwrap(), None);
     assert_eq!(index.get(&id3).unwrap(), Some(300));
-    assert_eq!(index.len().unwrap(), 2);
+    assert_eq!(index.len(), 2);
 }
 
 #[test]
@@ -269,8 +269,8 @@ fn insert_many_entries() {
         index.insert(&id, i * 10).unwrap();
     }
 
-    assert_eq!(index.len().unwrap(), 100);
-    assert!(!index.is_empty().unwrap());
+    assert_eq!(index.len(), 100);
+    assert!(!index.is_empty());
 
     for i in 0..100u64 {
         let id = DocId::from_u64(i);
@@ -293,7 +293,7 @@ fn update_preserves_other_entries() {
 
     assert_eq!(index.get(&id1).unwrap(), Some(999));
     assert_eq!(index.get(&id2).unwrap(), Some(200));
-    assert_eq!(index.len().unwrap(), 2);
+    assert_eq!(index.len(), 2);
 }
 
 #[test]
@@ -330,7 +330,7 @@ fn insert_duplicate_id_allowed() {
 
     let result = index.insert(&id, 200);
     assert!(result.is_ok());
-    assert_eq!(index.len().unwrap(), 2);
+    assert_eq!(index.len(), 2);
 }
 
 #[test]
@@ -344,6 +344,6 @@ fn separate_field_indices_are_independent() {
 
     assert!(index_a.contains_id(&id).unwrap());
     assert!(!index_b.contains_id(&id).unwrap());
-    assert_eq!(index_a.len().unwrap(), 1);
-    assert_eq!(index_b.len().unwrap(), 0);
+    assert_eq!(index_a.len(), 1);
+    assert_eq!(index_b.len(), 0);
 }
