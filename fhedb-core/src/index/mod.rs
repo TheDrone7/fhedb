@@ -13,3 +13,6 @@ pub mod tree;
 
 /// The primary module - contains the primary index structure and operations.
 pub mod primary;
+
+/// The secondary module - contains the secondary index structure and operations.
+pub mod secondary;
