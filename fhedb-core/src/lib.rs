@@ -36,6 +36,8 @@ pub mod prelude {
     pub use crate::index::{
         node::{InternalCell, LeafCell, Node, NodeHeader, NodeType, SLOT_SIZE},
         pager::{PAGE_SIZE, Page, Pager},
+        primary::PrimaryIndex,
+        secondary::SecondaryIndex,
         tree::BPlusTree,
     };
     pub use crate::query::{BsonComparable, Unescapable, ValueParseable};

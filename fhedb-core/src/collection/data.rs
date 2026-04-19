@@ -11,6 +11,7 @@ use std::{
 use crate::{
     collection::{Collection, Operation},
     errors::{Error, Result},
+    index::secondary::SecondaryIndex,
     schema::{FieldDefinition, FieldType, IdType, SchemaOps},
 };
 
@@ -139,6 +140,11 @@ impl Collection {
             self.add_ids_to_all_documents(field_name, "id")?;
         } else {
             self.cleanup_removed_field(field_name)?;
+            self.secondary_indices.remove(field_name);
+            let index_path = self.base_path.join(format!("{}.idx", field_name));
+            if index_path.exists() {
+                remove_file(&index_path)?;
+            }
         }
 
         Ok(())
@@ -272,6 +278,18 @@ impl Collection {
         }
 
         self.rename_field_in_documents(old_name, &new_name)?;
+
+        if self.secondary_indices.remove(old_name).is_some() {
+            let old_index_path = self.base_path.join(format!("{}.idx", old_name));
+            let new_index_path = self.base_path.join(format!("{}.idx", new_name));
+            if old_index_path.exists() {
+                rename(&old_index_path, &new_index_path)?;
+            }
+
+            if let Ok(new_index) = SecondaryIndex::new(new_name.clone(), self.base_path.clone()) {
+                self.secondary_indices.insert(new_name.clone(), new_index);
+            }
+        }
 
         Ok(())
     }

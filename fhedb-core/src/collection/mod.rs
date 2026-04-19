@@ -8,11 +8,11 @@ pub mod file;
 use crate::{
     document::{DocId, Document},
     errors::{Error, Result},
-    index::primary::PrimaryIndex,
+    index::{primary::PrimaryIndex, secondary::SecondaryIndex},
     schema::{IdType, Schema, SchemaOps},
 };
 use file::Operation;
-use std::{fs::create_dir_all, io, path::PathBuf};
+use std::{collections::HashMap, fs::create_dir_all, io, path::PathBuf};
 use uuid::Uuid;
 
 /// A collection of documents with a shared [`Schema`].
@@ -24,6 +24,8 @@ pub struct Collection {
     pub(crate) schema: Schema,
     /// The primary index for the collection, mapping document IDs to log file offsets.
     pub(crate) primary_index: PrimaryIndex,
+    /// The secondary indices for the collection, mapping field names to their respective indices.
+    pub(crate) secondary_indices: HashMap<String, SecondaryIndex>,
     /// The name of the field in the schema with type Id, or "id" if not present in the schema.
     pub(crate) id_field: String,
     /// The type of ID used in this collection (string or integer).
@@ -63,6 +65,7 @@ impl Collection {
             name,
             schema,
             primary_index,
+            secondary_indices: HashMap::new(),
             id_field,
             id_type,
             inserts: 0,

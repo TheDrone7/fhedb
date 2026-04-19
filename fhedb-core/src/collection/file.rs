@@ -4,12 +4,14 @@
 
 use crate::{
     collection::Collection,
+    index::secondary::SecondaryIndex,
     schema::{schema_from_document, schema_to_document},
 };
 use bson::{Bson, Document as BsonDocument};
 use std::{
+    collections::HashMap,
     fmt,
-    fs::{self, File, OpenOptions},
+    fs::{self, File, OpenOptions, read_dir},
     io::{self, Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
     str::FromStr,
@@ -466,6 +468,55 @@ impl Collection {
         Ok(())
     }
 
+    /// Clear and (re) build a secondary index for the given field name.
+    ///
+    /// ## Arguments
+    ///
+    /// * `field_name` - The name of the field to build the index for.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful,
+    /// or [`Err`]\([`io::Error`]) if failed.
+    pub fn build_secondary_index(&mut self, field_name: &str) -> io::Result<()> {
+        if let Some(idx) = self.secondary_indices.get_mut(field_name) {
+            idx.clear()?;
+        } else {
+            return Ok(());
+        }
+
+        if self.primary_index.is_empty() {
+            return Ok(());
+        }
+
+        for result in self.primary_index.all_entries()? {
+            let (id, offset) = result?;
+            let doc = Self::read_entry_at(&self.base_path, offset)?.document;
+
+            if let Some(idx) = self.secondary_indices.get_mut(field_name)
+                && let Some(val) = doc.get(field_name)
+            {
+                idx.insert(val, &id, offset)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Clear and (re) build all secondary indices.
+    ///
+    /// ## Returns
+    ///
+    /// Returns [`Ok`]\(()) if successful,
+    /// or [`Err`]\([`io::Error`]) if failed.
+    pub fn build_secondary_indices(&mut self) -> io::Result<()> {
+        let fields: Vec<String> = self.secondary_indices.keys().cloned().collect();
+        for field in fields {
+            self.build_secondary_index(&field)?;
+        }
+        Ok(())
+    }
+
     /// Creates a [`Collection`] from existing files on disk.
     ///
     /// ## Arguments
@@ -481,6 +532,26 @@ impl Collection {
         let mut collection = Self::read_metadata(base_path.as_ref(), name)?;
         collection.build_primary_index()?;
         collection.compact_logfile()?;
+
+        let c_dir = base_path.as_ref().join(name);
+        let mut secondary_indices = HashMap::new();
+
+        if c_dir.exists() {
+            for entry in read_dir(&c_dir)? {
+                let entry = entry?;
+                let path = entry.path();
+                if path.extension().is_some_and(|ext| ext == "idx") {
+                    let field_name = path.file_stem().unwrap().to_string_lossy().to_string();
+                    if field_name != collection.id_field {
+                        let idx = SecondaryIndex::new(field_name.clone(), c_dir.clone())?;
+                        secondary_indices.insert(field_name, idx);
+                    }
+                }
+            }
+        }
+
+        collection.secondary_indices = secondary_indices;
+        collection.build_secondary_indices()?;
 
         Ok(collection)
     }
