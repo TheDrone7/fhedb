@@ -26,6 +26,15 @@ pub enum Error {
 
     #[error("Execution error: {0}")]
     Execution(String),
+
+    #[error("Unable to create index on field '{0}': {1}")]
+    FieldNotIndexable(String, String),
+
+    #[error("Index already exists: {0}")]
+    IndexAlreadyExists(String),
+
+    #[error("Index not found: {0}")]
+    IndexNotFound(String),
 }
 
 impl PartialEq for Error {

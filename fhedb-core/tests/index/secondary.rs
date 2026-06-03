@@ -149,7 +149,7 @@ fn remove_missing() {
     let mut index = SecondaryIndex::new("status", dir.path()).unwrap();
 
     let id = DocId::from_u64(99);
-    let val = Bson::Double(3.14);
+    let val = Bson::Double(std::f64::consts::PI);
     let removed = index.remove(&val, &id).unwrap();
     assert_eq!(removed, None);
 }

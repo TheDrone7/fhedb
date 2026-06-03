@@ -2,8 +2,14 @@
 //!
 //! Provides the core [`Collection`] type and its document management operations.
 
+/// The data module - provides utilities for a collection's schema modification.
 pub mod data;
+
+/// The file module - provides utilities for file I/O for a collection.
 pub mod file;
+
+/// The index module - provides utilities for index management for a collection.
+pub mod index;
 
 use crate::{
     document::{DocId, Document},
@@ -112,6 +118,7 @@ impl Collection {
             }
             return Err(Error::Io(e));
         }
+        self.insert_secondary_indices(&doc, &doc_id, offset)?;
         self.inserts += 1;
         self.write_metadata()?;
         Ok(doc_id)
@@ -187,6 +194,7 @@ impl Collection {
 
         let new_offset = self.append_to_log(&Operation::Update, &updated_doc)?;
         self.primary_index.update(&id, new_offset)?;
+        self.update_secondary_indices(&current_log_entry.document, &updated_doc, &id, new_offset)?;
         Ok(Document::new(id, updated_doc))
     }
 
@@ -199,17 +207,17 @@ impl Collection {
     /// ## Returns
     ///
     /// Returns [`Some`]\([`Document`]) if removed, or [`None`] if not found.
-    pub fn remove_document(&mut self, id: DocId) -> Option<Document> {
+    pub fn remove_document(&mut self, id: DocId) -> Result<Option<Document>> {
         let removed = self.primary_index.remove(&id).ok();
 
-        if let Some(Some(offset)) = removed
-            && let Ok(log_entry) = Self::read_entry_at(&self.base_path, offset)
-        {
-            self.append_to_log(&Operation::Delete, &log_entry.document)
-                .ok();
-            return Some(Document::new(id, log_entry.document));
+        if let Some(Some(offset)) = removed {
+            let log_entry = Self::read_entry_at(&self.base_path, offset)?;
+            self.append_to_log(&Operation::Delete, &log_entry.document)?;
+            self.remove_secondary_indices(&log_entry.document, &id)?;
+            return Ok(Some(Document::new(id, log_entry.document)));
         }
-        None
+
+        Ok(None)
     }
 
     /// Retrieves a document by its ID.
